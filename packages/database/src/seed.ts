@@ -1,4 +1,4 @@
-import { PrismaClient, Role, PlanType, SubscriptionStatus } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -26,12 +26,12 @@ async function main() {
     data: {
       name: 'Test Organization',
       slug: 'test-org',
-      domainRestriction: ['test-org.com'],
+      domainRestriction: JSON.stringify(['test-org.com']),
       settings: {
         create: {
           enforceMfa: false,
           seatLimit: 50,
-          allowedDomains: ['test-org.com'],
+          allowedDomains: JSON.stringify(['test-org.com']),
         },
       },
     },
@@ -41,12 +41,12 @@ async function main() {
     data: {
       name: 'Demo Company',
       slug: 'demo-company',
-      domainRestriction: [],
+      domainRestriction: JSON.stringify([]),
       settings: {
         create: {
           enforceMfa: false,
           seatLimit: null, // Unlimited
-          allowedDomains: [],
+          allowedDomains: JSON.stringify([]),
         },
       },
     },
@@ -68,7 +68,7 @@ async function main() {
       organizations: {
         create: {
           organizationId: testOrg.id,
-          role: Role.ADMIN,
+          role: 'ADMIN',
         },
       },
     },
@@ -84,7 +84,7 @@ async function main() {
       organizations: {
         create: {
           organizationId: testOrg.id,
-          role: Role.DEPARTMENT_MANAGER,
+          role: 'DEPARTMENT_MANAGER',
           departmentId: 'dept_sales',
         },
       },
@@ -101,7 +101,7 @@ async function main() {
       organizations: {
         create: {
           organizationId: testOrg.id,
-          role: Role.MEMBER,
+          role: 'MEMBER',
         },
       },
     },
@@ -118,7 +118,7 @@ async function main() {
       organizations: {
         create: {
           organizationId: demoOrg.id,
-          role: Role.ADMIN,
+          role: 'ADMIN',
         },
       },
     },
@@ -130,8 +130,8 @@ async function main() {
   const testSubscription = await prisma.subscription.create({
     data: {
       organizationId: testOrg.id,
-      planType: PlanType.PREMIUM_10M,
-      status: SubscriptionStatus.ACTIVE,
+      planType: 'PREMIUM_10M',
+      status: 'ACTIVE',
       stripeCustomerId: 'cus_test_123',
       stripeSubscriptionId: 'sub_test_123',
       currentPeriodStart: new Date(),
@@ -151,8 +151,8 @@ async function main() {
   const demoSubscription = await prisma.subscription.create({
     data: {
       organizationId: demoOrg.id,
-      planType: PlanType.PREMIUM_20M,
-      status: SubscriptionStatus.ACTIVE,
+      planType: 'PREMIUM_20M',
+      status: 'ACTIVE',
       stripeCustomerId: 'cus_demo_123',
       stripeSubscriptionId: 'sub_demo_123',
       currentPeriodStart: new Date(),
@@ -186,7 +186,7 @@ async function main() {
         email: 'pending1@test-org.com',
         token: 'invite_token_1',
         organizationId: testOrg.id,
-        role: Role.MEMBER,
+        role: 'MEMBER',
         invitedById: adminUser.id,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
@@ -194,7 +194,7 @@ async function main() {
         email: 'pending2@test-org.com',
         token: 'invite_token_2',
         organizationId: testOrg.id,
-        role: Role.DEPARTMENT_MANAGER,
+        role: 'DEPARTMENT_MANAGER',
         invitedById: adminUser.id,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
@@ -211,21 +211,21 @@ async function main() {
         orgId: testOrg.id,
         action: 'user.signup',
         resource: `user:${adminUser.id}`,
-        metadata: { email: adminUser.email },
+        metadata: JSON.stringify({ email: adminUser.email }),
       },
       {
         userId: adminUser.id,
         orgId: testOrg.id,
         action: 'organization.created',
         resource: `organization:${testOrg.id}`,
-        metadata: { name: testOrg.name },
+        metadata: JSON.stringify({ name: testOrg.name }),
       },
       {
         userId: adminUser.id,
         orgId: testOrg.id,
         action: 'subscription.created',
         resource: `subscription:${testSubscription.id}`,
-        metadata: { planType: PlanType.PREMIUM_10M },
+        metadata: JSON.stringify({ planType: 'PREMIUM_10M' }),
       },
     ],
   })

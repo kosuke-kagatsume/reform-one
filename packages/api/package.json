@@ -14,13 +14,13 @@
     "generate-openapi": "ts-node scripts/generate-openapi.ts"
   },
   "dependencies": {
-    "@reform-one/auth": "workspace:*",
-    "@reform-one/database": "workspace:*",
     "zod": "^3.23.8",
-    "zod-to-openapi": "^6.0.0"
+    "@asteasolutions/zod-to-openapi": "^7.0.0",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.24",
+    "@types/js-yaml": "^4.0.9",
     "eslint": "^8.57.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

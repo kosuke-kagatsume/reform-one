@@ -15,4 +15,34 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-export type { Role, SubscriptionStatus, PlanType, ContentStatus } from '@prisma/client'
+// Export custom enum types for SQLite
+export const Role = {
+  ADMIN: 'ADMIN',
+  MEMBER: 'MEMBER',
+  DEPARTMENT_MANAGER: 'DEPARTMENT_MANAGER',
+} as const
+
+export const SubscriptionStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  CANCELLED: 'CANCELLED',
+  PENDING: 'PENDING',
+} as const
+
+export const PlanType = {
+  PREMIUM_10M: 'PREMIUM_10M',
+  PREMIUM_20M: 'PREMIUM_20M',
+  BASIC: 'BASIC',
+} as const
+
+export const ContentStatus = {
+  DRAFT: 'DRAFT',
+  REVIEW: 'REVIEW',
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+} as const
+
+export type Role = typeof Role[keyof typeof Role]
+export type SubscriptionStatus = typeof SubscriptionStatus[keyof typeof SubscriptionStatus]
+export type PlanType = typeof PlanType[keyof typeof PlanType]
+export type ContentStatus = typeof ContentStatus[keyof typeof ContentStatus]

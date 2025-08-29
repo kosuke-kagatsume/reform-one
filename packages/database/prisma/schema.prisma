@@ -3,35 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-// Enums
-enum Role {
-  ADMIN
-  MEMBER
-  DEPARTMENT_MANAGER
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  SUSPENDED
-  CANCELLED
-  PENDING
-}
-
-enum PlanType {
-  PREMIUM_10M
-  PREMIUM_20M
-  BASIC
-}
-
-enum ContentStatus {
-  DRAFT
-  REVIEW
-  PUBLISHED
-  ARCHIVED
 }
 
 // Organizations
@@ -39,7 +12,7 @@ model Organization {
   id                String   @id @default(cuid())
   name              String
   slug              String   @unique
-  domainRestriction String[]
+  domainRestriction String   @default("[]") // JSON string for SQLite
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
@@ -57,8 +30,8 @@ model OrganizationSettings {
   organizationId    String   @unique
   enforceMfa        Boolean  @default(false)
   seatLimit         Int?     // null = unlimited
-  allowedDomains    String[]
-  customRoles       Json?    // Custom role definitions
+  allowedDomains    String   @default("[]") // JSON string for SQLite
+  customRoles       String?  // JSON string for custom role definitions
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
@@ -88,7 +61,7 @@ model User {
 model UserOrganization {
   userId         String
   organizationId String
-  role           Role     @default(MEMBER)
+  role           String   @default("MEMBER") // ADMIN, MEMBER, DEPARTMENT_MANAGER
   departmentId   String?
   joinedAt       DateTime @default(now())
   
@@ -121,7 +94,7 @@ model Invitation {
   email          String
   token          String   @unique
   organizationId String
-  role           Role     @default(MEMBER)
+  role           String   @default("MEMBER") // ADMIN, MEMBER, DEPARTMENT_MANAGER
   invitedById    String
   expiresAt      DateTime
   acceptedAt     DateTime?
@@ -136,18 +109,18 @@ model Invitation {
 
 // Billing & Subscriptions
 model Subscription {
-  id                 String             @id @default(cuid())
+  id                 String   @id @default(cuid())
   organizationId     String
-  planType           PlanType
-  status             SubscriptionStatus @default(PENDING)
+  planType           String   // PREMIUM_10M, PREMIUM_20M, BASIC
+  status             String   @default("PENDING") // ACTIVE, SUSPENDED, CANCELLED, PENDING
   stripeCustomerId   String?
-  stripeSubscriptionId String?          @unique
+  stripeSubscriptionId String? @unique
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
   cancelAt           DateTime?
   canceledAt         DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
   
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   entitlements Entitlement[]
@@ -214,7 +187,7 @@ model AuditLog {
   orgId        String?
   action       String   // user.login, billing.upgrade, article.publish, etc
   resource     String?  // article:123, subscription:456
-  metadata     Json?
+  metadata     String?  // JSON string for SQLite
   ip           String?
   userAgent    String?
   timestamp    DateTime @default(now())
