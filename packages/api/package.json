@@ -1,0 +1,28 @@
+{
+  "name": "@reform-one/api",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "openapi.yaml"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint . --ext .ts",
+    "generate-openapi": "ts-node scripts/generate-openapi.ts"
+  },
+  "dependencies": {
+    "@reform-one/auth": "workspace:*",
+    "@reform-one/database": "workspace:*",
+    "zod": "^3.23.8",
+    "zod-to-openapi": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "eslint": "^8.57.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
