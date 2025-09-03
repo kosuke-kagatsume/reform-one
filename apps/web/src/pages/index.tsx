@@ -1,4 +1,3 @@
-import { Layout } from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,12 +12,13 @@ import {
   ArrowRight,
   Zap,
   Lock,
-  BarChart3
+  BarChart3,
+  Newspaper
 } from 'lucide-react'
 
 export default function Home() {
   return (
-    <Layout>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-b from-slate-50 to-white py-20">
         <div className="container mx-auto px-4">
@@ -39,13 +39,13 @@ export default function Home() {
             </p>
             <div className="flex gap-4 justify-center">
               <Button size="lg" asChild>
-                <Link href="/signup">
-                  無料で始める
+                <Link href="/login">
+                  ログイン
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="/demo">デモを見る</Link>
+                <Link href="/login">デモアカウントで試す</Link>
               </Button>
             </div>
           </div>
@@ -257,17 +257,17 @@ export default function Home() {
           </p>
           <div className="flex gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild>
-              <Link href="/signup">
-                無料トライアルを開始
+              <Link href="/login">
+                今すぐログイン
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20" asChild>
-              <Link href="/contact">お問い合わせ</Link>
+              <Link href="/login">デモアカウント</Link>
             </Button>
           </div>
         </div>
       </section>
-    </Layout>
+    </div>
   )
 }
