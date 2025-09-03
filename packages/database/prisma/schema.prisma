@@ -12,6 +12,7 @@ model Organization {
   id                String   @id @default(cuid())
   name              String
   slug              String   @unique
+  type              String   @default("CUSTOMER") // REFORM_COMPANY, CUSTOMER
   domainRestriction String   @default("[]") // JSON string for SQLite
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -21,8 +22,10 @@ model Organization {
   settings      OrganizationSettings?
   invitations   Invitation[]
   auditLogs     AuditLog[]
+  departments   Department[]
   
   @@index([slug])
+  @@index([type])
 }
 
 model OrganizationSettings {
@@ -38,11 +41,29 @@ model OrganizationSettings {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
+// Departments (for Reform Company employees)
+model Department {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   // 企画開発部, 編集部, 管理部
+  code           String   // PLANNING, EDITORIAL, MANAGEMENT
+  permissions    String   @default("[]") // JSON string for permissions
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        UserOrganization[]
+  
+  @@unique([organizationId, code])
+  @@index([organizationId])
+}
+
 // Users
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String?
+  userType      String   @default("CUSTOMER") // EMPLOYEE, CUSTOMER, EXTERNAL_INSTRUCTOR
   password      String?  // null for magic link users
   mfaEnabled    Boolean  @default(false)
   mfaSecret     String?
@@ -56,6 +77,7 @@ model User {
   invitations   Invitation[]
   
   @@index([email])
+  @@index([userType])
 }
 
 model UserOrganization {
@@ -67,10 +89,12 @@ model UserOrganization {
   
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   
   @@id([userId, organizationId])
   @@index([organizationId])
   @@index([userId])
+  @@index([departmentId])
 }
 
 // Sessions
@@ -111,8 +135,13 @@ model Invitation {
 model Subscription {
   id                 String   @id @default(cuid())
   organizationId     String
-  planType           String   // PREMIUM_10M, PREMIUM_20M, BASIC
+  planType           String   // STARTER, PREMIUM, ENTERPRISE
   status             String   @default("PENDING") // ACTIVE, SUSPENDED, CANCELLED, PENDING
+  basePrice          Float    // 基本価格
+  discountPercent    Float    @default(0) // 割引率 (0-100)
+  discountAmount     Float    @default(0) // 割引額
+  finalPrice         Float    // 最終価格
+  userLimit          Int?     // null = unlimited
   stripeCustomerId   String?
   stripeSubscriptionId String? @unique
   currentPeriodStart DateTime

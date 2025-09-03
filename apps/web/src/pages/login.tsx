@@ -27,19 +27,43 @@ export default function Login() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // For demo purposes, check against test accounts
+      // Updated test accounts with new schema
       const validAccounts = [
-        { email: 'admin@test-org.com', password: 'Admin123!' },
-        { email: 'manager@test-org.com', password: 'User123!' },
-        { email: 'member@test-org.com', password: 'User123!' }
+        // Reform Company employees
+        { email: 'admin@reform-s.co.jp', password: 'Admin123!', userType: 'EMPLOYEE', role: 'ADMIN' },
+        { email: 'planning@reform-s.co.jp', password: 'User123!', userType: 'EMPLOYEE', role: 'DEPARTMENT_MANAGER' },
+        { email: 'editor@reform-s.co.jp', password: 'User123!', userType: 'EMPLOYEE', role: 'MEMBER' },
+        // Heavy customers
+        { email: 'admin@ohte-reform.co.jp', password: 'Admin123!', userType: 'CUSTOMER', role: 'ADMIN' },
+        { email: 'user@ohte-reform.co.jp', password: 'User123!', userType: 'CUSTOMER', role: 'MEMBER' },
+        // Light customers
+        { email: 'tanaka@tanaka-koumuten.jp', password: 'User123!', userType: 'CUSTOMER', role: 'ADMIN' },
+        // Demo accounts
+        { email: 'admin@test-org.com', password: 'Admin123!', userType: 'CUSTOMER', role: 'ADMIN' },
+        { email: 'manager@test-org.com', password: 'User123!', userType: 'CUSTOMER', role: 'DEPARTMENT_MANAGER' },
+        { email: 'member@test-org.com', password: 'User123!', userType: 'CUSTOMER', role: 'MEMBER' },
+        // External instructor
+        { email: 'instructor@external.com', password: 'User123!', userType: 'EXTERNAL_INSTRUCTOR', role: 'MEMBER' }
       ]
       
-      const isValid = validAccounts.some(
-        account => account.email === email && account.password === password
+      const account = validAccounts.find(
+        acc => acc.email === email && acc.password === password
       )
       
-      if (isValid) {
-        router.push('/dashboard')
+      if (account) {
+        // Route based on user type
+        if (account.userType === 'EMPLOYEE') {
+          router.push('/admin/dashboard')
+        } else if (account.userType === 'EXTERNAL_INSTRUCTOR') {
+          router.push('/instructor/dashboard')
+        } else {
+          // Customer - check if heavy or light user
+          if (['admin@ohte-reform.co.jp', 'user@ohte-reform.co.jp', 'admin@test-org.com', 'manager@test-org.com', 'member@test-org.com'].includes(account.email)) {
+            router.push('/dashboard') // Heavy user dashboard
+          } else {
+            router.push('/dashboard/simple') // Light user dashboard
+          }
+        }
       } else {
         setError('メールアドレスまたはパスワードが正しくありません')
       }
@@ -50,17 +74,31 @@ export default function Login() {
     }
   }
 
-  const fillDemoAccount = (accountType: 'admin' | 'manager' | 'member') => {
-    const accounts = {
-      admin: { email: 'admin@test-org.com', password: 'Admin123!' },
-      manager: { email: 'manager@test-org.com', password: 'User123!' },
-      member: { email: 'member@test-org.com', password: 'User123!' }
+  const fillDemoAccount = (accountType: string) => {
+    const accounts: { [key: string]: { email: string; password: string }} = {
+      // Reform Company employees
+      'reform-admin': { email: 'admin@reform-s.co.jp', password: 'Admin123!' },
+      'reform-planning': { email: 'planning@reform-s.co.jp', password: 'User123!' },
+      'reform-editor': { email: 'editor@reform-s.co.jp', password: 'User123!' },
+      // Heavy customers
+      'heavy-admin': { email: 'admin@ohte-reform.co.jp', password: 'Admin123!' },
+      'heavy-user': { email: 'user@ohte-reform.co.jp', password: 'User123!' },
+      // Light customer
+      'light-owner': { email: 'tanaka@tanaka-koumuten.jp', password: 'User123!' },
+      // Demo accounts
+      'demo-admin': { email: 'admin@test-org.com', password: 'Admin123!' },
+      'demo-manager': { email: 'manager@test-org.com', password: 'User123!' },
+      'demo-member': { email: 'member@test-org.com', password: 'User123!' },
+      // External instructor
+      'instructor': { email: 'instructor@external.com', password: 'User123!' }
     }
     
     const account = accounts[accountType]
-    setEmail(account.email)
-    setPassword(account.password)
-    setError('')
+    if (account) {
+      setEmail(account.email)
+      setPassword(account.password)
+      setError('')
+    }
   }
 
   return (
@@ -188,16 +226,16 @@ export default function Login() {
             </CardFooter>
           </Card>
 
-          <div className="mt-8">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-slate-700 mb-3">🎯 デモアカウントで試す</p>
+          <div className="mt-8 space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-blue-900 mb-3">🏢 リフォーム産業新聞社 社員</p>
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoAccount('admin')}
-                  className="text-xs"
+                  onClick={() => fillDemoAccount('reform-admin')}
+                  className="text-xs bg-white hover:bg-blue-50"
                 >
                   管理者
                 </Button>
@@ -205,8 +243,80 @@ export default function Login() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoAccount('manager')}
-                  className="text-xs"
+                  onClick={() => fillDemoAccount('reform-planning')}
+                  className="text-xs bg-white hover:bg-blue-50"
+                >
+                  企画部長
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoAccount('reform-editor')}
+                  className="text-xs bg-white hover:bg-blue-50"
+                >
+                  編集スタッフ
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-purple-900 mb-3">🎓 ヘビーユーザー（研修・サロン参加）</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoAccount('heavy-admin')}
+                  className="text-xs bg-white hover:bg-purple-50"
+                >
+                  大手リフォーム管理者
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoAccount('heavy-user')}
+                  className="text-xs bg-white hover:bg-purple-50"
+                >
+                  大手リフォーム社員
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-green-900 mb-3">📰 ライトユーザー（電子版のみ）</p>
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoAccount('light-owner')}
+                  className="text-xs bg-white hover:bg-green-50"
+                >
+                  田中工務店
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-slate-700 mb-3">🎯 デモアカウント（テスト用）</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoAccount('demo-admin')}
+                  className="text-xs bg-white hover:bg-slate-100"
+                >
+                  管理者
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoAccount('demo-manager')}
+                  className="text-xs bg-white hover:bg-slate-100"
                 >
                   マネージャー
                 </Button>
@@ -214,16 +324,17 @@ export default function Login() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoAccount('member')}
-                  className="text-xs"
+                  onClick={() => fillDemoAccount('demo-member')}
+                  className="text-xs bg-white hover:bg-slate-100"
                 >
                   メンバー
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-3">
-                ボタンをクリックすると、自動的にフォームに入力されます
-              </p>
             </div>
+
+            <p className="text-xs text-slate-500 text-center">
+              ボタンをクリックすると、自動的にフォームに入力されます
+            </p>
           </div>
         </div>
       </div>
