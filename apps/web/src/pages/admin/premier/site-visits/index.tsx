@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { AdminLayout } from '@/components/layout/admin-layout'
+import AdminLayout from '@/components/layout/admin-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +23,7 @@ import {
   Calendar,
   MapPin,
   Users,
-  Yen,
+  JapaneseYen,
   Building2,
   Edit,
   Trash2
@@ -397,7 +397,7 @@ export default function AdminSiteVisitsPage() {
                           <span>{visit.participantCount || 0} / {visit.capacity}名</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Yen className="h-4 w-4" />
+                          <JapaneseYen className="h-4 w-4" />
                           <span>¥{formatPrice(visit.price)}</span>
                         </div>
                       </div>

@@ -10,7 +10,7 @@ import {
   Clock,
   MapPin,
   Users,
-  Yen,
+  JapaneseYen,
   CheckCircle,
   Building2,
   ArrowRight
@@ -207,7 +207,7 @@ export default function SiteVisitsPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Yen className="h-4 w-4 flex-shrink-0" />
+                          <JapaneseYen className="h-4 w-4 flex-shrink-0" />
                           <span className="font-semibold text-slate-900">
                             ¥{formatPrice(visit.price)}
                           </span>

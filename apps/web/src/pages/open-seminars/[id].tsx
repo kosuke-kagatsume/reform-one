@@ -12,7 +12,7 @@ import {
   Clock,
   MapPin,
   Users,
-  Yen,
+  JapaneseYen,
   ArrowLeft,
   Building2,
   CheckCircle
@@ -275,7 +275,7 @@ export default function OpenSeminarDetailPage() {
                   <Card className="sticky top-8">
                     <CardHeader>
                       <div className="flex items-center gap-2 mb-2">
-                        <Yen className="h-6 w-6" />
+                        <JapaneseYen className="h-6 w-6" />
                         <span className="text-3xl font-bold">
                           {seminar.price === 0 ? '無料' : `¥${formatPrice(seminar.price)}`}
                         </span>

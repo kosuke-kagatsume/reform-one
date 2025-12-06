@@ -9,7 +9,7 @@ import {
   Clock,
   MapPin,
   Users,
-  Yen,
+  JapaneseYen,
   ArrowRight,
   Building2
 } from 'lucide-react'
@@ -189,7 +189,7 @@ export default function OpenSeminarsPage() {
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
-                              <Yen className="h-5 w-5 text-slate-600" />
+                              <JapaneseYen className="h-5 w-5 text-slate-600" />
                               <span className="text-2xl font-bold">
                                 {seminar.price === 0 ? '無料' : `¥${formatPrice(seminar.price)}`}
                               </span>
