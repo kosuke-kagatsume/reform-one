@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Layout } from '@/components/layout/layout'
@@ -19,7 +19,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
@@ -28,6 +28,16 @@ export default function Login() {
       const result = await login(email, password)
 
       if (result.success) {
+        // リフォーム産業新聞社のユーザーは管理画面へ、それ以外はダッシュボードへ
+        // ログイン後のユーザー情報からリダイレクト先を判定
+        const savedUser = localStorage.getItem('premier_user')
+        if (savedUser) {
+          const userData = JSON.parse(savedUser)
+          if (userData.organization?.type === 'REFORM_COMPANY') {
+            router.push('/admin/premier')
+            return
+          }
+        }
         router.push('/dashboard')
       } else {
         setError(result.error || 'ログインに失敗しました')
@@ -37,9 +47,9 @@ export default function Login() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [email, password, login, router])
 
-  const fillDemoAccount = (accountType: string) => {
+  const fillDemoAccount = useCallback((accountType: string) => {
     const accounts: { [key: string]: { email: string; password: string }} = {
       'reform-admin': { email: 'admin@the-reform.co.jp', password: 'Admin123!' },
       'expert-admin': { email: 'admin@expert-reform.co.jp', password: 'Admin123!' },
@@ -53,7 +63,7 @@ export default function Login() {
       setPassword(account.password)
       setError('')
     }
-  }
+  }, [])
 
   const loading = isLoading || authLoading
 
@@ -78,8 +88,8 @@ export default function Login() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3 flex items-start gap-2">
-                    <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3 flex items-start gap-2" role="alert" aria-live="polite">
+                    <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" aria-hidden="true" />
                     <span className="text-sm">{error}</span>
                   </div>
                 )}

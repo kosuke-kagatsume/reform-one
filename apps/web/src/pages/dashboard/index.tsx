@@ -62,7 +62,11 @@ export default function Dashboard() {
     if (!isLoading && !isAuthenticated) {
       router.push('/login')
     }
-  }, [isLoading, isAuthenticated, router])
+    // リフォーム産業新聞社のユーザーは管理画面にリダイレクト
+    if (!isLoading && isAuthenticated && isReformCompany) {
+      router.push('/admin/premier')
+    }
+  }, [isLoading, isAuthenticated, isReformCompany, router])
 
   useEffect(() => {
     if (isAuthenticated) {

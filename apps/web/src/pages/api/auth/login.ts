@@ -1,16 +1,28 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import {
+  success,
+  error,
+  methodNotAllowed,
+  internalError,
+  ErrorCodes,
+} from '@/lib/api-response'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return methodNotAllowed(res, ['POST'])
   }
 
   const { email, password } = req.body
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' })
+    return error(
+      res,
+      ErrorCodes.MISSING_REQUIRED_FIELD,
+      'メールアドレスとパスワードは必須です',
+      { fields: ['email', 'password'] }
+    )
   }
 
   try {
@@ -33,21 +45,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' })
+      return error(
+        res,
+        ErrorCodes.INVALID_CREDENTIALS,
+        'メールアドレスまたはパスワードが正しくありません'
+      )
     }
 
     if (!user.password) {
-      return res.status(401).json({ error: 'Please use magic link to login' })
+      return error(
+        res,
+        ErrorCodes.INVALID_CREDENTIALS,
+        'マジックリンクでログインしてください'
+      )
     }
 
     const isValid = await bcrypt.compare(password, user.password)
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid email or password' })
+      return error(
+        res,
+        ErrorCodes.INVALID_CREDENTIALS,
+        'メールアドレスまたはパスワードが正しくありません'
+      )
     }
 
     const userOrg = user.organizations[0]
     if (!userOrg) {
-      return res.status(401).json({ error: 'User has no organization' })
+      return error(
+        res,
+        ErrorCodes.FORBIDDEN,
+        '組織に所属していません'
+      )
     }
 
     const subscription = userOrg.organization.subscriptions[0] || null
@@ -58,6 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name: user.name,
       userType: user.userType,
       emailVerified: user.emailVerified,
+      mfaEnabled: user.mfaEnabled,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       organization: {
@@ -92,14 +121,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         userId: user.id,
         orgId: userOrg.organization.id,
         action: 'user.login',
-        ip: req.headers['x-forwarded-for'] as string || req.socket.remoteAddress,
+        ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket?.remoteAddress,
         userAgent: req.headers['user-agent']
       }
     })
 
-    return res.status(200).json({ user: responseUser })
-  } catch (error) {
-    console.error('Login error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return success(res, { user: responseUser }, 'ログインに成功しました')
+  } catch (err) {
+    console.error('Login error:', err)
+    return internalError(res)
   }
 }

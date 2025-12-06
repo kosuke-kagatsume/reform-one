@@ -57,17 +57,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         body: JSON.stringify({ email, password })
       })
 
-      const data = await response.json()
+      const result = await response.json()
 
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Login failed' }
+      if (!response.ok || !result.success) {
+        return { success: false, error: result.error?.message || result.error || 'ログインに失敗しました' }
       }
 
-      setUser(data.user)
-      localStorage.setItem('premier_user', JSON.stringify(data.user))
+      setUser(result.data.user)
+      localStorage.setItem('premier_user', JSON.stringify(result.data.user))
       return { success: true }
-    } catch (error) {
-      return { success: false, error: 'Network error' }
+    } catch {
+      return { success: false, error: 'ネットワークエラーが発生しました' }
     } finally {
       setIsLoading(false)
     }
