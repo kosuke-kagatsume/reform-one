@@ -11,6 +11,10 @@ export type WidgetType =
   | 'materials-catalog'
   | 'store'
   | 'fair-registration'
+  // Premier subscription widgets
+  | 'upcoming-seminars'
+  | 'recent-archives'
+  | 'community-updates'
 
 export interface Widget {
   id: string
@@ -89,6 +93,31 @@ export const defaultWidgets: Widget[] = [
     title: 'コミュニティ',
     enabled: false,
     order: 7,
+    width: 'full'
+  },
+  // Premier subscription default widgets
+  {
+    id: 'upcoming-seminars',
+    type: 'upcoming-seminars',
+    title: '今後のセミナー',
+    enabled: true,
+    order: 8,
+    width: 'half'
+  },
+  {
+    id: 'recent-archives',
+    type: 'recent-archives',
+    title: '最新のアーカイブ',
+    enabled: true,
+    order: 9,
+    width: 'half'
+  },
+  {
+    id: 'community-updates',
+    type: 'community-updates',
+    title: 'コミュニティ更新',
+    enabled: true,
+    order: 10,
     width: 'full'
   }
 ]

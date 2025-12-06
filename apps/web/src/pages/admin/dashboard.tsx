@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings, 
+import {
+  Users,
+  FileText,
+  BarChart3,
+  Settings,
   Building,
   BookOpen,
   ShoppingBag,
@@ -21,7 +21,8 @@ import {
   DollarSign,
   UserCheck,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Newspaper
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -134,6 +135,12 @@ export default function AdminDashboard() {
       title: 'コンテンツ管理',
       icon: FileText,
       href: '/admin/content'
+    },
+    {
+      title: '電子新聞',
+      icon: Newspaper,
+      href: '/admin/newspaper',
+      badge: '新'
     },
     {
       title: '研修管理',

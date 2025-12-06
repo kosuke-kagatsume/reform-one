@@ -1,0 +1,601 @@
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
+import { PremierAdminLayout } from '@/components/layout/premier-admin-layout'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/lib/auth-context'
+import {
+  ArrowLeft,
+  Save,
+  Building,
+  Users,
+  CreditCard,
+  Mail,
+  Calendar,
+  Trash2,
+  UserPlus,
+  Link as LinkIcon,
+  Clock
+} from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+
+interface Subscription {
+  id: string
+  planType: string
+  status: string
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  basePrice: number
+  finalPrice: number
+}
+
+interface Member {
+  userId: string
+  role: string
+  joinedAt: string
+  user: {
+    id: string
+    name: string | null
+    email: string
+  }
+}
+
+interface Invitation {
+  id: string
+  email: string
+  role: string
+  token: string
+  status: string
+  expiresAt: string
+  createdAt: string
+}
+
+interface Organization {
+  id: string
+  name: string
+  slug: string
+  type: string
+  createdAt: string
+  subscriptions: Subscription[]
+  users: Member[]
+  invitations: Invitation[]
+}
+
+export default function OrganizationDetailPage() {
+  const router = useRouter()
+  const { id } = router.query
+  const { isLoading, isAuthenticated, isReformCompany } = useAuth()
+  const [organization, setOrganization] = useState<Organization | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
+
+  const [formData, setFormData] = useState({
+    name: '',
+    slug: '',
+    planType: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  })
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login')
+    }
+  }, [isLoading, isAuthenticated, router])
+
+  useEffect(() => {
+    if (isAuthenticated && isReformCompany && id) {
+      fetchOrganization()
+    }
+  }, [isAuthenticated, isReformCompany, id])
+
+  const fetchOrganization = async () => {
+    try {
+      const res = await fetch(`/api/admin/premier/organizations/${id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setOrganization(data.organization)
+
+        const activeSubscription = data.organization.subscriptions.find(
+          (s: Subscription) => s.status === 'ACTIVE'
+        )
+
+        setFormData({
+          name: data.organization.name,
+          slug: data.organization.slug,
+          planType: activeSubscription?.planType || '',
+          status: activeSubscription?.status || '',
+          startDate: activeSubscription?.currentPeriodStart?.split('T')[0] || '',
+          endDate: activeSubscription?.currentPeriodEnd?.split('T')[0] || ''
+        })
+      } else {
+        setError('組織が見つかりません')
+      }
+    } catch (error) {
+      console.error('Failed to fetch organization:', error)
+      setError('データの取得に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSaving(true)
+
+    try {
+      const res = await fetch(`/api/admin/premier/organizations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      if (res.ok) {
+        fetchOrganization()
+        setError('')
+      } else {
+        const data = await res.json()
+        setError(data.error || '更新に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to update organization:', error)
+      setError('更新に失敗しました')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/premier/organizations/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        router.push('/admin/premier/organizations')
+      } else {
+        const data = await res.json()
+        setError(data.error || '削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to delete organization:', error)
+      setError('削除に失敗しました')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const copyInviteUrl = (token: string) => {
+    const fullUrl = window.location.origin + `/invite/${token}`
+    navigator.clipboard.writeText(fullUrl)
+    alert('招待URLをコピーしました')
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(price)
+  }
+
+  if (isLoading || loading) {
+    return (
+      <PremierAdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-slate-600">読み込み中...</p>
+        </div>
+      </PremierAdminLayout>
+    )
+  }
+
+  if (!organization) {
+    return (
+      <PremierAdminLayout>
+        <div className="text-center py-12">
+          <p className="text-slate-600">組織が見つかりません</p>
+          <Button asChild className="mt-4">
+            <Link href="/admin/premier/organizations">一覧に戻る</Link>
+          </Button>
+        </div>
+      </PremierAdminLayout>
+    )
+  }
+
+  const activeSubscription = organization.subscriptions.find(s => s.status === 'ACTIVE')
+  const pendingInvitations = organization.invitations.filter(i => i.status === 'PENDING')
+
+  return (
+    <PremierAdminLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/admin/premier/organizations">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{organization.name}</h1>
+              <p className="text-slate-600">組織詳細・設定</p>
+            </div>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" disabled={deleting}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                組織を削除
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>組織を削除しますか？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  この操作は取り消せません。組織に関連するすべてのデータ（メンバー、購読情報など）も削除されます。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                  削除する
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-100 p-3 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{organization.users.length}</p>
+                  <p className="text-sm text-slate-600">メンバー数</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-green-100 p-3 rounded-lg">
+                  <CreditCard className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <Badge variant={activeSubscription?.planType === 'EXPERT' ? 'default' : 'secondary'}>
+                    {activeSubscription?.planType === 'EXPERT' ? 'エキスパート' : 'スタンダード'}
+                  </Badge>
+                  <p className="text-sm text-slate-600 mt-1">契約プラン</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-purple-100 p-3 rounded-lg">
+                  <Mail className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{pendingInvitations.length}</p>
+                  <p className="text-sm text-slate-600">保留中の招待</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-orange-100 p-3 rounded-lg">
+                  <Calendar className="h-6 w-6 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    {activeSubscription ? formatDate(activeSubscription.currentPeriodEnd) : '-'}
+                  </p>
+                  <p className="text-sm text-slate-600">契約終了日</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="overview">
+              <Building className="h-4 w-4 mr-2" />
+              基本情報
+            </TabsTrigger>
+            <TabsTrigger value="members">
+              <Users className="h-4 w-4 mr-2" />
+              メンバー
+            </TabsTrigger>
+            <TabsTrigger value="invitations">
+              <Mail className="h-4 w-4 mr-2" />
+              招待
+            </TabsTrigger>
+            <TabsTrigger value="subscription">
+              <CreditCard className="h-4 w-4 mr-2" />
+              購読
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>組織情報の編集</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">組織名</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="slug">識別子</Label>
+                      <Input
+                        id="slug"
+                        value={formData.slug}
+                        onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="planType">プラン</Label>
+                      <select
+                        id="planType"
+                        value={formData.planType}
+                        onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-md"
+                      >
+                        <option value="STANDARD">スタンダード</option>
+                        <option value="EXPERT">エキスパート</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">ステータス</Label>
+                      <select
+                        id="status"
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-md"
+                      >
+                        <option value="ACTIVE">アクティブ</option>
+                        <option value="CANCELLED">キャンセル</option>
+                        <option value="EXPIRED">期限切れ</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">契約開始日</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">契約終了日</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={saving}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {saving ? '保存中...' : '変更を保存'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="members" className="mt-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>メンバー一覧</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {organization.users.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-500">メンバーがいません</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {organization.users.map((member) => (
+                      <div
+                        key={member.userId}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="bg-slate-100 p-2 rounded-full">
+                            <Users className="h-5 w-5 text-slate-600" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{member.user.name || member.user.email}</p>
+                              {member.role === 'ADMIN' && (
+                                <Badge variant="secondary" className="text-xs">管理者</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-slate-500">{member.user.email}</p>
+                          </div>
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          <Clock className="h-3 w-3 inline mr-1" />
+                          {formatDate(member.joinedAt)}から
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="invitations" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>招待一覧</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {organization.invitations.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Mail className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-500">招待がありません</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {organization.invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2 rounded-full ${
+                            invitation.status === 'PENDING' ? 'bg-yellow-100' :
+                            invitation.status === 'ACCEPTED' ? 'bg-green-100' : 'bg-slate-100'
+                          }`}>
+                            <Mail className={`h-5 w-5 ${
+                              invitation.status === 'PENDING' ? 'text-yellow-600' :
+                              invitation.status === 'ACCEPTED' ? 'text-green-600' : 'text-slate-600'
+                            }`} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{invitation.email}</p>
+                              <Badge variant={
+                                invitation.status === 'PENDING' ? 'secondary' :
+                                invitation.status === 'ACCEPTED' ? 'default' : 'outline'
+                              } className="text-xs">
+                                {invitation.status === 'PENDING' ? '保留中' :
+                                 invitation.status === 'ACCEPTED' ? '承認済み' : '期限切れ'}
+                              </Badge>
+                              {invitation.role === 'ADMIN' && (
+                                <Badge variant="outline" className="text-xs">管理者</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-slate-500">
+                              有効期限: {formatDate(invitation.expiresAt)}
+                            </p>
+                          </div>
+                        </div>
+                        {invitation.status === 'PENDING' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyInviteUrl(invitation.token)}
+                          >
+                            <LinkIcon className="h-4 w-4 mr-2" />
+                            URLをコピー
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="subscription" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>購読履歴</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {organization.subscriptions.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <CreditCard className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-500">購読履歴がありません</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {organization.subscriptions.map((subscription) => (
+                      <div
+                        key={subscription.id}
+                        className="p-4 border rounded-lg"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={subscription.planType === 'EXPERT' ? 'default' : 'secondary'}>
+                              {subscription.planType === 'EXPERT' ? 'エキスパート' : 'スタンダード'}
+                            </Badge>
+                            <Badge variant={
+                              subscription.status === 'ACTIVE' ? 'default' :
+                              subscription.status === 'CANCELLED' ? 'destructive' : 'outline'
+                            }>
+                              {subscription.status === 'ACTIVE' ? 'アクティブ' :
+                               subscription.status === 'CANCELLED' ? 'キャンセル' : '期限切れ'}
+                            </Badge>
+                          </div>
+                          <p className="font-bold">{formatPrice(subscription.finalPrice)}/月</p>
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          <p>期間: {formatDate(subscription.currentPeriodStart)} 〜 {formatDate(subscription.currentPeriodEnd)}</p>
+                          <p>基本価格: {formatPrice(subscription.basePrice)} → {formatPrice(subscription.finalPrice)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </PremierAdminLayout>
+  )
+}

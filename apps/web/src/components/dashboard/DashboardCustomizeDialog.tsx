@@ -85,7 +85,10 @@ function getWidgetDescription(type: string): string {
     'digital-edition': '電子版へのアクセス',
     'materials-catalog': '建材カタログへのアクセス',
     store: '公式ストアへのアクセス',
-    'fair-registration': 'フェア来場登録'
+    'fair-registration': 'フェア来場登録',
+    'upcoming-seminars': '今後のセミナー予定を表示',
+    'recent-archives': '最新のアーカイブ動画を表示',
+    'community-updates': 'コミュニティの最新投稿を表示'
   }
   return descriptions[type] || ''
 }
