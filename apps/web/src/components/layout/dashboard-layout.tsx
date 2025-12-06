@@ -21,7 +21,14 @@ import {
   User,
   BookOpen,
   Package,
-  GraduationCap
+  GraduationCap,
+  Calendar,
+  Video,
+  MessageSquare,
+  Building2,
+  Wrench,
+  Award,
+  Mail
 } from 'lucide-react'
 
 interface DashboardLayoutProps {
@@ -35,13 +42,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: 'ダッシュボード', href: '/dashboard', icon: Home },
-    { name: '電子版', href: '/dashboard/digital-edition', icon: BookOpen },
-    { name: '建材カタログ', href: '/dashboard/materials-catalog', icon: Package },
-    { name: '研修プログラム', href: '/dashboard/training', icon: GraduationCap },
-    { name: '組織管理', href: '/dashboard/organization', icon: Building },
-    { name: 'ユーザー管理', href: '/dashboard/users', icon: Users },
+    { name: 'セミナー', href: '/dashboard/seminars', icon: Calendar },
+    { name: 'アーカイブ', href: '/dashboard/archives', icon: Video },
+    { name: 'コミュニティ', href: '/dashboard/community', icon: MessageSquare },
+    { name: 'データブック', href: '/dashboard/databooks', icon: FileText },
+    { name: 'ニュースレター', href: '/dashboard/newsletters', icon: Mail },
+    { name: '視察会', href: '/dashboard/site-visits', icon: Building2 },
+    { name: 'ツール', href: '/dashboard/tools', icon: Wrench },
+    { name: '資格・研修', href: '/dashboard/qualifications', icon: Award },
+    { name: 'メンバー管理', href: '/dashboard/members', icon: Users },
+    { name: '組織設定', href: '/dashboard/organization', icon: Building },
     { name: '請求・支払い', href: '/dashboard/billing', icon: CreditCard },
-    { name: 'レポート', href: '/dashboard/reports', icon: BarChart3 },
     { name: 'セキュリティ', href: '/dashboard/security', icon: Shield },
     { name: '設定', href: '/dashboard/settings', icon: Settings },
   ]
