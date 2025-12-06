@@ -201,6 +201,15 @@
 | CommunityMeeting | 定例会 |
 | Databook | データブック |
 | Newsletter | ニュースレター |
+| SiteVisit | 視察会 |
+| SiteVisitParticipant | 視察会参加者 |
+| Qualification | 資格 |
+| UserQualification | ユーザー資格受講権 |
+| Tool | ツール |
+| ToolUsageLog | ツール利用ログ |
+| Recommendation | おすすめ表示 |
+| RecommendationDismissal | おすすめ非表示記録 |
+| OpenSeminarRegistration | 外部セミナー申込 |
 
 ---
 
@@ -228,15 +237,47 @@
 
 ---
 
-## 未実装機能（Phase 3）
+## Phase 3 完了機能
 
-### Phase 3
-- [ ] 視察会申込・決済
-- [ ] 資格受講権管理
-- [ ] ツール追加機能
-- [ ] おすすめ表示（ポップアップ）
-- [ ] オープンセミナー（外部向け）
-- [ ] 既存会員データ移行（53社）
+### 視察会申込・決済
+| API | メソッド | 説明 |
+|-----|----------|------|
+| `/api/site-visits` | GET/POST | 視察会一覧取得・作成 |
+| `/api/site-visits/[id]` | GET/PUT/DELETE | 視察会詳細・更新・削除 |
+| `/api/site-visits/[id]/register` | POST | 視察会参加申込（Stripe決済対応） |
+| `/api/admin/premier/site-visits` | GET/POST | 管理者用視察会管理 |
+
+### 資格受講権管理
+| API | メソッド | 説明 |
+|-----|----------|------|
+| `/api/qualifications` | GET/POST | 資格一覧取得・作成 |
+| `/api/qualifications/[id]/enroll` | POST | 資格受講登録 |
+| `/api/admin/premier/qualifications` | GET/POST | 管理者用資格管理 |
+
+### ツール追加機能
+| API | メソッド | 説明 |
+|-----|----------|------|
+| `/api/tools` | GET/POST | ツール一覧取得・作成 |
+| `/api/tools/[slug]/use` | POST | ツール利用ログ記録 |
+| `/api/admin/premier/tools` | GET/POST | 管理者用ツール管理 |
+
+### おすすめ表示（ポップアップ）
+| API | メソッド | 説明 |
+|-----|----------|------|
+| `/api/recommendations` | GET/POST | おすすめ一覧取得・作成 |
+| `/api/recommendations/[id]/dismiss` | POST | おすすめ非表示設定 |
+| `/api/admin/premier/recommendations` | GET/POST | 管理者用おすすめ管理 |
+
+### オープンセミナー（外部向け）
+| API | メソッド | 説明 |
+|-----|----------|------|
+| `/api/open-seminars` | GET | 公開セミナー一覧（認証不要） |
+| `/api/open-seminars/[id]/register` | POST | 外部向け参加申込（Stripe決済対応） |
+
+### 既存会員データ移行
+| API | メソッド | 説明 |
+|-----|----------|------|
+| `/api/admin/premier/import/organizations` | POST | 組織一括インポート（JSON形式、dryRunサポート） |
 
 ---
 
@@ -309,6 +350,7 @@ npm run build
 
 | 日付 | 内容 |
 |------|------|
+| 2025-12-06 | Phase 3完了：視察会申込・決済、資格受講権管理、ツール追加、おすすめ表示、オープンセミナー、データ移行API |
 | 2025-12-06 | Phase 2完了：Stripe決済連携、更新通知システム、ニュースレター配信 |
 | 2025-12-06 | Resendメール送信機能追加（招待・セミナー告知・コミュニティ通知） |
 | 2025-12-06 | Supabase PostgreSQLへの移行完了 |
