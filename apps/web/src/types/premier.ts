@@ -21,6 +21,7 @@ export interface User {
   name: string | null
   userType: 'EMPLOYEE' | 'CUSTOMER'
   emailVerified: boolean
+  mfaEnabled?: boolean
   createdAt: Date
   updatedAt: Date
 }
