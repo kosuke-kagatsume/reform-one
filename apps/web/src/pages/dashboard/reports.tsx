@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,42 +27,33 @@ import {
 export default function Reports() {
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [selectedReport, setSelectedReport] = useState('overview')
+  const [loading, setLoading] = useState(true)
+  const [kpiData, setKpiData] = useState<any[]>([])
+  const [monthlyData, setMonthlyData] = useState<any[]>([])
+  const [serviceUsage, setServiceUsage] = useState<any[]>([])
+  const [topContent, setTopContent] = useState<any[]>([])
 
-  // Mock data
-  const kpiData = [
-    {
-      name: '総売上',
-      value: '¥12.4M',
-      change: '+15.3%',
-      trend: 'up',
-      icon: DollarSign,
-      sparkline: [20, 30, 25, 35, 30, 40, 45]
-    },
-    {
-      name: 'アクティブユーザー',
-      value: '1,234',
-      change: '+8.2%',
-      trend: 'up',
-      icon: Users,
-      sparkline: [100, 120, 110, 130, 125, 140, 145]
-    },
-    {
-      name: '平均セッション時間',
-      value: '24.5分',
-      change: '-2.1%',
-      trend: 'down',
-      icon: Clock,
-      sparkline: [30, 28, 29, 27, 26, 25, 24]
-    },
-    {
-      name: 'コンバージョン率',
-      value: '3.2%',
-      change: '+0.5%',
-      trend: 'up',
-      icon: TrendingUp,
-      sparkline: [2.5, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2]
+  useEffect(() => {
+    fetchReports()
+  }, [selectedPeriod])
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/dashboard/reports?period=${selectedPeriod}`)
+      if (res.ok) {
+        const data = await res.json()
+        setKpiData(data.kpiData || [])
+        setMonthlyData(data.monthlyData || [])
+        setServiceUsage(data.serviceUsage || [])
+        setTopContent(data.topContent || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch reports:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const reportTypes = [
     {
@@ -89,31 +80,6 @@ export default function Reports() {
       description: '各サービスの利用状況',
       icon: Package
     }
-  ]
-
-  const monthlyData = [
-    { month: '1月', users: 890, revenue: 980000, sessions: 12500 },
-    { month: '2月', users: 920, revenue: 1020000, sessions: 13200 },
-    { month: '3月', users: 980, revenue: 1100000, sessions: 14100 },
-    { month: '4月', users: 1050, revenue: 1180000, sessions: 15300 },
-    { month: '5月', users: 1120, revenue: 1250000, sessions: 16200 },
-    { month: '6月', users: 1180, revenue: 1320000, sessions: 17100 },
-    { month: '7月', users: 1234, revenue: 1400000, sessions: 18000 }
-  ]
-
-  const serviceUsage = [
-    { name: '電子版', users: 892, percentage: 72 },
-    { name: '建材トレンド', users: 456, percentage: 37 },
-    { name: '研修プログラム', users: 234, percentage: 19 },
-    { name: '公式ストア', users: 123, percentage: 10 }
-  ]
-
-  const topContent = [
-    { title: 'リフォーム市場動向2024', views: 3456, engagement: '高' },
-    { title: '補助金制度完全ガイド', views: 2890, engagement: '高' },
-    { title: '新建材カタログ', views: 2345, engagement: '中' },
-    { title: '施工事例集', views: 1987, engagement: '中' },
-    { title: '技術者研修プログラム', views: 1654, engagement: '低' }
   ]
 
   return (
@@ -200,7 +166,7 @@ export default function Reports() {
                   <div className="h-8">
                     <svg className="w-full h-full">
                       <polyline
-                        points={kpi.sparkline.map((val, idx) => 
+                        points={kpi.sparkline.map((val: number, idx: number) =>
                           `${idx * (100 / (kpi.sparkline.length - 1))},${32 - (val / Math.max(...kpi.sparkline)) * 28}`
                         ).join(' ')}
                         fill="none"

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import {
   FileText,
@@ -63,92 +63,38 @@ export default function ContentPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
   const [activeTab, setActiveTab] = useState('articles')
+  const [loading, setLoading] = useState(true)
+  const [articles, setArticles] = useState<any[]>([])
+  const [videos, setVideos] = useState<any[]>([])
+  const [stats, setStats] = useState<any[]>([])
 
-  const articles = [
-    {
-      id: 1,
-      title: '2024年リフォーム市場動向レポート',
-      category: '市場分析',
-      author: '山田太郎',
-      department: '編集部',
-      status: 'published',
-      views: 15234,
-      publishedAt: '2024-01-15',
-      updatedAt: '2時間前',
-      type: 'article'
-    },
-    {
-      id: 2,
-      title: '省エネリフォーム補助金制度の完全ガイド',
-      category: '制度・法規',
-      author: '佐藤花子',
-      department: '企画開発部',
-      status: 'draft',
-      views: 0,
-      publishedAt: null,
-      updatedAt: '1日前',
-      type: 'article'
-    },
-    {
-      id: 3,
-      title: '最新キッチンリフォームトレンド',
-      category: 'トレンド',
-      author: '鈴木一郎',
-      department: '編集部',
-      status: 'review',
-      views: 0,
-      publishedAt: null,
-      updatedAt: '3時間前',
-      type: 'article'
-    },
-    {
-      id: 4,
-      title: '職人不足問題への対応策',
-      category: '業界課題',
-      author: '田中美咲',
-      department: '編集部',
-      status: 'published',
-      views: 8921,
-      publishedAt: '2024-01-10',
-      updatedAt: '1週間前',
-      type: 'article'
-    },
-    {
-      id: 5,
-      title: 'デジタルツール活用事例集',
-      category: 'DX',
-      author: '高橋健',
-      department: '企画開発部',
-      status: 'scheduled',
-      views: 0,
-      publishedAt: '2024-02-01',
-      updatedAt: '5時間前',
-      type: 'article'
-    }
-  ]
+  useEffect(() => {
+    fetchContent()
+  }, [])
 
-  const videos = [
-    {
-      id: 1,
-      title: 'リフォーム現場の安全管理',
-      duration: '15:32',
-      author: '山田太郎',
-      status: 'published',
-      views: 3421,
-      publishedAt: '2024-01-12',
-      type: 'video'
-    },
-    {
-      id: 2,
-      title: '最新工具の使い方講座',
-      duration: '22:45',
-      author: '鈴木一郎',
-      status: 'processing',
-      views: 0,
-      publishedAt: null,
-      type: 'video'
+  const fetchContent = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/admin/content')
+      if (res.ok) {
+        const data = await res.json()
+        setArticles(data.articles || [])
+        setVideos(data.videos || [])
+        if (data.stats) {
+          setStats(data.stats.map((s: any) => ({
+            ...s,
+            icon: s.title === '総コンテンツ数' ? FileText :
+                  s.title === '公開中' ? CheckCircle :
+                  s.title === 'レビュー待ち' ? Clock : Eye
+          })))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch content:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -207,40 +153,24 @@ export default function ContentPage() {
     }
   }
 
-  const stats = [
-    {
-      title: '総コンテンツ数',
-      value: '1,234',
-      change: '+45',
-      changeLabel: '今月',
-      icon: FileText,
-      color: 'blue'
-    },
-    {
-      title: '公開中',
-      value: '892',
-      change: '+12',
-      changeLabel: '今週',
-      icon: CheckCircle,
-      color: 'green'
-    },
-    {
-      title: 'レビュー待ち',
-      value: '23',
-      change: '5',
-      changeLabel: '件',
-      icon: Clock,
-      color: 'yellow'
-    },
-    {
-      title: '総閲覧数',
-      value: '2.3M',
-      change: '+15%',
-      changeLabel: '前月比',
-      icon: Eye,
-      color: 'purple'
-    }
+  const defaultStats = [
+    { title: '総コンテンツ数', value: '0', change: '+0', changeLabel: '今月', icon: FileText, color: 'blue' },
+    { title: '公開中', value: '0', change: '+0', changeLabel: '今週', icon: CheckCircle, color: 'green' },
+    { title: 'レビュー待ち', value: '0', change: '0', changeLabel: '件', icon: Clock, color: 'yellow' },
+    { title: '総閲覧数', value: '0', change: '+0%', changeLabel: '前月比', icon: Eye, color: 'purple' }
   ]
+
+  const displayStats = stats.length > 0 ? stats : defaultStats
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 flex items-center justify-center min-h-screen">
+          <p className="text-slate-500">読み込み中...</p>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout>
@@ -252,7 +182,7 @@ export default function ContentPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          {stats.map((stat) => {
+          {displayStats.map((stat) => {
             const Icon = stat.icon
             return (
               <Card key={stat.title}>

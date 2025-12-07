@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   BookOpen,
   Calendar,
@@ -62,165 +62,49 @@ import AdminLayout from '@/components/layout/admin-layout'
 export default function TrainingPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [trainingSessions, setTrainingSessions] = useState<any[]>([])
+  const [courses, setCourses] = useState<any[]>([])
+  const [learningPaths, setLearningPaths] = useState<any[]>([])
+  const [stats, setStats] = useState<any[]>([])
 
-  const trainingSessions = [
-    {
-      id: 1,
-      title: 'リフォーム営業力強化研修',
-      instructor: '山田太郎（外部講師）',
-      type: 'online',
-      date: '2024-02-15',
-      time: '14:00-17:00',
-      participants: 45,
-      maxParticipants: 50,
-      status: 'upcoming',
-      level: 'intermediate',
-      category: '営業',
-      price: 15000
-    },
-    {
-      id: 2,
-      title: '最新建築法規セミナー',
-      instructor: '建設法務研究所',
-      type: 'offline',
-      location: '東京本社 会議室A',
-      date: '2024-02-10',
-      time: '10:00-12:00',
-      participants: 30,
-      maxParticipants: 30,
-      status: 'full',
-      level: 'advanced',
-      category: '法規',
-      price: 0
-    },
-    {
-      id: 3,
-      title: 'CAD実践講座',
-      instructor: '鈴木一郎（社内講師）',
-      type: 'hybrid',
-      location: '大阪支社',
-      date: '2024-02-20',
-      time: '13:00-18:00',
-      participants: 12,
-      maxParticipants: 20,
-      status: 'upcoming',
-      level: 'beginner',
-      category: '技術',
-      price: 25000
-    },
-    {
-      id: 4,
-      title: '顧客満足度向上ワークショップ',
-      instructor: 'CS研究会',
-      type: 'online',
-      date: '2024-01-25',
-      time: '15:00-17:00',
-      participants: 78,
-      maxParticipants: 100,
-      status: 'completed',
-      level: 'all',
-      category: 'CS',
-      price: 8000
+  useEffect(() => {
+    fetchTraining()
+  }, [])
+
+  const fetchTraining = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/admin/training')
+      if (res.ok) {
+        const data = await res.json()
+        setTrainingSessions(data.trainingSessions || [])
+        setCourses(data.courses || [])
+        setLearningPaths(data.learningPaths || [])
+        if (data.stats) {
+          setStats(data.stats.map((s: any) => ({
+            ...s,
+            icon: s.title === '総受講者数' ? Users :
+                  s.title === '実施研修数' ? BookOpen :
+                  s.title === '平均満足度' ? Star : Award
+          })))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch training:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const defaultStats = [
+    { title: '総受講者数', value: '0', change: '+0', changeLabel: '今月', icon: Users, color: 'blue' },
+    { title: '実施研修数', value: '0', change: '+0', changeLabel: '今月', icon: BookOpen, color: 'green' },
+    { title: '平均満足度', value: '0', change: '+0', changeLabel: '前月比', icon: Star, color: 'yellow' },
+    { title: '修了率', value: '0%', change: '+0%', changeLabel: '前月比', icon: Award, color: 'purple' }
   ]
 
-  const courses = [
-    {
-      id: 1,
-      title: 'リフォーム基礎講座',
-      description: 'リフォーム業界の基礎知識を体系的に学ぶ',
-      modules: 12,
-      duration: '約20時間',
-      enrollments: 234,
-      rating: 4.8,
-      completionRate: 85
-    },
-    {
-      id: 2,
-      title: '営業スキルアップコース',
-      description: '成約率を高める営業テクニック',
-      modules: 8,
-      duration: '約15時間',
-      enrollments: 189,
-      rating: 4.6,
-      completionRate: 78
-    },
-    {
-      id: 3,
-      title: '施工管理マスター',
-      description: '現場管理のプロフェッショナルを目指す',
-      modules: 15,
-      duration: '約30時間',
-      enrollments: 156,
-      rating: 4.9,
-      completionRate: 72
-    }
-  ]
-
-  const learningPaths = [
-    {
-      id: 1,
-      title: '新入社員研修パス',
-      target: '入社1年目',
-      courses: 5,
-      estimatedTime: '3ヶ月',
-      participants: 45,
-      progress: 68
-    },
-    {
-      id: 2,
-      title: '営業マネージャー育成',
-      target: '営業3年以上',
-      courses: 7,
-      estimatedTime: '6ヶ月',
-      participants: 23,
-      progress: 45
-    },
-    {
-      id: 3,
-      title: '技術者スキルアップ',
-      target: '施工管理者',
-      courses: 6,
-      estimatedTime: '4ヶ月',
-      participants: 34,
-      progress: 82
-    }
-  ]
-
-  const stats = [
-    {
-      title: '総受講者数',
-      value: '3,456',
-      change: '+234',
-      changeLabel: '今月',
-      icon: Users,
-      color: 'blue'
-    },
-    {
-      title: '実施研修数',
-      value: '42',
-      change: '+8',
-      changeLabel: '今月',
-      icon: BookOpen,
-      color: 'green'
-    },
-    {
-      title: '平均満足度',
-      value: '4.7',
-      change: '+0.2',
-      changeLabel: '前月比',
-      icon: Star,
-      color: 'yellow'
-    },
-    {
-      title: '修了率',
-      value: '78%',
-      change: '+5%',
-      changeLabel: '前月比',
-      icon: Award,
-      color: 'purple'
-    }
-  ]
+  const displayStats = stats.length > 0 ? stats : defaultStats
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -265,6 +149,16 @@ export default function TrainingPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 flex items-center justify-center min-h-screen">
+          <p className="text-slate-500">読み込み中...</p>
+        </div>
+      </AdminLayout>
+    )
+  }
+
   return (
     <AdminLayout>
       <div className="p-6">
@@ -275,7 +169,7 @@ export default function TrainingPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          {stats.map((stat) => {
+          {displayStats.map((stat) => {
             const Icon = stat.icon
             return (
               <Card key={stat.title}>

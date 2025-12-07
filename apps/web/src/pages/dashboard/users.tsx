@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,65 +26,37 @@ export default function UsersManagement() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [users, setUsers] = useState<any[]>([])
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    seatLimit: 50,
+    activeUsers: 0,
+    pendingInvites: 0,
+    adminCount: 0
+  })
 
-  // Mock data
-  const users = [
-    {
-      id: 1,
-      name: '山田 太郎',
-      email: 'yamada@test-org.com',
-      role: 'ADMIN',
-      status: 'active',
-      department: '経営企画部',
-      lastActive: '5分前',
-      joinedDate: '2020-01-15',
-      avatar: null
-    },
-    {
-      id: 2,
-      name: '佐藤 花子',
-      email: 'sato@test-org.com',
-      role: 'DEPARTMENT_MANAGER',
-      status: 'active',
-      department: '営業部',
-      lastActive: '1時間前',
-      joinedDate: '2020-03-20',
-      avatar: null
-    },
-    {
-      id: 3,
-      name: '鈴木 一郎',
-      email: 'suzuki@test-org.com',
-      role: 'MEMBER',
-      status: 'active',
-      department: '開発部',
-      lastActive: '3時間前',
-      joinedDate: '2021-06-10',
-      avatar: null
-    },
-    {
-      id: 4,
-      name: '田中 美咲',
-      email: 'tanaka@test-org.com',
-      role: 'MEMBER',
-      status: 'inactive',
-      department: 'マーケティング部',
-      lastActive: '1週間前',
-      joinedDate: '2021-09-01',
-      avatar: null
-    },
-    {
-      id: 5,
-      name: '伊藤 健太',
-      email: 'ito@test-org.com',
-      role: 'MEMBER',
-      status: 'pending',
-      department: '人事部',
-      lastActive: '未ログイン',
-      joinedDate: '2024-01-10',
-      avatar: null
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/dashboard/users')
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data.users || [])
+        if (data.stats) {
+          setStats(data.stats)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const roleLabels = {
     ADMIN: { label: '管理者', color: 'bg-purple-100 text-purple-700 border-purple-200' },
@@ -136,37 +108,37 @@ export default function UsersManagement() {
               <CardDescription>総ユーザー数</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">48</p>
-              <p className="text-xs text-slate-500">ライセンス: 50</p>
+              <p className="text-2xl font-bold">{stats.totalUsers}</p>
+              <p className="text-xs text-slate-500">ライセンス: {stats.seatLimit}</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>アクティブ</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">42</p>
+              <p className="text-2xl font-bold text-green-600">{stats.activeUsers}</p>
               <p className="text-xs text-slate-500">過去30日間</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>招待中</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-yellow-600">3</p>
+              <p className="text-2xl font-bold text-yellow-600">{stats.pendingInvites}</p>
               <p className="text-xs text-slate-500">返答待ち</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>管理者</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-purple-600">5</p>
+              <p className="text-2xl font-bold text-purple-600">{stats.adminCount}</p>
               <p className="text-xs text-slate-500">全権限あり</p>
             </CardContent>
           </Card>
@@ -243,7 +215,7 @@ export default function UsersManagement() {
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 bg-slate-200 rounded-full flex items-center justify-center">
                               <span className="text-sm font-medium text-slate-600">
-                                {user.name.split(' ').map(n => n[0]).join('')}
+                                {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </span>
                             </div>
                             <div>

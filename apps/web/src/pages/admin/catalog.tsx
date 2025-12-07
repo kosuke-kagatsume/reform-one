@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Package,
   Plus,
@@ -55,95 +55,60 @@ export default function CatalogPage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [brandFilter, setBrandFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [materials, setMaterials] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    monthlyViews: 0,
+    inquiries: 0,
+    avgRating: 0,
+    reviewCount: 0
+  })
 
-  const materials = [
-    {
-      id: 1,
-      name: 'システムキッチン Lクラス',
-      category: 'キッチン',
-      brand: 'Panasonic',
-      sku: 'PAN-L-KIT-001',
-      price: '¥1,200,000〜',
-      stock: 'カタログ商品',
-      status: '掲載中',
-      views: 3456,
-      inquiries: 89,
-      rating: 4.5,
-      image: '/catalog/kitchen-1.jpg',
-      tags: ['高級', '人気', 'エコ']
-    },
-    {
-      id: 2,
-      name: 'システムバス SYNLA',
-      category: 'バスルーム',
-      brand: 'TOTO',
-      sku: 'TOTO-SYN-BAT-001',
-      price: '¥980,000〜',
-      stock: 'カタログ商品',
-      status: '掲載中',
-      views: 2890,
-      inquiries: 67,
-      rating: 4.3,
-      image: '/catalog/bath-1.jpg',
-      tags: ['人気', '節水']
-    },
-    {
-      id: 3,
-      name: 'トイレ アラウーノL150',
-      category: 'トイレ',
-      brand: 'Panasonic',
-      sku: 'PAN-ARA-TOI-150',
-      price: '¥350,000〜',
-      stock: 'カタログ商品',
-      status: '掲載中',
-      views: 4123,
-      inquiries: 112,
-      rating: 4.7,
-      image: '/catalog/toilet-1.jpg',
-      tags: ['節水', '自動洗浄', 'ベストセラー']
-    },
-    {
-      id: 4,
-      name: '無垢フローリング オーク',
-      category: '床材',
-      brand: '朝日ウッドテック',
-      sku: 'AWT-OAK-FLR-001',
-      price: '¥12,000/㎡',
-      stock: 'カタログ商品',
-      status: '掲載中',
-      views: 1567,
-      inquiries: 34,
-      rating: 4.2,
-      image: '/catalog/floor-1.jpg',
-      tags: ['天然木', '高級']
-    },
-    {
-      id: 5,
-      name: 'エコカラット プラス',
-      category: '壁材',
-      brand: 'LIXIL',
-      sku: 'LIX-ECO-WAL-001',
-      price: '¥8,000/㎡',
-      stock: 'カタログ商品',
-      status: '新規登録',
-      views: 890,
-      inquiries: 12,
-      rating: 4.0,
-      image: '/catalog/wall-1.jpg',
-      tags: ['調湿', 'エコ', '新商品']
+  useEffect(() => {
+    fetchCatalog()
+  }, [])
+
+  const fetchCatalog = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/admin/catalog')
+      if (res.ok) {
+        const data = await res.json()
+        setMaterials(data.materials || [])
+        if (data.categories) {
+          setCategories(data.categories)
+        }
+        if (data.stats) {
+          setStats({
+            totalProducts: data.stats.totalProducts || 0,
+            monthlyViews: data.stats.monthlyViews || 0,
+            inquiries: data.stats.inquiries || 0,
+            avgRating: data.stats.avgRating || 0,
+            reviewCount: data.stats.reviewCount || 0
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch catalog:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const defaultCategories = [
+    { id: 'kitchen', name: 'キッチン', count: 0 },
+    { id: 'bathroom', name: 'バスルーム', count: 0 },
+    { id: 'toilet', name: 'トイレ', count: 0 },
+    { id: 'floor', name: '床材', count: 0 },
+    { id: 'wall', name: '壁材', count: 0 },
+    { id: 'exterior', name: '外装材', count: 0 },
+    { id: 'window', name: '窓・サッシ', count: 0 },
+    { id: 'door', name: 'ドア', count: 0 }
   ]
 
-  const categories = [
-    { id: 'kitchen', name: 'キッチン', count: 156 },
-    { id: 'bathroom', name: 'バスルーム', count: 98 },
-    { id: 'toilet', name: 'トイレ', count: 67 },
-    { id: 'floor', name: '床材', count: 234 },
-    { id: 'wall', name: '壁材', count: 189 },
-    { id: 'exterior', name: '外装材', count: 145 },
-    { id: 'window', name: '窓・サッシ', count: 89 },
-    { id: 'door', name: 'ドア', count: 112 }
-  ]
+  const displayCategories = categories.length > 0 ? categories : defaultCategories
 
   const brands = [
     { id: 'panasonic', name: 'Panasonic', count: 234 },
@@ -180,6 +145,16 @@ export default function CatalogPage() {
     }
   ]
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 flex items-center justify-center min-h-screen">
+          <p className="text-slate-500">読み込み中...</p>
+        </div>
+      </AdminLayout>
+    )
+  }
+
   return (
     <AdminLayout>
       <div className="p-6">
@@ -211,8 +186,8 @@ export default function CatalogPage() {
               <CardTitle className="text-sm font-medium text-slate-600">総商品数</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">1,234</p>
-              <p className="text-xs text-slate-500 mt-1">先月比 +56 商品</p>
+              <p className="text-2xl font-bold">{stats.totalProducts.toLocaleString()}</p>
+              <p className="text-xs text-slate-500 mt-1">登録済み商品</p>
             </CardContent>
           </Card>
           <Card>
@@ -220,10 +195,10 @@ export default function CatalogPage() {
               <CardTitle className="text-sm font-medium text-slate-600">今月の閲覧数</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">45.6K</p>
+              <p className="text-2xl font-bold">{stats.monthlyViews >= 1000 ? `${(stats.monthlyViews / 1000).toFixed(1)}K` : stats.monthlyViews.toLocaleString()}</p>
               <div className="flex items-center gap-1 mt-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
-                <span className="text-xs text-green-600">+12.5%</span>
+                <span className="text-xs text-green-600">閲覧数</span>
               </div>
             </CardContent>
           </Card>
@@ -232,10 +207,10 @@ export default function CatalogPage() {
               <CardTitle className="text-sm font-medium text-slate-600">問い合わせ数</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">892</p>
+              <p className="text-2xl font-bold">{stats.inquiries.toLocaleString()}</p>
               <div className="flex items-center gap-1 mt-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
-                <span className="text-xs text-green-600">+8.3%</span>
+                <span className="text-xs text-green-600">今月</span>
               </div>
             </CardContent>
           </Card>
@@ -245,17 +220,17 @@ export default function CatalogPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold">4.3</p>
+                <p className="text-2xl font-bold">{stats.avgRating.toFixed(1)}</p>
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-4 w-4 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`}
+                      className={`h-4 w-4 ${i < Math.floor(stats.avgRating) ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`}
                     />
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mt-1">3,456 レビュー</p>
+              <p className="text-xs text-slate-500 mt-1">{stats.reviewCount.toLocaleString()} レビュー</p>
             </CardContent>
           </Card>
         </div>
@@ -367,7 +342,7 @@ export default function CatalogPage() {
                               <p className="font-medium">{material.name}</p>
                               <p className="text-xs text-slate-500">SKU: {material.sku}</p>
                               <div className="flex gap-1 mt-1">
-                                {material.tags.map((tag) => (
+                                {material.tags?.map((tag: string) => (
                                   <Badge key={tag} variant="secondary" className="text-xs">
                                     {tag}
                                   </Badge>
@@ -450,7 +425,7 @@ export default function CatalogPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {categories.map((category) => (
+                  {displayCategories.map((category) => (
                     <Card key={category.id}>
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start">

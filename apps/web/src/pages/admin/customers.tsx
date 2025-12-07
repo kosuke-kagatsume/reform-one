@@ -1,18 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import {
   Users,
   Search,
-  Filter,
   Plus,
   MoreVertical,
   Mail,
-  Phone,
-  Building,
-  Calendar,
   TrendingUp,
-  AlertCircle,
-  CheckCircle,
   Clock,
   Download,
   Edit,
@@ -23,7 +17,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -49,80 +43,79 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import AdminLayout from '@/components/layout/admin-layout'
+import { useAuth } from '@/lib/auth-context'
+
+interface Customer {
+  id: string
+  name: string
+  email: string
+  phone: string
+  plan: string
+  status: string
+  users: number
+  revenue: number
+  joinedAt: string
+  lastActive: string
+  features: string[]
+}
+
+interface CustomerStats {
+  totalCustomers: number
+  customerChange: string
+  activeCustomers: number
+  activeRate: string
+  monthlyRevenue: number
+  revenueChange: string
+  avgRevenue: number
+}
 
 export default function CustomersPage() {
   const router = useRouter()
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPlan, setFilterPlan] = useState('all')
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [stats, setStats] = useState<CustomerStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
-  const customers = [
-    {
-      id: 1,
-      name: '株式会社大手リフォーム',
-      email: 'admin@ohte-reform.co.jp',
-      phone: '03-1234-5678',
-      plan: 'ENTERPRISE',
-      status: 'active',
-      users: 45,
-      revenue: 180000,
-      joinedAt: '2023-01-15',
-      lastActive: '1時間前',
-      features: ['e-paper', 'training', 'online-salon', 'materials-catalog']
-    },
-    {
-      id: 2,
-      name: '田中工務店',
-      email: 'tanaka@tanaka-koumuten.jp',
-      phone: '045-987-6543',
-      plan: 'STARTER',
-      status: 'active',
-      users: 3,
-      revenue: 0,
-      joinedAt: '2023-06-20',
-      lastActive: '3日前',
-      features: ['e-paper']
-    },
-    {
-      id: 3,
-      name: '山田建設株式会社',
-      email: 'info@yamada-kensetsu.co.jp',
-      phone: '06-2222-3333',
-      plan: 'PREMIUM',
-      status: 'active',
-      users: 12,
-      revenue: 100000,
-      joinedAt: '2023-03-10',
-      lastActive: '5時間前',
-      features: ['e-paper', 'training', 'materials-catalog']
-    },
-    {
-      id: 4,
-      name: '佐藤リフォーム',
-      email: 'sato@sato-reform.jp',
-      phone: '052-444-5555',
-      plan: 'PREMIUM',
-      status: 'suspended',
-      users: 8,
-      revenue: 100000,
-      joinedAt: '2022-11-05',
-      lastActive: '1週間前',
-      features: ['e-paper', 'training']
-    },
-    {
-      id: 5,
-      name: '高橋工業',
-      email: 'takahashi@takahashi-kogyo.com',
-      phone: '011-666-7777',
-      plan: 'ENTERPRISE',
-      status: 'active',
-      users: 67,
-      revenue: 200000,
-      joinedAt: '2022-08-15',
-      lastActive: '30分前',
-      features: ['e-paper', 'training', 'online-salon', 'materials-catalog', 'analytics']
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
     }
-  ]
+  }, [authLoading, isAuthenticated, router])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCustomers()
+    }
+  }, [isAuthenticated, page, searchQuery, filterStatus, filterPlan])
+
+  const fetchCustomers = async () => {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '20'
+      })
+      if (searchQuery) params.append('search', searchQuery)
+      if (filterStatus !== 'all') params.append('status', filterStatus)
+      if (filterPlan !== 'all') params.append('plan', filterPlan)
+
+      const res = await fetch(`/api/admin/customers?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setCustomers(data.customers || [])
+        setStats(data.stats || null)
+        setTotalPages(data.pagination?.totalPages || 1)
+      }
+    } catch (error) {
+      console.error('Failed to fetch customers:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -139,10 +132,10 @@ export default function CustomersPage() {
 
   const getPlanBadge = (plan: string) => {
     switch (plan) {
-      case 'ENTERPRISE':
-        return <Badge className="bg-purple-100 text-purple-700">エンタープライズ</Badge>
-      case 'PREMIUM':
-        return <Badge className="bg-blue-100 text-blue-700">プレミアム</Badge>
+      case 'EXPERT':
+        return <Badge className="bg-purple-100 text-purple-700">エキスパート</Badge>
+      case 'STANDARD':
+        return <Badge className="bg-blue-100 text-blue-700">スタンダード</Badge>
       case 'STARTER':
         return <Badge className="bg-slate-100 text-slate-700">スターター</Badge>
       default:
@@ -150,14 +143,15 @@ export default function CustomersPage() {
     }
   }
 
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          customer.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = filterStatus === 'all' || customer.status === filterStatus
-    const matchesPlan = filterPlan === 'all' || customer.plan === filterPlan
-    
-    return matchesSearch && matchesStatus && matchesPlan
-  })
+  if (authLoading || loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 flex items-center justify-center h-64">
+          <p className="text-slate-600">読み込み中...</p>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout>
@@ -174,43 +168,47 @@ export default function CustomersPage() {
               <CardTitle className="text-sm font-medium text-slate-600">総顧客数</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">2,547</p>
+              <p className="text-2xl font-bold">{stats?.totalCustomers.toLocaleString() || '-'}</p>
               <div className="flex items-center gap-1 mt-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
-                <span className="text-xs text-green-600">+12.5%</span>
+                <span className="text-xs text-green-600">{stats?.customerChange || '-'}</span>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">アクティブ顧客</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">2,103</p>
-              <p className="text-xs text-slate-500 mt-1">82.6% of total</p>
+              <p className="text-2xl font-bold">{stats?.activeCustomers.toLocaleString() || '-'}</p>
+              <p className="text-xs text-slate-500 mt-1">{stats?.activeRate || '-'}% of total</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">月間収益</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">¥45.2M</p>
+              <p className="text-2xl font-bold">
+                ¥{stats ? (stats.monthlyRevenue / 1000000).toFixed(1) + 'M' : '-'}
+              </p>
               <div className="flex items-center gap-1 mt-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
-                <span className="text-xs text-green-600">+8.2%</span>
+                <span className="text-xs text-green-600">{stats?.revenueChange || '-'}</span>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">平均顧客単価</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">¥17,731</p>
+              <p className="text-2xl font-bold">
+                ¥{stats?.avgRevenue.toLocaleString() || '-'}
+              </p>
               <p className="text-xs text-slate-500 mt-1">per month</p>
             </CardContent>
           </Card>
@@ -230,7 +228,7 @@ export default function CustomersPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                
+
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="ステータス" />
@@ -242,20 +240,20 @@ export default function CustomersPage() {
                     <SelectItem value="cancelled">解約</SelectItem>
                   </SelectContent>
                 </Select>
-                
+
                 <Select value={filterPlan} onValueChange={setFilterPlan}>
                   <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="プラン" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">すべて</SelectItem>
-                    <SelectItem value="ENTERPRISE">エンタープライズ</SelectItem>
-                    <SelectItem value="PREMIUM">プレミアム</SelectItem>
+                    <SelectItem value="EXPERT">エキスパート</SelectItem>
+                    <SelectItem value="STANDARD">スタンダード</SelectItem>
                     <SelectItem value="STARTER">スターター</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex gap-2">
                 <Button variant="outline">
                   <Download className="mr-2 h-4 w-4" />
@@ -268,7 +266,7 @@ export default function CustomersPage() {
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent>
             <div className="rounded-md border">
               <Table>
@@ -284,7 +282,7 @@ export default function CustomersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCustomers.map((customer) => (
+                  {customers.length > 0 ? customers.map((customer) => (
                     <TableRow key={customer.id}>
                       <TableCell>
                         <div>
@@ -345,22 +343,38 @@ export default function CustomersPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                        顧客が見つかりません
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
-            
+
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-slate-600">
-                {filteredCustomers.length} 件中 1-{Math.min(10, filteredCustomers.length)} 件を表示
+                {customers.length} 件を表示
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => p - 1)}
+                >
                   <ChevronLeft className="h-4 w-4" />
                   前へ
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                >
                   次へ
                   <ChevronRight className="h-4 w-4" />
                 </Button>

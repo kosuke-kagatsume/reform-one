@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,122 +34,63 @@ export default function MaterialsCatalog() {
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [priceRange, setPriceRange] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [materials, setMaterials] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [manufacturers, setManufacturers] = useState<string[]>([])
 
-  // 建材カタログデータ
-  const materials = [
-    {
-      id: 1,
-      name: '高断熱複層ガラス「エコシールド」',
-      manufacturer: 'YKK AP',
-      category: '窓・サッシ',
-      description: '業界最高クラスの断熱性能を実現。Low-E複層ガラスで冷暖房効率を大幅改善',
-      price: '¥45,000〜/㎡',
-      features: ['断熱性能 U値1.0', '遮音性能 T-3等級', '結露防止'],
-      rating: 4.8,
-      reviews: 234,
-      isNew: true,
-      isFavorite: false,
-      certification: ['省エネ基準適合', 'JIS認証'],
-      image: '/api/placeholder/300/300'
-    },
-    {
-      id: 2,
-      name: '無垢フローリング「ナチュラルオーク」',
-      manufacturer: '朝日ウッドテック',
-      category: '床材',
-      description: '天然オーク材100%使用。自然な木目と温かみのある質感が特徴',
-      price: '¥12,000〜/㎡',
-      features: ['厚さ15mm', 'UV塗装仕上げ', 'F☆☆☆☆'],
-      rating: 4.6,
-      reviews: 189,
-      isNew: false,
-      isFavorite: true,
-      certification: ['F☆☆☆☆', 'エコマーク'],
-      image: '/api/placeholder/300/300'
-    },
-    {
-      id: 3,
-      name: '調湿建材「エコカラット プラス」',
-      manufacturer: 'LIXIL',
-      category: '壁材',
-      description: '湿度を自動調整し、カビ・結露を防ぐ。消臭効果も併せ持つ機能性壁材',
-      price: '¥6,800〜/㎡',
-      features: ['調湿機能', '消臭効果', 'VOC低減'],
-      rating: 4.7,
-      reviews: 312,
-      isNew: false,
-      isFavorite: false,
-      certification: ['調湿建材認定', 'グリーン購入法適合'],
-      image: '/api/placeholder/300/300'
-    },
-    {
-      id: 4,
-      name: 'システムキッチン「ラクエラ」',
-      manufacturer: 'クリナップ',
-      category: 'キッチン',
-      description: 'ステンレスエコキャビネット採用。清潔で長持ち、お手入れ簡単',
-      price: '¥380,000〜',
-      features: ['ステンレス製', '静音設計', '省エネ'],
-      rating: 4.5,
-      reviews: 156,
-      isNew: true,
-      isFavorite: true,
-      certification: ['グッドデザイン賞', 'エコマーク'],
-      image: '/api/placeholder/300/300'
-    },
-    {
-      id: 5,
-      name: 'エコジョーズ給湯器「プレミアム」',
-      manufacturer: 'リンナイ',
-      category: '給湯器',
-      description: '熱効率95%の高効率給湯器。ガス代を年間約13,000円節約',
-      price: '¥180,000〜',
-      features: ['熱効率95%', 'CO2削減', '10年保証'],
-      rating: 4.9,
-      reviews: 423,
-      isNew: false,
-      isFavorite: false,
-      certification: ['省エネ大賞', 'エコジョーズ認定'],
-      image: '/api/placeholder/300/300'
-    },
-    {
-      id: 6,
-      name: '高性能断熱材「アクリアネクスト」',
-      manufacturer: '旭ファイバーグラス',
-      category: '断熱材',
-      description: '次世代省エネ基準をクリア。高い断熱性能と施工性を両立',
-      price: '¥2,500〜/㎡',
-      features: ['熱伝導率0.038W', '不燃材料', 'ノンホルム'],
-      rating: 4.4,
-      reviews: 98,
-      isNew: true,
-      isFavorite: false,
-      certification: ['JIS A 9521', 'F☆☆☆☆'],
-      image: '/api/placeholder/300/300'
+  useEffect(() => {
+    fetchMaterials()
+  }, [selectedCategory, searchQuery])
+
+  const fetchMaterials = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (searchQuery) params.append('search', searchQuery)
+      if (selectedCategory !== 'all') params.append('category', selectedCategory)
+
+      const res = await fetch(`/api/dashboard/materials-catalog?${params.toString()}`)
+      if (res.ok) {
+        const data = await res.json()
+        setMaterials(data.materials || [])
+        if (data.categories) {
+          setCategories(data.categories.map((cat: any) => ({
+            ...cat,
+            icon: cat.id === 'all' ? Grid :
+                  cat.id === 'window' ? Home :
+                  cat.id === 'floor' ? Package :
+                  cat.id === 'wall' ? Building :
+                  cat.id === 'kitchen' ? Wrench :
+                  cat.id === 'bathroom' ? Droplets :
+                  cat.id === 'heating' ? Flame :
+                  cat.id === 'insulation' ? Shield : Building
+          })))
+        }
+        if (data.manufacturers) {
+          setManufacturers(data.manufacturers)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch materials:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const defaultCategories = [
+    { id: 'all', name: 'すべて', icon: Grid, count: 0 },
+    { id: 'window', name: '窓・サッシ', icon: Home, count: 0 },
+    { id: 'floor', name: '床材', icon: Package, count: 0 },
+    { id: 'wall', name: '壁材', icon: Building, count: 0 },
+    { id: 'kitchen', name: 'キッチン', icon: Wrench, count: 0 },
+    { id: 'bathroom', name: 'バスルーム', icon: Droplets, count: 0 },
+    { id: 'heating', name: '給湯器', icon: Flame, count: 0 },
+    { id: 'insulation', name: '断熱材', icon: Shield, count: 0 },
+    { id: 'exterior', name: '外装材', icon: Building, count: 0 }
   ]
 
-  const categories = [
-    { id: 'all', name: 'すべて', icon: Grid, count: 1250 },
-    { id: 'window', name: '窓・サッシ', icon: Home, count: 156 },
-    { id: 'floor', name: '床材', icon: Package, count: 234 },
-    { id: 'wall', name: '壁材', icon: Building, count: 189 },
-    { id: 'kitchen', name: 'キッチン', icon: Wrench, count: 98 },
-    { id: 'bathroom', name: 'バスルーム', icon: Droplets, count: 112 },
-    { id: 'heating', name: '給湯器', icon: Flame, count: 67 },
-    { id: 'insulation', name: '断熱材', icon: Shield, count: 145 },
-    { id: 'exterior', name: '外装材', icon: Building, count: 249 }
-  ]
-
-  const manufacturers = [
-    'LIXIL',
-    'YKK AP',
-    'TOTO',
-    'パナソニック',
-    'クリナップ',
-    '旭ファイバーグラス',
-    '朝日ウッドテック'
-  ]
+  const displayCategories = categories.length > 0 ? categories : defaultCategories
 
   const filteredMaterials = materials.filter(material => {
     const matchesSearch = material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -210,7 +151,7 @@ export default function MaterialsCatalog() {
               </CardHeader>
               <CardContent className="p-0">
                 <nav className="space-y-1 p-2">
-                  {categories.map((category) => (
+                  {displayCategories.map((category) => (
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
@@ -417,7 +358,7 @@ export default function MaterialsCatalog() {
                           <span className="font-semibold text-lg">{material.price}</span>
                         </div>
                         <div className="flex gap-2">
-                          {material.certification.map((cert) => (
+                          {material.certification?.map((cert: string) => (
                             <Badge key={cert} variant="outline" className="text-xs">
                               {cert}
                             </Badge>

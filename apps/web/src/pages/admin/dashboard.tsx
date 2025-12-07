@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import {
   Users,
@@ -22,7 +22,8 @@ import {
   UserCheck,
   AlertCircle,
   CheckCircle,
-  Newspaper
+  Newspaper,
+  TrendingDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,87 +37,74 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useAuth } from '@/lib/auth-context'
+
+interface DashboardStat {
+  title: string
+  value: string
+  change: string
+  trend: 'up' | 'down'
+  color: string
+}
+
+interface Activity {
+  id: string
+  type: string
+  title: string
+  description: string
+  time: string
+  status: 'success' | 'warning' | 'info'
+}
+
+const iconMap: Record<string, any> = {
+  blue: Users,
+  green: DollarSign,
+  purple: Briefcase,
+  orange: UserCheck
+}
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  
-  const currentUser = {
-    name: '管理者',
-    email: 'admin@reform-s.co.jp',
-    role: 'ADMIN',
-    department: '管理部'
+  const [stats, setStats] = useState<DashboardStat[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
+    }
+  }, [authLoading, isAuthenticated, router])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchDashboardData()
+    }
+  }, [isAuthenticated])
+
+  const fetchDashboardData = async () => {
+    try {
+      const [statsRes, activitiesRes] = await Promise.all([
+        fetch('/api/admin/dashboard/stats'),
+        fetch('/api/admin/dashboard/activities')
+      ])
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json()
+        setStats(statsData.stats || [])
+      }
+
+      if (activitiesRes.ok) {
+        const activitiesData = await activitiesRes.json()
+        setActivities(activitiesData.activities || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
   }
-
-  const stats = [
-    {
-      title: '総顧客数',
-      value: '2,547',
-      change: '+12.5%',
-      trend: 'up',
-      icon: Users,
-      color: 'blue'
-    },
-    {
-      title: '月間売上',
-      value: '¥45.2M',
-      change: '+8.2%',
-      trend: 'up',
-      icon: DollarSign,
-      color: 'green'
-    },
-    {
-      title: 'アクティブ契約',
-      value: '1,823',
-      change: '+5.3%',
-      trend: 'up',
-      icon: Briefcase,
-      color: 'purple'
-    },
-    {
-      title: '新規リード',
-      value: '142',
-      change: '+23.1%',
-      trend: 'up',
-      icon: UserCheck,
-      color: 'orange'
-    }
-  ]
-
-  const recentActivities = [
-    {
-      id: 1,
-      type: 'new_customer',
-      title: '新規顧客登録',
-      description: '株式会社山田工務店が新規登録しました',
-      time: '5分前',
-      status: 'success'
-    },
-    {
-      id: 2,
-      type: 'subscription',
-      title: 'プラン変更',
-      description: '田中建設がエンタープライズプランにアップグレード',
-      time: '1時間前',
-      status: 'info'
-    },
-    {
-      id: 3,
-      type: 'content',
-      title: '記事公開',
-      description: '「2024年リフォーム市場動向」が公開されました',
-      time: '2時間前',
-      status: 'success'
-    },
-    {
-      id: 4,
-      type: 'alert',
-      title: '支払い遅延',
-      description: '佐藤リフォームの支払いが7日遅延しています',
-      time: '3時間前',
-      status: 'warning'
-    }
-  ]
 
   const navigationItems = [
     {
@@ -164,6 +152,14 @@ export default function AdminDashboard() {
     }
   ]
 
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-600">読み込み中...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -183,7 +179,7 @@ export default function AdminDashboard() {
               <Badge variant="secondary" className="ml-2">社員用</Badge>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -192,14 +188,14 @@ export default function AdminDashboard() {
                 className="pl-10 w-64"
               />
             </div>
-            
+
             <Button variant="ghost" size="sm" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 3
               </span>
             </Button>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2">
@@ -208,8 +204,8 @@ export default function AdminDashboard() {
                       <User className="h-4 w-4" />
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-medium">{currentUser.name}</p>
-                      <p className="text-xs text-slate-500">{currentUser.department}</p>
+                      <p className="text-sm font-medium">{user?.name || '管理者'}</p>
+                      <p className="text-xs text-slate-500">管理部</p>
                     </div>
                   </div>
                   <ChevronDown className="h-4 w-4" />
@@ -218,8 +214,8 @@ export default function AdminDashboard() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div>
-                    <p className="font-medium">{currentUser.name}</p>
-                    <p className="text-xs text-slate-500">{currentUser.email}</p>
+                    <p className="font-medium">{user?.name || '管理者'}</p>
+                    <p className="text-xs text-slate-500">{user?.email}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -257,8 +253,8 @@ export default function AdminDashboard() {
                   key={item.title}
                   onClick={() => router.push(item.href)}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                    item.active 
-                      ? 'bg-blue-50 text-blue-600' 
+                    item.active
+                      ? 'bg-blue-50 text-blue-600'
                       : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
@@ -288,8 +284,10 @@ export default function AdminDashboard() {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat) => {
-              const Icon = stat.icon
+            {stats.length > 0 ? stats.map((stat) => {
+              const Icon = iconMap[stat.color] || Users
+              const TrendIcon = stat.trend === 'up' ? TrendingUp : TrendingDown
+              const trendColor = stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
               return (
                 <Card key={stat.title}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -305,8 +303,8 @@ export default function AdminDashboard() {
                       <div>
                         <p className="text-2xl font-bold">{stat.value}</p>
                         <div className="flex items-center gap-1 mt-1">
-                          <TrendingUp className="h-3 w-3 text-green-500" />
-                          <span className="text-xs text-green-600">{stat.change}</span>
+                          <TrendIcon className={`h-3 w-3 ${trendColor}`} />
+                          <span className={`text-xs ${trendColor}`}>{stat.change}</span>
                           <span className="text-xs text-slate-500">前月比</span>
                         </div>
                       </div>
@@ -314,7 +312,26 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               )
-            })}
+            }) : (
+              // フォールバック表示
+              [
+                { title: '総顧客数', value: '-', color: 'blue' },
+                { title: '月間売上', value: '-', color: 'green' },
+                { title: 'アクティブ契約', value: '-', color: 'purple' },
+                { title: '新規リード', value: '-', color: 'orange' }
+              ].map((stat) => (
+                <Card key={stat.title}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-slate-600">
+                      {stat.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -327,7 +344,7 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivities.map((activity) => (
+                    {activities.length > 0 ? activities.map((activity) => (
                       <div key={activity.id} className="flex items-start gap-4 pb-4 border-b last:border-0">
                         <div className={`p-2 rounded-lg ${
                           activity.status === 'success' ? 'bg-green-100' :
@@ -348,7 +365,11 @@ export default function AdminDashboard() {
                           <p className="text-xs text-slate-400 mt-1">{activity.time}</p>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-sm text-slate-500 text-center py-4">
+                        アクティビティがありません
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -396,28 +417,28 @@ export default function AdminDashboard() {
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>新規顧客獲得</span>
-                        <span className="font-medium">142/200</span>
+                        <span className="font-medium">-/200</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '71%' }} />
+                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '0%' }} />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>コンテンツ公開</span>
-                        <span className="font-medium">28/30</span>
+                        <span className="font-medium">-/30</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: '93%' }} />
+                        <div className="bg-green-600 h-2 rounded-full" style={{ width: '0%' }} />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>研修実施</span>
-                        <span className="font-medium">5/8</span>
+                        <span className="font-medium">-/8</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="bg-purple-600 h-2 rounded-full" style={{ width: '62%' }} />
+                        <div className="bg-purple-600 h-2 rounded-full" style={{ width: '0%' }} />
                       </div>
                     </div>
                   </div>

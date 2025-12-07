@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import {
   TrendingUp,
   TrendingDown,
@@ -6,13 +7,10 @@ import {
   Eye,
   FileText,
   DollarSign,
-  Calendar,
   Download,
   Filter,
   ChevronUp,
   ChevronDown,
-  BarChart3,
-  PieChart,
   Activity,
   ArrowRight,
   Clock,
@@ -35,96 +33,95 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs'
 import AdminLayout from '@/components/layout/admin-layout'
+import { useAuth } from '@/lib/auth-context'
+
+interface KpiData {
+  title: string
+  value: string
+  change: number
+  previousValue: string
+  color: string
+}
+
+interface CustomerSegment {
+  name: string
+  value: number
+  count: number
+  revenue: string
+}
+
+interface TopContent {
+  rank: number
+  title: string
+  views: number
+  engagement: number
+  trend: string
+}
+
+interface GrowthMetric {
+  month: string
+  revenue: number
+  users: number
+  content: number
+}
+
+const iconMap: Record<string, any> = {
+  green: DollarSign,
+  blue: Users,
+  purple: Eye,
+  orange: FileText
+}
 
 export default function AnalyticsPage() {
+  const router = useRouter()
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [period, setPeriod] = useState('month')
-  const [compareMode, setCompareMode] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [kpiData, setKpiData] = useState<KpiData[]>([])
+  const [customerSegments, setCustomerSegments] = useState<CustomerSegment[]>([])
+  const [topContent, setTopContent] = useState<TopContent[]>([])
+  const [growthMetrics, setGrowthMetrics] = useState<GrowthMetric[]>([])
+  const [totalRevenue, setTotalRevenue] = useState('¥0M')
 
-  const kpiData = [
-    {
-      title: '月間収益',
-      value: '¥45.2M',
-      change: 12.5,
-      previousValue: '¥40.2M',
-      icon: DollarSign,
-      color: 'green'
-    },
-    {
-      title: 'アクティブユーザー',
-      value: '8,234',
-      change: 8.3,
-      previousValue: '7,604',
-      icon: Users,
-      color: 'blue'
-    },
-    {
-      title: 'コンテンツ閲覧数',
-      value: '2.3M',
-      change: 15.2,
-      previousValue: '2.0M',
-      icon: Eye,
-      color: 'purple'
-    },
-    {
-      title: '新規契約',
-      value: '142',
-      change: -5.2,
-      previousValue: '150',
-      icon: FileText,
-      color: 'orange'
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
     }
-  ]
+  }, [authLoading, isAuthenticated, router])
 
-  const topContent = [
-    {
-      rank: 1,
-      title: '2024年リフォーム市場動向レポート',
-      views: 45234,
-      engagement: 92,
-      trend: 'up'
-    },
-    {
-      rank: 2,
-      title: '省エネリフォーム補助金制度ガイド',
-      views: 38921,
-      engagement: 88,
-      trend: 'up'
-    },
-    {
-      rank: 3,
-      title: '最新キッチンリフォームトレンド',
-      views: 31456,
-      engagement: 85,
-      trend: 'stable'
-    },
-    {
-      rank: 4,
-      title: '職人不足問題への対応策',
-      views: 28734,
-      engagement: 79,
-      trend: 'down'
-    },
-    {
-      rank: 5,
-      title: 'デジタルツール活用事例集',
-      views: 24567,
-      engagement: 82,
-      trend: 'up'
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAnalytics()
     }
-  ]
+  }, [isAuthenticated, period])
 
-  const customerSegments = [
-    { name: 'エンタープライズ', value: 35, count: 89, revenue: '¥15.8M' },
-    { name: 'プレミアム', value: 45, count: 1150, revenue: '¥23.0M' },
-    { name: 'スターター', value: 20, count: 1308, revenue: '¥6.4M' }
-  ]
+  const fetchAnalytics = async () => {
+    try {
+      const res = await fetch(`/api/admin/analytics?period=${period}`)
+      if (res.ok) {
+        const data = await res.json()
+        setKpiData(data.kpiData || [])
+        setCustomerSegments(data.customerSegments || [])
+        setTopContent(data.topContent || [])
+        setGrowthMetrics(data.growthMetrics || [])
+        setTotalRevenue(data.totalRevenue || '¥0M')
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const growthMetrics = [
-    { month: '10月', revenue: 38.5, users: 7200, content: 1850 },
-    { month: '11月', revenue: 40.2, users: 7604, content: 1920 },
-    { month: '12月', revenue: 42.8, users: 7890, content: 2010 },
-    { month: '1月', revenue: 45.2, users: 8234, content: 2130 }
-  ]
+  if (authLoading || loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 flex items-center justify-center h-64">
+          <p className="text-slate-600">読み込み中...</p>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout>
@@ -159,8 +156,8 @@ export default function AnalyticsPage() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {kpiData.map((kpi) => {
-            const Icon = kpi.icon
+          {kpiData.length > 0 ? kpiData.map((kpi) => {
+            const Icon = iconMap[kpi.color] || DollarSign
             const isPositive = kpi.change > 0
             return (
               <Card key={kpi.title}>
@@ -181,7 +178,7 @@ export default function AnalyticsPage() {
                           <TrendingDown className="h-4 w-4 text-red-500" />
                         )}
                         <span className={`text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {Math.abs(kpi.change)}%
+                          {Math.abs(kpi.change).toFixed(1)}%
                         </span>
                       </div>
                       <span className="text-xs text-slate-500">前期: {kpi.previousValue}</span>
@@ -190,7 +187,18 @@ export default function AnalyticsPage() {
                 </CardContent>
               </Card>
             )
-          })}
+          }) : (
+            [1, 2, 3, 4].map((i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-600">-</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">-</p>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -211,17 +219,19 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-64 flex items-end justify-between gap-2">
-                  {growthMetrics.map((metric, index) => (
+                  {growthMetrics.length > 0 ? growthMetrics.map((metric) => (
                     <div key={metric.month} className="flex-1 flex flex-col items-center gap-2">
                       <div className="w-full bg-slate-100 rounded-t relative" style={{ height: `${(metric.revenue / 50) * 100}%` }}>
                         <div className="absolute inset-x-0 bottom-0 bg-blue-500 rounded-t" style={{ height: '80%' }} />
                       </div>
                       <div className="text-center">
                         <p className="text-xs font-medium">{metric.month}</p>
-                        <p className="text-xs text-slate-500">¥{metric.revenue}M</p>
+                        <p className="text-xs text-slate-500">¥{metric.revenue.toFixed(1)}M</p>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="w-full text-center text-slate-500 py-8">データがありません</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -235,26 +245,28 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {customerSegments.map((segment) => (
+                {customerSegments.length > 0 ? customerSegments.map((segment) => (
                   <div key={segment.name}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">{segment.name}</span>
                       <span className="text-sm text-slate-500">{segment.revenue}</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full" 
+                      <div
+                        className="bg-blue-500 h-2 rounded-full"
                         style={{ width: `${segment.value}%` }}
                       />
                     </div>
                     <p className="text-xs text-slate-500 mt-1">{segment.count} 顧客 ({segment.value}%)</p>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-center text-slate-500 py-4">データがありません</p>
+                )}
               </div>
               <div className="mt-6 pt-4 border-t">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">合計収益</span>
-                  <span className="text-lg font-bold">¥45.2M</span>
+                  <span className="text-lg font-bold">{totalRevenue}</span>
                 </div>
               </div>
             </CardContent>
@@ -282,7 +294,7 @@ export default function AnalyticsPage() {
                     </Button>
                   </div>
                   <div className="space-y-3">
-                    {topContent.map((content) => (
+                    {topContent.length > 0 ? topContent.map((content) => (
                       <div key={content.rank} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center gap-4">
                           <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold text-sm">
@@ -321,7 +333,9 @@ export default function AnalyticsPage() {
                           )}
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-center text-slate-500 py-4">データがありません</p>
+                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -330,23 +344,19 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-600 mb-1">新規ユーザー</p>
-                    <p className="text-xl font-bold">1,234</p>
-                    <p className="text-xs text-green-600 mt-1">+15.2%</p>
+                    <p className="text-xl font-bold">-</p>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-600 mb-1">アクティブ率</p>
-                    <p className="text-xl font-bold">78.5%</p>
-                    <p className="text-xs text-green-600 mt-1">+3.2%</p>
+                    <p className="text-xl font-bold">-</p>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-600 mb-1">平均滞在時間</p>
-                    <p className="text-xl font-bold">12:34</p>
-                    <p className="text-xs text-green-600 mt-1">+2:15</p>
+                    <p className="text-xl font-bold">-</p>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-600 mb-1">離脱率</p>
-                    <p className="text-xl font-bold">2.3%</p>
-                    <p className="text-xs text-red-600 mt-1">+0.5%</p>
+                    <p className="text-xl font-bold">-</p>
                   </div>
                 </div>
               </TabsContent>
@@ -357,23 +367,19 @@ export default function AnalyticsPage() {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-sm font-medium text-blue-900">無料トライアル → 有料契約</p>
-                        <p className="text-2xl font-bold text-blue-900 mt-1">32.5%</p>
+                        <p className="text-2xl font-bold text-blue-900 mt-1">-</p>
                       </div>
                       <Target className="h-8 w-8 text-blue-500" />
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-green-600">前月比 +5.2%</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-slate-50 rounded-lg">
-                      <p className="text-sm text-slate-600">スターター → プレミアム</p>
-                      <p className="text-xl font-bold mt-1">18.7%</p>
+                      <p className="text-sm text-slate-600">スタンダード → エキスパート</p>
+                      <p className="text-xl font-bold mt-1">-</p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-lg">
-                      <p className="text-sm text-slate-600">プレミアム → エンタープライズ</p>
-                      <p className="text-xl font-bold mt-1">8.3%</p>
+                      <p className="text-sm text-slate-600">アップグレード率</p>
+                      <p className="text-xl font-bold mt-1">-</p>
                     </div>
                   </div>
                 </div>
@@ -384,20 +390,20 @@ export default function AnalyticsPage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-slate-50 rounded-lg">
                       <p className="text-sm text-slate-600">1ヶ月継続率</p>
-                      <p className="text-2xl font-bold mt-1">92%</p>
+                      <p className="text-2xl font-bold mt-1">-</p>
                     </div>
                     <div className="text-center p-4 bg-slate-50 rounded-lg">
                       <p className="text-sm text-slate-600">3ヶ月継続率</p>
-                      <p className="text-2xl font-bold mt-1">85%</p>
+                      <p className="text-2xl font-bold mt-1">-</p>
                     </div>
                     <div className="text-center p-4 bg-slate-50 rounded-lg">
                       <p className="text-sm text-slate-600">年間継続率</p>
-                      <p className="text-2xl font-bold mt-1">78%</p>
+                      <p className="text-2xl font-bold mt-1">-</p>
                     </div>
                   </div>
                   <div className="p-4 bg-yellow-50 rounded-lg">
                     <p className="text-sm font-medium text-yellow-900">解約リスクのある顧客</p>
-                    <p className="text-2xl font-bold text-yellow-900 mt-1">23社</p>
+                    <p className="text-2xl font-bold text-yellow-900 mt-1">-</p>
                     <Button variant="outline" size="sm" className="mt-3">
                       <Clock className="mr-2 h-4 w-4" />
                       対応リストを見る
