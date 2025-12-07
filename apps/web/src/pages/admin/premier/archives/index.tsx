@@ -25,6 +25,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface Category {
   id: string
@@ -52,6 +60,9 @@ export default function ArchivesAdminPage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingArchive, setDeletingArchive] = useState<Archive | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -85,6 +96,36 @@ export default function ArchivesAdminPage() {
       console.error('Failed to fetch data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = (archive: Archive) => {
+    setDeletingArchive(archive)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingArchive) return
+    setSubmitting(true)
+
+    try {
+      const res = await fetch(`/api/archives/${deletingArchive.id}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        setIsDeleteDialogOpen(false)
+        setDeletingArchive(null)
+        fetchData()
+      } else {
+        const error = await res.json()
+        alert(error.error || '削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to delete archive:', error)
+      alert('削除に失敗しました')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -276,7 +317,7 @@ export default function ArchivesAdminPage() {
                             <Edit className="h-4 w-4 mr-2" />
                             編集
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(archive)}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             削除
                           </DropdownMenuItem>
@@ -289,6 +330,26 @@ export default function ArchivesAdminPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* 削除確認ダイアログ */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>アーカイブを削除</DialogTitle>
+              <DialogDescription>
+                「{deletingArchive?.title}」を削除しますか？この操作は取り消せません。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                キャンセル
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete} disabled={submitting}>
+                {submitting ? '削除中...' : '削除'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </PremierAdminLayout>
   )

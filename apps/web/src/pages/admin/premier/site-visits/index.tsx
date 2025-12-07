@@ -51,7 +51,11 @@ export default function AdminSiteVisitsPage() {
   const [siteVisits, setSiteVisits] = useState<SiteVisit[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [editingVisit, setEditingVisit] = useState<SiteVisit | null>(null)
+  const [deletingVisit, setDeletingVisit] = useState<SiteVisit | null>(null)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -64,6 +68,20 @@ export default function AdminSiteVisitsPage() {
     capacity: '20',
     price: '',
     isPublished: false,
+  })
+
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    address: '',
+    imageUrl: '',
+    scheduledAt: '',
+    duration: '',
+    capacity: '20',
+    price: '',
+    isPublished: false,
+    isCanceled: false,
   })
 
   useEffect(() => {
@@ -130,6 +148,90 @@ export default function AdminSiteVisitsPage() {
     } catch (error) {
       console.error('Failed to create site visit:', error)
       alert('作成に失敗しました')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleEdit = (visit: SiteVisit) => {
+    setEditingVisit(visit)
+    const scheduledDate = new Date(visit.scheduledAt)
+    const localDateTime = new Date(scheduledDate.getTime() - scheduledDate.getTimezoneOffset() * 60000)
+      .toISOString().slice(0, 16)
+    setEditFormData({
+      title: visit.title,
+      description: visit.description || '',
+      location: visit.location,
+      address: visit.address || '',
+      imageUrl: visit.imageUrl || '',
+      scheduledAt: localDateTime,
+      duration: visit.duration ? String(visit.duration) : '',
+      capacity: String(visit.capacity),
+      price: String(visit.price),
+      isPublished: visit.isPublished,
+      isCanceled: visit.isCanceled,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingVisit) return
+    setSubmitting(true)
+
+    try {
+      const res = await fetch(`/api/admin/premier/site-visits/${editingVisit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editFormData,
+          duration: editFormData.duration ? parseInt(editFormData.duration) : null,
+          capacity: parseInt(editFormData.capacity),
+          price: parseFloat(editFormData.price),
+        }),
+      })
+
+      if (res.ok) {
+        setIsEditDialogOpen(false)
+        setEditingVisit(null)
+        fetchSiteVisits()
+      } else {
+        const error = await res.json()
+        alert(error.error || '更新に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to update site visit:', error)
+      alert('更新に失敗しました')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = (visit: SiteVisit) => {
+    setDeletingVisit(visit)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingVisit) return
+    setSubmitting(true)
+
+    try {
+      const res = await fetch(`/api/admin/premier/site-visits/${deletingVisit.id}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        setIsDeleteDialogOpen(false)
+        setDeletingVisit(null)
+        fetchSiteVisits()
+      } else {
+        const error = await res.json()
+        alert(error.error || '削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to delete site visit:', error)
+      alert('削除に失敗しました')
     } finally {
       setSubmitting(false)
     }
@@ -404,10 +506,10 @@ export default function AdminSiteVisitsPage() {
                     </div>
 
                     <div className="flex gap-2 ml-4">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(visit)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(visit)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -417,6 +519,158 @@ export default function AdminSiteVisitsPage() {
             ))}
           </div>
         )}
+
+        {/* 編集ダイアログ */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>視察会を編集</DialogTitle>
+              <DialogDescription>
+                視察会の情報を編集します
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit}>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="edit-title">タイトル *</Label>
+                  <Input
+                    id="edit-title"
+                    value={editFormData.title}
+                    onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-description">説明</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-location">場所 *</Label>
+                    <Input
+                      id="edit-location"
+                      value={editFormData.location}
+                      onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-address">住所</Label>
+                    <Input
+                      id="edit-address"
+                      value={editFormData.address}
+                      onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-imageUrl">画像URL</Label>
+                  <Input
+                    id="edit-imageUrl"
+                    value={editFormData.imageUrl}
+                    onChange={(e) => setEditFormData({ ...editFormData, imageUrl: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-scheduledAt">開催日時 *</Label>
+                    <Input
+                      id="edit-scheduledAt"
+                      type="datetime-local"
+                      value={editFormData.scheduledAt}
+                      onChange={(e) => setEditFormData({ ...editFormData, scheduledAt: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-duration">所要時間（分）</Label>
+                    <Input
+                      id="edit-duration"
+                      type="number"
+                      value={editFormData.duration}
+                      onChange={(e) => setEditFormData({ ...editFormData, duration: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-capacity">定員 *</Label>
+                    <Input
+                      id="edit-capacity"
+                      type="number"
+                      value={editFormData.capacity}
+                      onChange={(e) => setEditFormData({ ...editFormData, capacity: e.target.value })}
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-price">参加費（円） *</Label>
+                    <Input
+                      id="edit-price"
+                      type="number"
+                      value={editFormData.price}
+                      onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
+                      required
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="edit-isPublished"
+                      checked={editFormData.isPublished}
+                      onCheckedChange={(checked) => setEditFormData({ ...editFormData, isPublished: checked })}
+                    />
+                    <Label htmlFor="edit-isPublished">公開する</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="edit-isCanceled"
+                      checked={editFormData.isCanceled}
+                      onCheckedChange={(checked) => setEditFormData({ ...editFormData, isCanceled: checked })}
+                    />
+                    <Label htmlFor="edit-isCanceled">中止</Label>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  キャンセル
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? '更新中...' : '更新'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* 削除確認ダイアログ */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>視察会を削除</DialogTitle>
+              <DialogDescription>
+                「{deletingVisit?.title}」を削除しますか？この操作は取り消せません。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                キャンセル
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete} disabled={submitting}>
+                {submitting ? '削除中...' : '削除'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   )

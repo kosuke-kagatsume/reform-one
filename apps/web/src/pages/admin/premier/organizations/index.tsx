@@ -237,10 +237,7 @@ export default function OrganizationsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => router.push(`/admin/premier/organizations/${org.id}`)}>
-                            詳細を見る
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => router.push(`/admin/premier/organizations/${org.id}/edit`)}>
-                            編集
+                            詳細・編集
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

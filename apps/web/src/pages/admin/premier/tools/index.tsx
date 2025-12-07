@@ -70,9 +70,26 @@ export default function AdminToolsPage() {
   const [tools, setTools] = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [editingTool, setEditingTool] = useState<Tool | null>(null)
+  const [deletingTool, setDeletingTool] = useState<Tool | null>(null)
 
   const [formData, setFormData] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    category: 'SPREADSHEET',
+    fileUrl: '',
+    externalUrl: '',
+    iconName: '',
+    requiredPlan: 'STANDARD',
+    sortOrder: '0',
+    isPublished: true,
+  })
+
+  const [editFormData, setEditFormData] = useState({
     name: '',
     slug: '',
     description: '',
@@ -147,6 +164,84 @@ export default function AdminToolsPage() {
     } catch (error) {
       console.error('Failed to create tool:', error)
       alert('作成に失敗しました')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleEdit = (tool: Tool) => {
+    setEditingTool(tool)
+    setEditFormData({
+      name: tool.name,
+      slug: tool.slug,
+      description: tool.description || '',
+      category: tool.category,
+      fileUrl: tool.fileUrl || '',
+      externalUrl: tool.externalUrl || '',
+      iconName: tool.iconName || '',
+      requiredPlan: tool.requiredPlan,
+      sortOrder: String(tool.sortOrder),
+      isPublished: tool.isPublished,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTool) return
+    setSubmitting(true)
+
+    try {
+      const res = await fetch(`/api/admin/premier/tools/${editingTool.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editFormData,
+          sortOrder: parseInt(editFormData.sortOrder),
+        }),
+      })
+
+      if (res.ok) {
+        setIsEditDialogOpen(false)
+        setEditingTool(null)
+        fetchTools()
+      } else {
+        const error = await res.json()
+        alert(error.error || '更新に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to update tool:', error)
+      alert('更新に失敗しました')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = (tool: Tool) => {
+    setDeletingTool(tool)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingTool) return
+    setSubmitting(true)
+
+    try {
+      const res = await fetch(`/api/admin/premier/tools/${deletingTool.id}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        setIsDeleteDialogOpen(false)
+        setDeletingTool(null)
+        fetchTools()
+      } else {
+        const error = await res.json()
+        alert(error.error || '削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to delete tool:', error)
+      alert('削除に失敗しました')
     } finally {
       setSubmitting(false)
     }
@@ -451,10 +546,10 @@ export default function AdminToolsPage() {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(tool)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(tool)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -464,6 +559,152 @@ export default function AdminToolsPage() {
             ))}
           </div>
         )}
+
+        {/* 編集ダイアログ */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>ツールを編集</DialogTitle>
+              <DialogDescription>
+                ツールの情報を編集します
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit}>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="edit-name">名前 *</Label>
+                  <Input
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-slug">スラッグ *</Label>
+                  <Input
+                    id="edit-slug"
+                    value={editFormData.slug}
+                    onChange={(e) => setEditFormData({ ...editFormData, slug: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-description">説明</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-category">カテゴリ *</Label>
+                    <Select
+                      value={editFormData.category}
+                      onValueChange={(value) => setEditFormData({ ...editFormData, category: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-requiredPlan">必要プラン</Label>
+                    <Select
+                      value={editFormData.requiredPlan}
+                      onValueChange={(value) => setEditFormData({ ...editFormData, requiredPlan: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {planOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-fileUrl">ファイルURL</Label>
+                  <Input
+                    id="edit-fileUrl"
+                    value={editFormData.fileUrl}
+                    onChange={(e) => setEditFormData({ ...editFormData, fileUrl: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-externalUrl">外部リンクURL</Label>
+                  <Input
+                    id="edit-externalUrl"
+                    value={editFormData.externalUrl}
+                    onChange={(e) => setEditFormData({ ...editFormData, externalUrl: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-sortOrder">表示順</Label>
+                    <Input
+                      id="edit-sortOrder"
+                      type="number"
+                      value={editFormData.sortOrder}
+                      onChange={(e) => setEditFormData({ ...editFormData, sortOrder: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="edit-isPublished"
+                        checked={editFormData.isPublished}
+                        onCheckedChange={(checked) => setEditFormData({ ...editFormData, isPublished: checked })}
+                      />
+                      <Label htmlFor="edit-isPublished">公開する</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  キャンセル
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? '更新中...' : '更新'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* 削除確認ダイアログ */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ツールを削除</DialogTitle>
+              <DialogDescription>
+                「{deletingTool?.name}」を削除しますか？この操作は取り消せません。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                キャンセル
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete} disabled={submitting}>
+                {submitting ? '削除中...' : '削除'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   )
