@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { NotificationCenter } from './notification-center'
+import { FAQDropdown } from './faq-dropdown'
 import {
   Home,
   Users,
@@ -15,8 +17,6 @@ import {
   FileText,
   BarChart3,
   Shield,
-  Bell,
-  HelpCircle,
   ChevronDown,
   User,
   BookOpen,
@@ -143,14 +143,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 hover:bg-slate-50 rounded-lg">
-              <Bell className="h-5 w-5 text-slate-600" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
-            </button>
+            <NotificationCenter userId="temp-user-id" />
 
-            <button className="p-2 hover:bg-slate-50 rounded-lg">
-              <HelpCircle className="h-5 w-5 text-slate-600" />
-            </button>
+            <FAQDropdown />
 
             <div className="relative">
               <button
