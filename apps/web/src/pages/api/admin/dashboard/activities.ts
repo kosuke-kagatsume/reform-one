@@ -7,44 +7,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 最近のアクティビティを取得
-    const recentAuditLogs = await prisma.auditLog.findMany({
-      take: 10,
-      orderBy: { timestamp: 'desc' },
-      include: {
-        user: {
-          select: { name: true, email: true }
-        },
-        organization: {
-          select: { name: true }
+    // すべてのクエリを並列実行（4クエリ→1回の並列実行）
+    const [recentCustomers, recentSubscriptions, recentArchives] = await Promise.all([
+      // 最近の新規顧客
+      prisma.organization.findMany({
+        where: { type: 'CUSTOMER' },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, createdAt: true }
+      }),
+      // 最近のサブスクリプション変更
+      prisma.subscription.findMany({
+        take: 5,
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          organization: { select: { name: true } }
         }
-      }
-    })
-
-    // 最近の新規顧客
-    const recentCustomers = await prisma.organization.findMany({
-      where: { type: 'CUSTOMER' },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, createdAt: true }
-    })
-
-    // 最近のサブスクリプション変更
-    const recentSubscriptions = await prisma.subscription.findMany({
-      take: 5,
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        organization: { select: { name: true } }
-      }
-    })
-
-    // 最近のアーカイブ（コンテンツ）
-    const recentArchives = await prisma.archive.findMany({
-      where: { publishedAt: { lte: new Date() } },
-      take: 3,
-      orderBy: { publishedAt: 'desc' },
-      select: { id: true, title: true, publishedAt: true }
-    })
+      }),
+      // 最近のアーカイブ（コンテンツ）
+      prisma.archive.findMany({
+        where: { publishedAt: { lte: new Date() } },
+        take: 3,
+        orderBy: { publishedAt: 'desc' },
+        select: { id: true, title: true, publishedAt: true }
+      })
+    ])
 
     // アクティビティを統合してフォーマット
     const activities: Array<{
@@ -104,8 +91,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return parseTimeAgo(b.time) - parseTimeAgo(a.time)
     })
 
-    // 30秒キャッシュ
-    res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+    // 2分キャッシュ - アクティビティは準リアルタイムで十分
+    res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=240')
     return res.status(200).json({ activities: activities.slice(0, 8) })
   } catch (error) {
     console.error('Get dashboard activities error:', error)

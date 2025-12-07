@@ -13,6 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
+      // 10分キャッシュ - カテゴリはほとんど変更されない
+      res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200')
       return res.status(200).json({ categories })
     } catch (error) {
       console.error('Get archive categories error:', error)

@@ -140,8 +140,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       engagement: content._count.views > 2000 ? '高' : content._count.views > 1000 ? '中' : '低'
     }))
 
-    // 60秒キャッシュ（CDN + ブラウザ）
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    // 5分キャッシュ（CDN + ブラウザ）- レポートデータは頻繁に変わらない
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
     return res.status(200).json({
       kpiData,
       monthlyData,

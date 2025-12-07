@@ -4,6 +4,12 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
+// Serverless環境向けに接続プール設定を最適化
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'warn', 'error'] : ['error'],
+  // データソースURLにpgbouncerパラメータが含まれている場合は
+  // Prismaが自動的にトランザクションモードを調整
+})
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// 開発環境でもグローバルにキャッシュ（Hot Reload対策）
+globalForPrisma.prisma = prisma

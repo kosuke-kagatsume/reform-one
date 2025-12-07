@@ -121,8 +121,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       adminCount
     }
 
-    // 30秒キャッシュ（ユーザーデータは頻繁に変更される可能性）
-    res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+    // 2分キャッシュ - ユーザーリストはリアルタイム性は不要
+    res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=240')
     return res.status(200).json({
       users,
       stats,
