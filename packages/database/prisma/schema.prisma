@@ -8,75 +8,67 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Organizations
 model Organization {
-  id                String   @id @default(cuid())
+  id                String                @id @default(cuid())
   name              String
-  slug              String   @unique
-  type              String   @default("CUSTOMER") // REFORM_COMPANY, CUSTOMER
-  domainRestriction String   @default("[]") // JSON string for SQLite
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  users         UserOrganization[]
-  subscriptions Subscription[]
-  settings      OrganizationSettings?
-  invitations   Invitation[]
-  auditLogs     AuditLog[]
-  departments   Department[]
-  
+  slug              String                @unique
+  type              String                @default("CUSTOMER")
+  domainRestriction String                @default("[]")
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  auditLogs         AuditLog[]
+  departments       Department[]
+  invitations       Invitation[]
+  settings          OrganizationSettings?
+  subscriptions     Subscription[]
+  users             UserOrganization[]
+
   @@index([slug])
   @@index([type])
 }
 
 model OrganizationSettings {
-  id                String   @id @default(cuid())
-  organizationId    String   @unique
-  enforceMfa        Boolean  @default(false)
-  seatLimit         Int?     // null = unlimited
-  allowedDomains    String   @default("[]") // JSON string for SQLite
-  customRoles       String?  // JSON string for custom role definitions
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  enforceMfa     Boolean      @default(false)
+  seatLimit      Int?
+  allowedDomains String       @default("[]")
+  customRoles    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
-// Departments (for Reform Company employees)
 model Department {
-  id             String   @id @default(cuid())
+  id             String             @id @default(cuid())
   organizationId String
-  name           String   // 企画開発部, 編集部, 管理部
-  code           String   // PLANNING, EDITORIAL, MANAGEMENT
-  permissions    String   @default("[]") // JSON string for permissions
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  users        UserOrganization[]
-  
+  name           String
+  code           String
+  permissions    String             @default("[]")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users          UserOrganization[]
+
   @@unique([organizationId, code])
   @@index([organizationId])
 }
 
-// Users
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String             @id @default(cuid())
+  email         String             @unique
   name          String?
-  userType      String   @default("CUSTOMER") // EMPLOYEE, CUSTOMER, EXTERNAL_INSTRUCTOR
-  password      String?  // null for magic link users
-  mfaEnabled    Boolean  @default(false)
+  userType      String             @default("CUSTOMER")
+  password      String?
+  mfaEnabled    Boolean            @default(false)
   mfaSecret     String?
-  emailVerified Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  organizations UserOrganization[]
-  sessions      Session[]
+  emailVerified Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
   auditLogs     AuditLog[]
   invitations   Invitation[]
-  notifications Notification[]
+  sessions      Session[]
+  organizations UserOrganization[]
 
   @@index([email])
   @@index([userType])
@@ -85,21 +77,19 @@ model User {
 model UserOrganization {
   userId         String
   organizationId String
-  role           String   @default("MEMBER") // ADMIN, MEMBER, DEPARTMENT_MANAGER
+  role           String       @default("MEMBER")
   departmentId   String?
-  joinedAt       DateTime @default(now())
-  
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  
+  joinedAt       DateTime     @default(now())
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([userId, organizationId])
   @@index([organizationId])
   @@index([userId])
   @@index([departmentId])
 }
 
-// Sessions
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -107,59 +97,54 @@ model Session {
   expires      DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([sessionToken])
   @@index([userId])
 }
 
-// Invitations
 model Invitation {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   email          String
-  token          String   @unique
+  token          String       @unique
   organizationId String
-  role           String   @default("MEMBER") // ADMIN, MEMBER, DEPARTMENT_MANAGER
+  role           String       @default("MEMBER")
   invitedById    String
   expiresAt      DateTime
   acceptedAt     DateTime?
-  createdAt      DateTime @default(now())
-  
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invitedBy    User         @relation(fields: [invitedById], references: [id])
-  
+  createdAt      DateTime     @default(now())
+  invitedBy      User         @relation(fields: [invitedById], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([token])
   @@index([email, organizationId])
 }
 
-// Billing & Subscriptions
 model Subscription {
-  id                 String   @id @default(cuid())
-  organizationId     String
-  planType           String   // STANDARD, EXPERT
-  status             String   @default("PENDING") // ACTIVE, SUSPENDED, CANCELLED, PENDING
-  paymentMethod      String   @default("CARD") // CARD, BANK_TRANSFER, CONVENIENCE_STORE
-  basePrice          Float    // 基本価格
-  discountPercent    Float    @default(0) // 割引率 (0-100)
-  discountAmount     Float    @default(0) // 割引額
-  finalPrice         Float    // 最終価格
-  userLimit          Int?     // null = unlimited
-  autoRenewal        Boolean  @default(true)
-  stripeCustomerId   String?
-  stripeSubscriptionId String? @unique
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  renewalNotifiedAt  DateTime?
-  cancelAt           DateTime?
-  canceledAt         DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  entitlements Entitlement[]
-  addons       Addon[]
-  invoices     Invoice[]
+  id                   String        @id @default(cuid())
+  organizationId       String
+  planType             String
+  status               String        @default("PENDING")
+  paymentMethod        String        @default("CARD")
+  basePrice            Float
+  discountPercent      Float         @default(0)
+  discountAmount       Float         @default(0)
+  finalPrice           Float
+  userLimit            Int?
+  autoRenewal          Boolean       @default(true)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?       @unique
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  renewalNotifiedAt    DateTime?
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  addons               Addon[]
+  entitlements         Entitlement[]
+  invoices             Invoice[]
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([stripeSubscriptionId])
@@ -168,68 +153,63 @@ model Subscription {
 }
 
 model Entitlement {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   subscriptionId String
-  feature        String   // e-paper, community, databook, newsletter, etc
-  limit          Int?     // null = unlimited
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  
+  feature        String
+  limit          Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
   @@unique([subscriptionId, feature])
   @@index([subscriptionId])
 }
 
 model Addon {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   subscriptionId String
-  type           String   // paper, electronic_id
-  quantity       Int      @default(1)
+  type           String
+  quantity       Int          @default(1)
   pricePerUnit   Float
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
   @@index([subscriptionId])
 }
 
 model Invoice {
-  id               String   @id @default(cuid())
-  subscriptionId   String
-  stripeInvoiceId  String   @unique
-  amount           Float
-  currency         String   @default("JPY")
-  status           String   // draft, open, paid, void, uncollectible
-  paidAt           DateTime?
-  dueDate          DateTime?
-  invoiceNumber    String   @unique
-  invoicePdf       String?
-  taxAmount        Float?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  
+  id              String       @id @default(cuid())
+  subscriptionId  String
+  stripeInvoiceId String       @unique
+  amount          Float
+  currency        String       @default("JPY")
+  status          String
+  paidAt          DateTime?
+  dueDate         DateTime?
+  invoiceNumber   String       @unique
+  invoicePdf      String?
+  taxAmount       Float?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
   @@index([subscriptionId])
   @@index([stripeInvoiceId])
 }
 
-// Audit Logs
 model AuditLog {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   userId       String?
   orgId        String?
-  action       String   // user.login, billing.upgrade, article.publish, etc
-  resource     String?  // article:123, subscription:456
-  metadata     String?  // JSON string for SQLite
+  action       String
+  resource     String?
+  metadata     String?
   ip           String?
   userAgent    String?
-  timestamp    DateTime @default(now())
-
-  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  organization Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  timestamp    DateTime      @default(now())
+  organization Organization? @relation(fields: [orgId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([orgId])
@@ -237,161 +217,140 @@ model AuditLog {
   @@index([timestamp])
 }
 
-// ============================================
-// Premier Subscription System Models
-// ============================================
-
-// Seminar Categories
 model SeminarCategory {
-  id          String   @id @default(cuid())
-  name        String   // 営業セミナー, 業界標準化研修, スペシャリストセミナー, オンライン物件紹介
-  slug        String   @unique
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
   description String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  seminars Seminar[]
-  archives Archive[]
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archives    Archive[]
+  seminars    Seminar[]
 
   @@index([slug])
 }
 
-// Seminars
 model Seminar {
-  id           String   @id @default(cuid())
-  categoryId   String
-  title        String
-  description  String?
-  instructor   String?
-  imageUrl     String?
-  zoomUrl      String?
-  scheduledAt  DateTime
-  duration     Int?     // minutes
-  isPublic     Boolean  @default(false) // for open seminars
-  publicPrice  Float?   // price for external participants
-  notificationSentAt DateTime? // when notification email was sent
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  category     SeminarCategory    @relation(fields: [categoryId], references: [id])
-  participants SeminarParticipant[]
+  id                 String               @id @default(cuid())
+  categoryId         String
+  title              String
+  description        String?
+  instructor         String?
+  imageUrl           String?
+  zoomUrl            String?
+  scheduledAt        DateTime
+  duration           Int?
+  isPublic           Boolean              @default(false)
+  publicPrice        Float?
+  notificationSentAt DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  category           SeminarCategory      @relation(fields: [categoryId], references: [id])
+  participants       SeminarParticipant[]
 
   @@index([categoryId])
   @@index([scheduledAt])
   @@index([isPublic])
 }
 
-// Seminar Participants (for tracking)
 model SeminarParticipant {
-  id         String   @id @default(cuid())
-  seminarId  String
-  userId     String
-  registeredAt DateTime @default(now())
-  attendedAt DateTime?
-
-  seminar Seminar @relation(fields: [seminarId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  seminarId    String
+  userId       String
+  registeredAt DateTime  @default(now())
+  attendedAt   DateTime?
+  seminar      Seminar   @relation(fields: [seminarId], references: [id], onDelete: Cascade)
 
   @@unique([seminarId, userId])
   @@index([seminarId])
   @@index([userId])
 }
 
-// Archives (YouTube videos)
 model Archive {
-  id          String   @id @default(cuid())
-  categoryId  String
-  title       String
-  description String?
-  youtubeUrl  String
+  id           String          @id @default(cuid())
+  categoryId   String
+  title        String
+  description  String?
+  youtubeUrl   String
   thumbnailUrl String?
-  duration    Int?     // minutes
-  publishedAt DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  category SeminarCategory @relation(fields: [categoryId], references: [id])
-  views    ArchiveView[]
+  duration     Int?
+  publishedAt  DateTime        @default(now())
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  category     SeminarCategory @relation(fields: [categoryId], references: [id])
+  views        ArchiveView[]
 
   @@index([categoryId])
   @@index([publishedAt])
 }
 
-// Archive Views (for tracking)
 model ArchiveView {
   id        String   @id @default(cuid())
   archiveId String
   userId    String
   viewedAt  DateTime @default(now())
-
-  archive Archive @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  archive   Archive  @relation(fields: [archiveId], references: [id], onDelete: Cascade)
 
   @@index([archiveId])
   @@index([userId])
   @@index([viewedAt])
 }
 
-// Community Categories
 model CommunityCategory {
-  id                String   @id @default(cuid())
-  name              String   // 人事, 施工管理, 設計, 広報
-  slug              String   @unique
-  description       String?
-  meetingUrl        String?  // fixed Zoom registration URL
-  sortOrder         Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  posts             CommunityPost[]
-  meetingArchives   MeetingArchive[]
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  description     String?
+  meetingUrl      String?
+  sortOrder       Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  posts           CommunityPost[]
+  meetingArchives MeetingArchive[]
 
   @@index([slug])
 }
 
-// Community Posts
 model CommunityPost {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   categoryId  String
   authorId    String
   title       String
   content     String
-  attachments String   @default("[]") // JSON array of attachment URLs
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  category CommunityCategory @relation(fields: [categoryId], references: [id])
+  attachments String            @default("[]")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  category    CommunityCategory @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
   @@index([authorId])
   @@index([createdAt])
 }
 
-// Meeting Archives
 model MeetingArchive {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   categoryId  String
   title       String
   description String?
   youtubeUrl  String
   heldAt      DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  category CommunityCategory @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  category    CommunityCategory @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
   @@index([heldAt])
 }
 
-// Activity Log (for tracking user activities)
 model ActivityLog {
   id           String   @id @default(cuid())
   userId       String
   orgId        String?
-  activityType String   // seminar_register, seminar_attend, archive_view, community_view, community_post
-  resourceType String?  // seminar, archive, community
+  activityType String
+  resourceType String?
   resourceId   String?
-  metadata     String?  // JSON string
+  metadata     String?
   createdAt    DateTime @default(now())
 
   @@index([userId])
@@ -400,102 +359,85 @@ model ActivityLog {
   @@index([createdAt])
 }
 
-// ============================================
-// Phase 2: Databook & Newsletter Models
-// ============================================
-
-// Databook (Expert plan only - quarterly PDFs with YouTube explanations)
 model Databook {
-  id           String   @id @default(cuid())
-  title        String   // e.g., "2025年Q1 業界動向レポート"
-  description  String?
-  pdfUrl       String   // URL to the PDF file
-  youtubeUrl   String?  // Optional: explanation video URL
-  quarter      String   // e.g., "2025-Q1", "2025-Q2"
-  publishedAt  DateTime @default(now())
-  isPublished  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  downloads DatabookDownload[]
+  id          String             @id @default(cuid())
+  title       String
+  description String?
+  pdfUrl      String
+  youtubeUrl  String?
+  quarter     String
+  publishedAt DateTime           @default(now())
+  isPublished Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  downloads   DatabookDownload[]
 
   @@index([quarter])
   @@index([publishedAt])
   @@index([isPublished])
 }
 
-// Databook Download tracking
 model DatabookDownload {
-  id         String   @id @default(cuid())
-  databookId String
-  userId     String
+  id           String   @id @default(cuid())
+  databookId   String
+  userId       String
   downloadedAt DateTime @default(now())
-
-  databook Databook @relation(fields: [databookId], references: [id], onDelete: Cascade)
+  databook     Databook @relation(fields: [databookId], references: [id], onDelete: Cascade)
 
   @@index([databookId])
   @@index([userId])
   @@index([downloadedAt])
 }
 
-// Newsletter (Expert plan only)
 model Newsletter {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  content     String   // HTML content
-  summary     String?  // Plain text summary for email
-  authorId    String   // Author (Reform Company employee)
+  content     String
+  summary     String?
+  authorId    String
   sentAt      DateTime?
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isPublished Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([sentAt])
   @@index([isPublished])
   @@index([authorId])
 }
 
-// ============================================
-// Phase 3: Site Visits, Qualifications, Tools
-// ============================================
-
-// Site Visits (視察会)
 model SiteVisit {
-  id           String   @id @default(cuid())
-  title        String   // e.g., "大阪リフォーム視察ツアー"
+  id           String                 @id @default(cuid())
+  title        String
   description  String?
-  location     String   // 開催地
-  address      String?  // 詳細住所
+  location     String
+  address      String?
   imageUrl     String?
-  scheduledAt  DateTime // 開催日時
-  duration     Int?     // 時間（分）
-  capacity     Int      @default(20) // 定員
-  price        Float    // 参加費（円）
-  isPublished  Boolean  @default(false)
-  isCanceled   Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
+  scheduledAt  DateTime
+  duration     Int?
+  capacity     Int                    @default(20)
+  price        Float
+  isPublished  Boolean                @default(false)
+  isCanceled   Boolean                @default(false)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
   participants SiteVisitParticipant[]
 
   @@index([scheduledAt])
   @@index([isPublished])
 }
 
-// Site Visit Participants
 model SiteVisitParticipant {
-  id           String   @id @default(cuid())
-  siteVisitId  String
-  userId       String
-  organizationId String?
-  status       String   @default("PENDING") // PENDING, CONFIRMED, CANCELED, ATTENDED
-  paymentStatus String  @default("UNPAID") // UNPAID, PAID, REFUNDED
+  id                    String    @id @default(cuid())
+  siteVisitId           String
+  userId                String
+  organizationId        String?
+  status                String    @default("PENDING")
+  paymentStatus         String    @default("UNPAID")
   stripePaymentIntentId String?
-  registeredAt DateTime @default(now())
-  paidAt       DateTime?
-  attendedAt   DateTime?
-
-  siteVisit SiteVisit @relation(fields: [siteVisitId], references: [id], onDelete: Cascade)
+  registeredAt          DateTime  @default(now())
+  paidAt                DateTime?
+  attendedAt            DateTime?
+  siteVisit             SiteVisit @relation(fields: [siteVisitId], references: [id], onDelete: Cascade)
 
   @@unique([siteVisitId, userId])
   @@index([siteVisitId])
@@ -504,35 +446,31 @@ model SiteVisitParticipant {
   @@index([status])
 }
 
-// Qualifications (資格)
 model Qualification {
-  id          String   @id @default(cuid())
-  name        String   // e.g., "リフォーム業界標準化資格"
-  code        String   @unique // e.g., "REFORM_STANDARD"
+  id          String              @id @default(cuid())
+  name        String
+  code        String              @unique
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  courses UserQualification[]
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  courses     UserQualification[]
 
   @@index([code])
   @@index([isActive])
 }
 
-// User Qualifications (資格受講権)
 model UserQualification {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   userId          String
   qualificationId String
   organizationId  String?
-  status          String   @default("ENROLLED") // ENROLLED, IN_PROGRESS, COMPLETED, EXPIRED
-  enrolledAt      DateTime @default(now())
+  status          String        @default("ENROLLED")
+  enrolledAt      DateTime      @default(now())
   completedAt     DateTime?
   expiresAt       DateTime?
   certificateUrl  String?
-
-  qualification Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+  qualification   Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, qualificationId])
   @@index([userId])
@@ -541,23 +479,21 @@ model UserQualification {
   @@index([status])
 }
 
-// Tools (追加ツール)
 model Tool {
-  id           String   @id @default(cuid())
-  name         String   // e.g., "見積書テンプレート", "契約書フォーマット"
-  slug         String   @unique
+  id           String         @id @default(cuid())
+  name         String
+  slug         String         @unique
   description  String?
-  category     String   // TEMPLATE, CALCULATOR, CHECKLIST
-  fileUrl      String?  // ダウンロード可能なファイル
-  externalUrl  String?  // 外部ツールへのリンク
-  iconName     String?  // アイコン名
-  requiredPlan String   @default("STANDARD") // STANDARD, EXPERT
-  sortOrder    Int      @default(0)
-  isPublished  Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  usageLogs ToolUsageLog[]
+  category     String
+  fileUrl      String?
+  externalUrl  String?
+  iconName     String?
+  requiredPlan String         @default("STANDARD")
+  sortOrder    Int            @default(0)
+  isPublished  Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  usageLogs    ToolUsageLog[]
 
   @@index([slug])
   @@index([category])
@@ -565,39 +501,35 @@ model Tool {
   @@index([isPublished])
 }
 
-// Tool Usage Log
 model ToolUsageLog {
   id        String   @id @default(cuid())
   toolId    String
   userId    String
-  action    String   // VIEW, DOWNLOAD, USE
+  action    String
   createdAt DateTime @default(now())
-
-  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@index([toolId])
   @@index([userId])
   @@index([createdAt])
 }
 
-// Recommendations (おすすめ表示)
 model Recommendation {
-  id           String   @id @default(cuid())
-  title        String
-  description  String?
-  imageUrl     String?
-  linkUrl      String
-  linkText     String   @default("詳細を見る")
-  targetType   String   // ALL, STANDARD, EXPERT, NEW_USER
-  position     String   @default("POPUP") // POPUP, BANNER, SIDEBAR
-  priority     Int      @default(0)
-  startAt      DateTime?
-  endAt        DateTime?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  dismissals RecommendationDismissal[]
+  id          String                    @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  linkUrl     String
+  linkText    String                    @default("詳細を見る")
+  targetType  String
+  position    String                    @default("POPUP")
+  priority    Int                       @default(0)
+  startAt     DateTime?
+  endAt       DateTime?
+  isActive    Boolean                   @default(true)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  dismissals  RecommendationDismissal[]
 
   @@index([targetType])
   @@index([position])
@@ -606,94 +538,66 @@ model Recommendation {
   @@index([endAt])
 }
 
-// Recommendation Dismissals (ユーザーが閉じた記録)
 model RecommendationDismissal {
-  id               String   @id @default(cuid())
+  id               String         @id @default(cuid())
   recommendationId String
   userId           String
-  dismissedAt      DateTime @default(now())
-
-  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  dismissedAt      DateTime       @default(now())
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
 
   @@unique([recommendationId, userId])
   @@index([recommendationId])
   @@index([userId])
 }
 
-// Open Seminar Registrations (外部向けセミナー申込)
 model OpenSeminarRegistration {
-  id           String   @id @default(cuid())
-  seminarId    String
-  name         String
-  email        String
-  company      String?
-  phone        String?
-  paymentStatus String  @default("UNPAID") // UNPAID, PAID, REFUNDED
+  id                    String    @id @default(cuid())
+  seminarId             String
+  name                  String
+  email                 String
+  company               String?
+  phone                 String?
+  paymentStatus         String    @default("UNPAID")
   stripePaymentIntentId String?
-  registeredAt DateTime @default(now())
-  paidAt       DateTime?
+  registeredAt          DateTime  @default(now())
+  paidAt                DateTime?
 
   @@index([seminarId])
   @@index([email])
   @@index([paymentStatus])
 }
 
-// ============================================
-// Security Models (Password Reset, 2FA)
-// ============================================
-
-// Password Reset Tokens
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  token     String   @unique
+  token     String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([token])
   @@index([userId])
   @@index([expiresAt])
 }
 
-// Email Verification Tokens
 model EmailVerificationToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  token     String   @unique
+  token     String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([token])
   @@index([userId])
 }
 
-// MFA Backup Codes
 model MfaBackupCode {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  code      String   // hashed backup code
+  code      String
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId])
-}
-
-// Notifications
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String   // SYSTEM, SEMINAR, ARCHIVE, ANNOUNCEMENT
-  title     String
-  message   String
-  link      String?  // URL to navigate when clicked
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([userId, read])
-  @@index([createdAt])
 }

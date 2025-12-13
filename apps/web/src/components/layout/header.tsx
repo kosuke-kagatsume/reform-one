@@ -36,7 +36,7 @@ export function Header() {
               <Link href="/login">ログイン</Link>
             </Button>
             <Button asChild>
-              <Link href="/signup">無料で始める</Link>
+              <Link href="/contact">お問い合わせ</Link>
             </Button>
           </div>
         </div>

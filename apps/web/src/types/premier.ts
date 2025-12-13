@@ -1,6 +1,37 @@
 export type PlanType = 'STANDARD' | 'EXPERT'
 
-export type UserRole = 'ADMIN' | 'MEMBER'
+// 権限ロール: OWNER=社長, ADMIN=管理者, MEMBER=一般社員, ACCOUNTANT=経理
+export type UserRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'ACCOUNTANT'
+
+// 権限ロールの日本語表示名
+export const ROLE_LABELS: Record<UserRole, string> = {
+  OWNER: '社長',
+  ADMIN: '管理者',
+  MEMBER: '一般社員',
+  ACCOUNTANT: '経理'
+}
+
+// 各ロールがアクセスできるメニュー項目
+export const ROLE_MENU_ACCESS: Record<UserRole, string[]> = {
+  OWNER: [
+    'dashboard', 'seminars', 'archives', 'community',
+    'databooks', 'newsletters', 'site-visits', 'tools', 'qualifications',
+    'members', 'organization', 'billing', 'security', 'settings'
+  ],
+  ADMIN: [
+    'dashboard', 'seminars', 'archives', 'community',
+    'databooks', 'newsletters', 'site-visits', 'tools', 'qualifications',
+    'members', 'organization', 'security', 'settings'
+  ],
+  MEMBER: [
+    'dashboard', 'seminars', 'archives', 'community',
+    'databooks', 'newsletters', 'site-visits', 'tools', 'qualifications',
+    'settings'
+  ],
+  ACCOUNTANT: [
+    'dashboard', 'billing', 'settings'
+  ]
+}
 
 export type PaymentMethod = 'CARD' | 'BANK_TRANSFER' | 'CONVENIENCE_STORE'
 

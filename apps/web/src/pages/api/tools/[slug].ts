@@ -2,45 +2,24 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
 
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '') + '-' + Date.now().toString(36)
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = await verifyAuth(req)
   if (!auth) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  // Check if user is REFORM_COMPANY admin
+  // Only REFORM_COMPANY employees can manage tools
   const isAdmin = auth.userType === 'EMPLOYEE'
-
-  if (req.method === 'GET') {
-    try {
-      const tools = await prisma.tool.findMany({
-        where: isAdmin ? {} : { isPublished: true },
-        orderBy: [
-          { category: 'asc' },
-          { sortOrder: 'asc' }
-        ]
-      })
-
-      return res.status(200).json({ tools })
-    } catch (error) {
-      console.error('Get tools error:', error)
-      return res.status(500).json({ error: 'Internal server error' })
-    }
+  if (!isAdmin) {
+    return res.status(403).json({ error: 'Forbidden' })
   }
 
-  if (req.method === 'POST') {
-    if (!isAdmin) {
-      return res.status(403).json({ error: 'Forbidden' })
-    }
+  const { slug: id } = req.query
+  if (!id || typeof id !== 'string') {
+    return res.status(400).json({ error: 'Tool ID is required' })
+  }
 
+  if (req.method === 'PUT') {
     try {
       const { name, description, category, iconName, requiredPlan, fileUrl, externalUrl, isPublished } = req.body
 
@@ -48,10 +27,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Name and category are required' })
       }
 
-      const tool = await prisma.tool.create({
+      const tool = await prisma.tool.update({
+        where: { id },
         data: {
           name,
-          slug: generateSlug(name),
           description: description || null,
           category,
           iconName: iconName || null,
@@ -62,9 +41,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      return res.status(201).json({ tool })
+      return res.status(200).json({ tool })
     } catch (error) {
-      console.error('Create tool error:', error)
+      console.error('Update tool error:', error)
+      return res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    try {
+      await prisma.tool.delete({
+        where: { id }
+      })
+
+      return res.status(200).json({ success: true })
+    } catch (error) {
+      console.error('Delete tool error:', error)
       return res.status(500).json({ error: 'Internal server error' })
     }
   }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react'
+import { ArrowRight, Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
@@ -18,11 +18,20 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isSlowConnection, setIsSlowConnection] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [capsLockOn, setCapsLockOn] = useState(false)
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
+    setIsSlowConnection(false)
+
+    // 5秒後に遅い接続の警告を表示
+    const slowConnectionTimer = setTimeout(() => {
+      setIsSlowConnection(true)
+    }, 5000)
 
     try {
       const result = await login(email, password)
@@ -45,7 +54,9 @@ export default function Login() {
     } catch (err) {
       setError('ログイン中にエラーが発生しました')
     } finally {
+      clearTimeout(slowConnectionTimer)
       setIsLoading(false)
+      setIsSlowConnection(false)
     }
   }, [email, password, login, router])
 
@@ -116,32 +127,57 @@ export default function Login() {
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="********"
-                      className="pl-10"
+                      className="pl-10 pr-10"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
+                      onKeyUp={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
+                  {capsLockOn && (
+                    <p className="text-xs text-amber-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Caps Lockがオンになっています
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-slate-600">
-                      ログイン状態を保持
-                    </span>
-                  </label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    パスワードを忘れた方
-                  </Link>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-slate-600">
+                        ログイン状態を保持
+                      </span>
+                    </label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      パスワードを忘れた方
+                    </Link>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    ※共有PCをご利用の場合はチェックを外してください
+                  </p>
                 </div>
 
                 <Button
@@ -151,7 +187,10 @@ export default function Login() {
                   disabled={loading}
                 >
                   {loading ? (
-                    '認証中...'
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      認証中...
+                    </>
                   ) : (
                     <>
                       ログイン
@@ -159,16 +198,27 @@ export default function Login() {
                     </>
                   )}
                 </Button>
+
+                {isSlowConnection && (
+                  <p className="text-sm text-amber-600 text-center mt-2">
+                    通信に時間がかかっています。通信環境をご確認ください。
+                  </p>
+                )}
               </form>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-              <p className="text-center text-sm text-slate-600">
-                法人の管理者から招待メールを受け取っていない場合は、{' '}
-                <Link href="/contact" className="text-blue-600 hover:text-blue-700 font-medium">
-                  お問い合わせ
-                </Link>
-                ください
-              </p>
+            <CardFooter className="flex flex-col space-y-3 bg-slate-50 rounded-b-lg">
+              <div className="text-sm text-slate-600 space-y-2">
+                <p>
+                  リフォーム産業新聞プレミア購読のご契約者様はこちらからログインしてください。
+                </p>
+                <p>
+                  アカウントをお持ちでない方は、法人管理者または{' '}
+                  <Link href="/contact" className="text-blue-600 hover:text-blue-700 font-medium">
+                    弊社までお問い合わせ
+                  </Link>
+                  ください。
+                </p>
+              </div>
             </CardFooter>
           </Card>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import AdminLayout from '@/components/layout/admin-layout'
+import { PremierAdminLayout } from '@/components/layout/premier-admin-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -66,7 +66,7 @@ const planOptions = [
 
 export default function AdminToolsPage() {
   const router = useRouter()
-  const { user, isLoading, isAuthenticated } = useAuth()
+  const { user, isLoading, isAuthenticated, isReformCompany } = useAuth()
   const [tools, setTools] = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -109,17 +109,17 @@ export default function AdminToolsPage() {
   }, [isLoading, isAuthenticated, router])
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'ADMIN') {
+    if (isAuthenticated && isReformCompany) {
       fetchTools()
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, isReformCompany])
 
   const fetchTools = async () => {
     try {
-      const res = await fetch('/api/admin/premier/tools')
+      const res = await fetch('/api/tools')
       if (res.ok) {
         const data = await res.json()
-        setTools(data)
+        setTools(data.tools || [])
       }
     } catch (error) {
       console.error('Failed to fetch tools:', error)
@@ -133,7 +133,7 @@ export default function AdminToolsPage() {
     setSubmitting(true)
 
     try {
-      const res = await fetch('/api/admin/premier/tools', {
+      const res = await fetch('/api/tools', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,7 +192,7 @@ export default function AdminToolsPage() {
     setSubmitting(true)
 
     try {
-      const res = await fetch(`/api/admin/premier/tools/${editingTool.id}`, {
+      const res = await fetch(`/api/tools/${editingTool.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -227,7 +227,7 @@ export default function AdminToolsPage() {
     setSubmitting(true)
 
     try {
-      const res = await fetch(`/api/admin/premier/tools/${deletingTool.id}`, {
+      const res = await fetch(`/api/tools/${deletingTool.id}`, {
         method: 'DELETE',
       })
 
@@ -273,16 +273,16 @@ export default function AdminToolsPage() {
 
   if (isLoading || loading) {
     return (
-      <AdminLayout>
+      <PremierAdminLayout>
         <div className="flex items-center justify-center h-64">
           <p className="text-slate-600">読み込み中...</p>
         </div>
-      </AdminLayout>
+      </PremierAdminLayout>
     )
   }
 
   return (
-    <AdminLayout>
+    <PremierAdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -706,6 +706,6 @@ export default function AdminToolsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </AdminLayout>
+    </PremierAdminLayout>
   )
 }

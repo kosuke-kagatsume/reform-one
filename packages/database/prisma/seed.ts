@@ -367,6 +367,127 @@ async function main() {
     }
   })
 
+  // Tools seed data
+  await prisma.tool.upsert({
+    where: { slug: 'estimate-template' },
+    update: {},
+    create: {
+      name: '見積書テンプレート',
+      slug: 'estimate-template',
+      description: 'リフォーム工事向けの見積書テンプレート（Excel形式）。項目別の単価設定や自動計算機能付き。',
+      category: 'テンプレート',
+      fileUrl: '/downloads/templates/estimate-template.xlsx',
+      iconName: 'FileSpreadsheet',
+      requiredPlan: 'STANDARD',
+      sortOrder: 1
+    }
+  })
+
+  await prisma.tool.upsert({
+    where: { slug: 'contract-template' },
+    update: {},
+    create: {
+      name: '契約書テンプレート',
+      slug: 'contract-template',
+      description: '工事請負契約書のテンプレート（Word形式）。建設業法に準拠した標準書式。',
+      category: 'テンプレート',
+      fileUrl: '/downloads/templates/contract-template.docx',
+      iconName: 'FileText',
+      requiredPlan: 'STANDARD',
+      sortOrder: 2
+    }
+  })
+
+  await prisma.tool.upsert({
+    where: { slug: 'cost-calculator' },
+    update: {},
+    create: {
+      name: '原価計算ツール',
+      slug: 'cost-calculator',
+      description: '工事原価を簡単に計算できるスプレッドシート。材料費・労務費・経費を自動集計。',
+      category: '計算ツール',
+      fileUrl: '/downloads/tools/cost-calculator.xlsx',
+      iconName: 'Calculator',
+      requiredPlan: 'STANDARD',
+      sortOrder: 1
+    }
+  })
+
+  await prisma.tool.upsert({
+    where: { slug: 'checklist-inspection' },
+    update: {},
+    create: {
+      name: '現場検査チェックリスト',
+      slug: 'checklist-inspection',
+      description: '工事完了時の検査項目チェックリスト。部位別・工種別に網羅的にチェック可能。',
+      category: 'チェックリスト',
+      fileUrl: '/downloads/checklists/inspection-checklist.pdf',
+      iconName: 'ClipboardCheck',
+      requiredPlan: 'STANDARD',
+      sortOrder: 1
+    }
+  })
+
+  await prisma.tool.upsert({
+    where: { slug: 'diagnosis-sheet' },
+    update: {},
+    create: {
+      name: '住宅診断シート',
+      slug: 'diagnosis-sheet',
+      description: 'リフォーム提案のための住宅診断シート。現況調査から提案書作成まで一貫して使用可能。',
+      category: '診断ツール',
+      fileUrl: '/downloads/diagnosis/housing-diagnosis.pdf',
+      iconName: 'ClipboardCheck',
+      requiredPlan: 'STANDARD',
+      sortOrder: 1
+    }
+  })
+
+  await prisma.tool.upsert({
+    where: { slug: 'project-schedule' },
+    update: {},
+    create: {
+      name: '工程表テンプレート',
+      slug: 'project-schedule',
+      description: 'ガントチャート形式の工程表テンプレート。複数職種の調整に最適。',
+      category: 'テンプレート',
+      fileUrl: '/downloads/templates/project-schedule.xlsx',
+      iconName: 'Calendar',
+      requiredPlan: 'STANDARD',
+      sortOrder: 3
+    }
+  })
+
+  await prisma.tool.upsert({
+    where: { slug: 'safety-checklist' },
+    update: {},
+    create: {
+      name: '安全確認チェックリスト',
+      slug: 'safety-checklist',
+      description: '現場作業前の安全確認チェックリスト。KY活動記録としても使用可能。',
+      category: 'チェックリスト',
+      fileUrl: '/downloads/checklists/safety-checklist.pdf',
+      iconName: 'Shield',
+      requiredPlan: 'STANDARD',
+      sortOrder: 2
+    }
+  })
+
+  await prisma.tool.upsert({
+    where: { slug: 'customer-survey' },
+    update: {},
+    create: {
+      name: '顧客満足度アンケート',
+      slug: 'customer-survey',
+      description: '工事完了後の顧客満足度調査テンプレート。改善点の発見に活用。',
+      category: 'テンプレート',
+      fileUrl: '/downloads/templates/customer-survey.docx',
+      iconName: 'Users',
+      requiredPlan: 'EXPERT',
+      sortOrder: 4
+    }
+  })
+
   console.log('Seed data created successfully!')
 }
 

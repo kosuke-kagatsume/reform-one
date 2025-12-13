@@ -20,27 +20,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const notifications = await prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50
-    })
-
-    const unreadCount = await prisma.notification.count({
-      where: { userId, read: false }
-    })
-
+    // Notification model is not yet implemented - return empty for now
+    // TODO: Add Notification model to schema and implement properly
     return success(res, {
-      notifications: notifications.map(n => ({
-        id: n.id,
-        type: n.type,
-        title: n.title,
-        message: n.message,
-        link: n.link,
-        read: n.read,
-        createdAt: n.createdAt.toISOString()
-      })),
-      unreadCount
+      notifications: [],
+      unreadCount: 0
     })
   } catch (err) {
     console.error('Get notifications error:', err)

@@ -16,7 +16,8 @@ import {
   User,
   Settings,
   Home,
-  FolderOpen
+  FolderOpen,
+  Wrench
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -75,6 +76,11 @@ export function PremierAdminLayout({ children }: PremierAdminLayoutProps) {
       title: 'カテゴリ管理',
       icon: FolderOpen,
       href: '/admin/premier/categories',
+    },
+    {
+      title: 'ツール管理',
+      icon: Wrench,
+      href: '/admin/premier/tools',
     },
   ]
 

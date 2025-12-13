@@ -16,7 +16,11 @@ import {
   Clock,
   ExternalLink,
   Lock,
-  Shield
+  Shield,
+  X,
+  UserPlus,
+  FileText,
+  Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -51,6 +55,8 @@ export default function Dashboard() {
   const [upcomingSeminars, setUpcomingSeminars] = useState<Seminar[]>([])
   const [recentArchives, setRecentArchives] = useState<Archive[]>([])
   const [communityCategories, setCommunityCategories] = useState<CommunityCategory[]>([])
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(0)
 
   // Helper to check if a widget is enabled
   const isWidgetEnabled = (widgetId: string) => {
@@ -67,6 +73,49 @@ export default function Dashboard() {
       router.push('/admin/premier')
     }
   }, [isLoading, isAuthenticated, isReformCompany, router])
+
+  // 初回ログイン時にオンボーディングを表示
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const onboardingKey = `onboarding_completed_${user.id}`
+      const completed = localStorage.getItem(onboardingKey)
+      if (!completed) {
+        setShowOnboarding(true)
+      }
+    }
+  }, [isAuthenticated, user])
+
+  const completeOnboarding = () => {
+    if (user) {
+      const onboardingKey = `onboarding_completed_${user.id}`
+      localStorage.setItem(onboardingKey, 'true')
+    }
+    setShowOnboarding(false)
+  }
+
+  const onboardingSteps = [
+    {
+      icon: UserPlus,
+      title: 'メンバーを招待する',
+      description: '社内のチームメンバーを招待して、一緒にプレミアコンテンツを活用しましょう。',
+      action: { label: 'メンバーを招待', href: '/dashboard/members' },
+      color: 'blue'
+    },
+    {
+      icon: Calendar,
+      title: '今月のセミナーに申し込む',
+      description: '経営・営業・技術など、様々なテーマのセミナーに参加できます。',
+      action: { label: 'セミナー一覧を見る', href: '/dashboard/seminars' },
+      color: 'purple'
+    },
+    {
+      icon: FileText,
+      title: 'データブックを確認する',
+      description: '市場データや経営に役立つ資料をダウンロードできます。',
+      action: { label: 'データブックを見る', href: '/dashboard/databooks' },
+      color: 'green'
+    }
+  ]
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -129,6 +178,68 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* 初回オンボーディング */}
+        {showOnboarding && (
+          <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-lg">プレミア購読へようこそ！</CardTitle>
+                </div>
+                <button
+                  onClick={completeOnboarding}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <CardDescription>
+                はじめに以下の3つのステップを完了して、サービスを最大限に活用しましょう。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {onboardingSteps.map((step, index) => {
+                  const StepIcon = step.icon
+                  const colorClasses = {
+                    blue: 'bg-blue-100 text-blue-600',
+                    purple: 'bg-purple-100 text-purple-600',
+                    green: 'bg-green-100 text-green-600'
+                  }
+                  return (
+                    <div
+                      key={index}
+                      className="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${colorClasses[step.color as keyof typeof colorClasses]}`}>
+                          <StepIcon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{step.title}</p>
+                          <p className="text-xs text-slate-500 mt-1">{step.description}</p>
+                          <Button size="sm" variant="outline" className="mt-3" asChild>
+                            <Link href={step.action.href}>
+                              {step.action.label}
+                              <ChevronRight className="h-3 w-3 ml-1" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button variant="ghost" size="sm" onClick={completeOnboarding}>
+                  スキップして閉じる
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">

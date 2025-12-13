@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return error(
         res,
         ErrorCodes.INVALID_CREDENTIALS,
-        'メールアドレスまたはパスワードが正しくありません'
+        'このメールアドレスのアカウントは見つかりません。入力ミスか、未登録の可能性があります。'
       )
     }
 
@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return error(
         res,
         ErrorCodes.INVALID_CREDENTIALS,
-        'メールアドレスまたはパスワードが正しくありません'
+        'パスワードが違います。大文字・小文字をご確認ください。'
       )
     }
 
@@ -125,6 +125,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         userAgent: req.headers['user-agent']
       }
     })
+
+    // Set session cookie for API authentication
+    res.setHeader('Set-Cookie', `premier_session=${user.id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`)
 
     return success(res, { user: responseUser }, 'ログインに成功しました')
   } catch (err) {

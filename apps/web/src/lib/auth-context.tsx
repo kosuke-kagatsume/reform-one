@@ -10,7 +10,7 @@ interface AuthContextType {
   isReformCompany: boolean
   hasFeature: (feature: string) => boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
+  logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
 
@@ -25,16 +25,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('premier_user')
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser)
-        setUser(parsed)
-      } catch {
-        localStorage.removeItem('premier_user')
+    const initAuth = async () => {
+      const savedUser = localStorage.getItem('premier_user')
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser)
+          setUser(parsed)
+          // Sync session cookie for existing logged-in users
+          await fetch('/api/auth/sync-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: parsed.id })
+          })
+        } catch {
+          localStorage.removeItem('premier_user')
+        }
       }
+      setIsLoading(false)
     }
-    setIsLoading(false)
+    initAuth()
   }, [])
 
   const planType = user?.subscription?.planType || null
@@ -73,7 +82,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // Continue with local logout even if API fails
+    }
     setUser(null)
     localStorage.removeItem('premier_user')
   }
