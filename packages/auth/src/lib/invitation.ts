@@ -69,7 +69,7 @@ export async function createInvitation(
       orgId: organizationId,
       action: 'invitation.created',
       resource: `invitation:${invitation.id}`,
-      metadata: { email: input.email, role: input.role },
+      metadata: JSON.stringify({ email: input.email, role: input.role }),
     },
   })
   
@@ -149,7 +149,7 @@ export async function acceptInvitation(
         orgId: invitation.organizationId,
         action: 'invitation.accepted',
         resource: `invitation:${invitation.id}`,
-        metadata: { email: invitation.email },
+        metadata: JSON.stringify({ email: invitation.email }),
       },
     })
   })
@@ -196,7 +196,7 @@ export async function revokeInvitation(
       orgId: organizationId,
       action: 'invitation.revoked',
       resource: `invitation:${invitationId}`,
-      metadata: { email: invitation.email },
+      metadata: JSON.stringify({ email: invitation.email }),
     },
   })
 }

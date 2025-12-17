@@ -84,8 +84,8 @@ export async function getUserRole(
       },
     },
   })
-  
-  return userOrg?.role || null
+
+  return (userOrg?.role as Role) || null
 }
 
 export async function enforcePermission(
@@ -211,7 +211,7 @@ export async function changeUserRole(
       orgId: organizationId,
       action: 'user.role.changed',
       resource: `user:${userId}`,
-      metadata: { newRole, performedBy },
+      metadata: JSON.stringify({ newRole, performedBy }),
     },
   })
 }

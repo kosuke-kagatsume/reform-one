@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/lib/auth-context'
-import { ArrowLeft, Save, Calendar, Clock, User, Video, FileText } from 'lucide-react'
+import { ArrowLeft, Save, Calendar, Clock, User, Video, FileText, ImageIcon } from 'lucide-react'
+import { ImageUpload } from '@/components/ui/image-upload'
 
 interface Category {
   id: string
@@ -261,13 +262,15 @@ export default function NewSeminarPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="imageUrl">サムネイル画像URL</Label>
-                  <Input
-                    id="imageUrl"
-                    type="url"
+                  <Label className="flex items-center gap-1">
+                    <ImageIcon className="h-4 w-4" />
+                    サムネイル画像
+                  </Label>
+                  <ImageUpload
+                    folder="seminars"
                     value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://..."
+                    onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                    aspectRatio="video"
                   />
                 </div>
 

@@ -43,7 +43,7 @@ export async function signup(input: SignupInput) {
       data: {
         name: organizationName,
         slug: slug + '-' + Date.now(), // Ensure uniqueness
-        domainRestriction: [],
+        domainRestriction: '[]',
       },
     })
     
@@ -71,7 +71,7 @@ export async function signup(input: SignupInput) {
       data: {
         organizationId: organization.id,
         enforceMfa: false,
-        allowedDomains: [],
+        allowedDomains: '[]',
       },
     })
     
@@ -82,7 +82,7 @@ export async function signup(input: SignupInput) {
         orgId: organization.id,
         action: 'user.signup',
         resource: `user:${user.id}`,
-        metadata: { email, organizationName },
+        metadata: JSON.stringify({ email, organizationName }),
       },
     })
     
@@ -157,7 +157,7 @@ export async function login(input: LoginInput, organizationId?: string) {
       orgId: organizationId,
       action: 'user.login',
       resource: `user:${user.id}`,
-      metadata: { email },
+      metadata: JSON.stringify({ email }),
     },
   })
   
@@ -206,7 +206,7 @@ export async function loginWithMfa(
       orgId: organizationId,
       action: 'user.login.mfa',
       resource: `user:${user.id}`,
-      metadata: { email: user.email },
+      metadata: JSON.stringify({ email: user.email }),
     },
   })
   

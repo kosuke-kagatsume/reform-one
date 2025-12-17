@@ -2,11 +2,15 @@
 
 ## Connection Details
 
-- **Project ID**: lrlrrseflklqvkonsrhy
-- **Region**: aws-1-ap-south-1
+- **Project ID**: jmcbjrhggawwqycspshu
+- **Region**: aws-1-ap-northeast-1 (Tokyo)
 - **Session Pooler URL** (IPv4 compatible):
   ```
-  postgresql://postgres.lrlrrseflklqvkonsrhy:[PASSWORD]@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+  postgresql://postgres.jmcbjrhggawwqycspshu:[PASSWORD]@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
+  ```
+- **Direct Connection URL** (IPv6 only):
+  ```
+  postgresql://postgres:[PASSWORD]@db.jmcbjrhggawwqycspshu.supabase.co:5432/postgres
   ```
 
 ## Important Notes

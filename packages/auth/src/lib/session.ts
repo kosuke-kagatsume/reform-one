@@ -88,7 +88,7 @@ export async function invalidateAllUserSessions(userId: string): Promise<void> {
 }
 
 export function createJWT(payload: any, secret: string, expiresIn: string = '24h'): string {
-  return jwt.sign(payload, secret, { expiresIn })
+  return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions)
 }
 
 export function verifyJWT(token: string, secret: string): any {

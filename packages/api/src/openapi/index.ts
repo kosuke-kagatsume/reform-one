@@ -76,20 +76,4 @@ export const openApiSpec = generator.generateDocument({
       description: 'Article and media content endpoints',
     },
   ],
-  components: {
-    securitySchemes: {
-      sessionToken: {
-        type: 'apiKey',
-        in: 'cookie',
-        name: 'session-token',
-        description: 'Session token stored in HTTP-only cookie',
-      },
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'JWT Bearer token for API access',
-      },
-    },
-  },
 })
