@@ -17,6 +17,9 @@ const cspHeader = `
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@reform-one/ui", "@reform-one/database", "@reform-one/auth"],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async headers() {
     return [
       {

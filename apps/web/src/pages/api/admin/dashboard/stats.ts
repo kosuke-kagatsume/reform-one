@@ -13,6 +13,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
 
+    // 30日後の日付（契約期限アラート用）
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    // 7日後の日付（セミナー開催アラート用）
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
     const [
       // 顧客数（今月と先月）
       totalCustomers,
@@ -25,7 +30,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       lastMonthRevenue,
       // 新規リード（今月新規登録）
       newLeadsThisMonth,
-      lastMonthLeads
+      lastMonthLeads,
+      // セミナー関連
+      upcomingSeminars,
+      archiveVideos,
+      // コミュニティ
+      communityCount,
+      // 総会員数
+      totalMembers,
+      // 運営アラート用データ
+      expiringContracts,
+      unpublishedUpcomingSeminars,
+      pendingInvoices
     ] = await Promise.all([
       prisma.organization.count({
         where: { type: 'CUSTOMER' }
@@ -70,6 +86,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           type: 'CUSTOMER',
           createdAt: { gte: lastMonthStart, lt: thisMonthStart }
         }
+      }),
+      // 今後のセミナー（開催予定）
+      prisma.seminar.count({
+        where: {
+          scheduledAt: { gte: now }
+        }
+      }),
+      // 公開中アーカイブ
+      prisma.archive.count(),
+      // コミュニティカテゴリ数
+      prisma.communityCategory.count(),
+      // 総会員数（全組織）
+      prisma.userOrganization.count({
+        where: {
+          role: { in: ['MEMBER', 'ADMIN'] },
+          organization: { type: 'CUSTOMER' }
+        }
+      }),
+      // 契約期限が30日以内の組織
+      prisma.subscription.count({
+        where: {
+          status: 'ACTIVE',
+          currentPeriodEnd: {
+            gte: now,
+            lte: thirtyDaysFromNow
+          }
+        }
+      }),
+      // 7日以内開催のセミナー（アラート用）
+      prisma.seminar.count({
+        where: {
+          scheduledAt: {
+            gte: now,
+            lte: sevenDaysFromNow
+          }
+        }
+      }),
+      // 未入金/請求未発行
+      prisma.invoice.count({
+        where: {
+          status: { in: ['PENDING', 'SENT'] }
+        }
       })
     ])
 
@@ -83,38 +141,100 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const currentRevenue = thisMonthRevenue._sum.amount || 0
     const previousRevenue = lastMonthRevenue._sum.amount || 0
 
+    // 最終更新時刻
+    const lastUpdated = now.toISOString()
+
     const stats = [
       {
-        title: '総顧客数',
+        title: '契約組織数',
+        subtitle: '全期間',
         value: totalCustomers.toLocaleString(),
         change: calculateChange(totalCustomers, lastMonthCustomers),
         trend: totalCustomers >= lastMonthCustomers ? 'up' : 'down',
-        color: 'blue'
+        color: 'blue',
+        href: '/admin/premier/organizations'
       },
       {
-        title: '月間売上',
-        value: `¥${(currentRevenue / 1000000).toFixed(1)}M`,
-        change: calculateChange(currentRevenue, previousRevenue),
-        trend: currentRevenue >= previousRevenue ? 'up' : 'down',
-        color: 'green'
-      },
-      {
-        title: 'アクティブ契約',
+        title: '有効契約数',
+        subtitle: '期限内',
         value: activeSubscriptions.toLocaleString(),
         change: calculateChange(activeSubscriptions, lastMonthActiveSubscriptions),
         trend: activeSubscriptions >= lastMonthActiveSubscriptions ? 'up' : 'down',
-        color: 'purple'
+        color: 'purple',
+        href: '/admin/premier/organizations?status=active'
       },
       {
-        title: '新規リード',
-        value: newLeadsThisMonth.toString(),
-        change: calculateChange(newLeadsThisMonth, lastMonthLeads),
-        trend: newLeadsThisMonth >= lastMonthLeads ? 'up' : 'down',
-        color: 'orange'
+        title: '開催予定セミナー',
+        subtitle: '公開中',
+        value: upcomingSeminars.toString(),
+        change: '',
+        trend: 'up' as const,
+        color: 'green',
+        href: '/admin/premier/seminars'
+      },
+      {
+        title: '公開中アーカイブ',
+        subtitle: '本数',
+        value: archiveVideos.toString(),
+        change: '',
+        trend: 'up' as const,
+        color: 'orange',
+        href: '/admin/premier/archives'
+      },
+      {
+        title: 'コミュニティ数',
+        subtitle: 'アクティブ',
+        value: communityCount.toString(),
+        change: '',
+        trend: 'up' as const,
+        color: 'pink',
+        href: '/admin/premier/communities'
+      },
+      {
+        title: '登録会員数',
+        subtitle: '全組織',
+        value: totalMembers.toLocaleString(),
+        change: '',
+        trend: 'up' as const,
+        color: 'cyan',
+        href: '/admin/premier/members'
       }
     ]
 
-    return res.status(200).json({ stats })
+    // 運営アラート
+    const alerts = [
+      {
+        id: 'expiring-contracts',
+        type: 'warning',
+        title: '契約期限が近い組織',
+        description: '30日以内に期限を迎える契約',
+        count: expiringContracts,
+        href: '/admin/premier/organizations?filter=expiring'
+      },
+      {
+        id: 'upcoming-seminars',
+        type: 'info',
+        title: '直近のセミナー',
+        description: '7日以内に開催予定',
+        count: unpublishedUpcomingSeminars,
+        href: '/admin/premier/seminars'
+      },
+      {
+        id: 'pending-invoices',
+        type: 'info',
+        title: '未入金/請求未発行',
+        description: '対応が必要な請求',
+        count: pendingInvoices,
+        href: '/admin/premier/invoices?filter=pending'
+      }
+    ].filter(alert => alert.count > 0)
+
+    return res.status(200).json({
+      stats,
+      alerts,
+      lastUpdated,
+      environment: process.env.VERCEL_ENV || process.env.NODE_ENV || 'development'
+    })
   } catch (error) {
     console.error('Get dashboard stats error:', error)
     return res.status(500).json({ error: 'Internal server error' })

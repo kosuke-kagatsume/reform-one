@@ -18,12 +18,17 @@ import {
   User,
   Shield,
   Briefcase,
-  DollarSign,
-  UserCheck,
   AlertCircle,
   CheckCircle,
   Newspaper,
-  TrendingDown
+  TrendingDown,
+  ChevronRight,
+  Wrench,
+  FolderPlus,
+  UserSearch,
+  Clock,
+  Video,
+  MessageSquare
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,10 +46,12 @@ import { useAuth } from '@/lib/auth-context'
 
 interface DashboardStat {
   title: string
+  subtitle?: string
   value: string
   change: string
   trend: 'up' | 'down'
   color: string
+  href?: string
 }
 
 interface Activity {
@@ -56,11 +63,22 @@ interface Activity {
   status: 'success' | 'warning' | 'info'
 }
 
-const iconMap: Record<string, any> = {
-  blue: Users,
-  green: DollarSign,
+interface OperationalAlert {
+  id: string
+  type: 'warning' | 'info' | 'error'
+  title: string
+  description: string
+  count: number
+  href: string
+}
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  blue: Building,
+  green: Calendar,
   purple: Briefcase,
-  orange: UserCheck
+  orange: Video,
+  pink: MessageSquare,
+  cyan: Users
 }
 
 export default function AdminDashboard() {
@@ -69,6 +87,9 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [stats, setStats] = useState<DashboardStat[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
+  const [alerts, setAlerts] = useState<OperationalAlert[]>([])
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [environment, setEnvironment] = useState<string>('production')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -93,6 +114,9 @@ export default function AdminDashboard() {
       if (statsRes.ok) {
         const statsData = await statsRes.json()
         setStats(statsData.stats || [])
+        setAlerts(statsData.alerts || [])
+        setLastUpdated(statsData.lastUpdated || null)
+        setEnvironment(statsData.environment || 'production')
       }
 
       if (activitiesRes.ok) {
@@ -103,6 +127,26 @@ export default function AdminDashboard() {
       console.error('Failed to fetch dashboard data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 最終更新時刻をフォーマット
+  const formatLastUpdated = (isoString: string | null) => {
+    if (!isoString) return ''
+    const date = new Date(isoString)
+    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+  }
+
+  // 環境バッジの色を取得
+  const getEnvironmentBadge = () => {
+    switch (environment) {
+      case 'production':
+        return { label: '本番', variant: 'destructive' as const }
+      case 'preview':
+      case 'staging':
+        return { label: 'ステージング', variant: 'secondary' as const }
+      default:
+        return { label: '開発', variant: 'outline' as const }
     }
   }
 
@@ -176,7 +220,9 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-2">
               <Building className="h-6 w-6 text-blue-600" />
               <span className="text-lg font-semibold">Reform One 管理画面</span>
-              <Badge variant="secondary" className="ml-2">社員用</Badge>
+              <Badge variant={getEnvironmentBadge().variant} className="ml-2">
+                {getEnvironmentBadge().label}
+              </Badge>
             </div>
           </div>
 
@@ -184,8 +230,8 @@ export default function AdminDashboard() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="顧客・コンテンツを検索..."
-                className="pl-10 w-64"
+                placeholder="組織名・会員名・セミナー・ツールを検索"
+                className="pl-10 w-80"
               />
             </div>
 
@@ -277,23 +323,76 @@ export default function AdminDashboard() {
 
         {/* Main Content */}
         <main className="flex-1 p-6">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">ダッシュボード</h1>
-            <p className="text-slate-600">リフォーム産業新聞社 管理システム</p>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">ダッシュボード</h1>
+              <p className="text-slate-600">リフォーム産業新聞社 管理システム</p>
+            </div>
+            {lastUpdated && (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Clock className="h-4 w-4" />
+                <span>最終更新: {formatLastUpdated(lastUpdated)}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fetchDashboardData()}
+                  className="ml-2"
+                >
+                  更新
+                </Button>
+              </div>
+            )}
           </div>
 
+          {/* 運営アラート */}
+          {alerts.length > 0 && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <h2 className="font-semibold text-amber-800">要対応</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {alerts.map((alert) => (
+                  <button
+                    key={alert.id}
+                    onClick={() => router.push(alert.href)}
+                    className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100 hover:border-amber-300 hover:shadow-sm transition-all text-left"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-800">{alert.title}</p>
+                      <p className="text-xs text-slate-500">{alert.description}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive">{alert.count}件</Badge>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
             {stats.length > 0 ? stats.map((stat) => {
               const Icon = iconMap[stat.color] || Users
               const TrendIcon = stat.trend === 'up' ? TrendingUp : TrendingDown
               const trendColor = stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
               return (
-                <Card key={stat.title}>
+                <Card
+                  key={stat.title}
+                  className="cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+                  onClick={() => stat.href && router.push(stat.href)}
+                >
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">
-                      {stat.title}
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-sm font-medium text-slate-600">
+                        {stat.title}
+                      </CardTitle>
+                      {stat.subtitle && (
+                        <p className="text-xs text-slate-400">{stat.subtitle}</p>
+                      )}
+                    </div>
                     <div className={`p-2 rounded-lg bg-${stat.color}-100`}>
                       <Icon className={`h-4 w-4 text-${stat.color}-600`} />
                     </div>
@@ -302,12 +401,18 @@ export default function AdminDashboard() {
                     <div className="flex items-end justify-between">
                       <div>
                         <p className="text-2xl font-bold">{stat.value}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <TrendIcon className={`h-3 w-3 ${trendColor}`} />
-                          <span className={`text-xs ${trendColor}`}>{stat.change}</span>
-                          <span className="text-xs text-slate-500">前月比</span>
-                        </div>
+                        {stat.change && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <TrendIcon className={`h-3 w-3 ${trendColor}`} />
+                            <span className={`text-xs ${trendColor}`}>{stat.change}</span>
+                          </div>
+                        )}
                       </div>
+                    </div>
+                    <div className="flex items-center justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-xs text-blue-600 flex items-center gap-1">
+                        一覧へ <ChevronRight className="h-3 w-3" />
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -315,16 +420,21 @@ export default function AdminDashboard() {
             }) : (
               // フォールバック表示
               [
-                { title: '総顧客数', value: '-', color: 'blue' },
-                { title: '月間売上', value: '-', color: 'green' },
-                { title: 'アクティブ契約', value: '-', color: 'purple' },
-                { title: '新規リード', value: '-', color: 'orange' }
+                { title: '契約組織数', subtitle: '全期間', value: '-', color: 'blue' },
+                { title: '有効契約数', subtitle: '期限内', value: '-', color: 'purple' },
+                { title: '開催予定セミナー', subtitle: '公開中', value: '-', color: 'green' },
+                { title: '公開中アーカイブ', subtitle: '本数', value: '-', color: 'orange' },
+                { title: 'コミュニティ数', subtitle: 'アクティブ', value: '-', color: 'pink' },
+                { title: '登録会員数', subtitle: '全組織', value: '-', color: 'cyan' }
               ].map((stat) => (
                 <Card key={stat.title}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">
-                      {stat.title}
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-sm font-medium text-slate-600">
+                        {stat.title}
+                      </CardTitle>
+                      <p className="text-xs text-slate-400">{stat.subtitle}</p>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-2xl font-bold">{stat.value}</p>
@@ -384,25 +494,53 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <Button className="w-full justify-start" variant="outline">
-                      <Users className="mr-2 h-4 w-4" />
-                      新規顧客追加
+                    <Button
+                      className="w-full justify-start"
+                      variant="outline"
+                      onClick={() => router.push('/admin/premier/seminars/new')}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      新規セミナー
                     </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <FileText className="mr-2 h-4 w-4" />
-                      記事作成
+                    <Button
+                      className="w-full justify-start"
+                      variant="outline"
+                      onClick={() => router.push('/admin/premier/archives/new')}
+                    >
+                      <Video className="mr-2 h-4 w-4" />
+                      新規アーカイブ
                     </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      研修スケジュール作成
+                    <Button
+                      className="w-full justify-start"
+                      variant="outline"
+                      onClick={() => router.push('/admin/premier/organizations/new')}
+                    >
+                      <Building className="mr-2 h-4 w-4" />
+                      新規契約組織
                     </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <ShoppingBag className="mr-2 h-4 w-4" />
-                      建材カタログ更新
+                    <Button
+                      className="w-full justify-start"
+                      variant="outline"
+                      onClick={() => router.push('/admin/premier/tools/new')}
+                    >
+                      <Wrench className="mr-2 h-4 w-4" />
+                      新規ツール追加
                     </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <TrendingUp className="mr-2 h-4 w-4" />
-                      売上レポート生成
+                    <Button
+                      className="w-full justify-start"
+                      variant="outline"
+                      onClick={() => router.push('/admin/premier/categories/new')}
+                    >
+                      <FolderPlus className="mr-2 h-4 w-4" />
+                      カテゴリ追加
+                    </Button>
+                    <Button
+                      className="w-full justify-start"
+                      variant="outline"
+                      onClick={() => router.push('/admin/premier/members')}
+                    >
+                      <UserSearch className="mr-2 h-4 w-4" />
+                      会員を検索
                     </Button>
                   </div>
                 </CardContent>

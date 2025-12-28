@@ -269,9 +269,12 @@ export default function NewOrganizationPage() {
                     onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
                     className="w-full px-3 py-2 border rounded-md"
                   >
-                    <option value="STANDARD">スタンダード（月額55,000円）</option>
-                    <option value="EXPERT">エキスパート（月額165,000円）</option>
+                    <option value="STANDARD">スタンダード（年額110,000円・税込）</option>
+                    <option value="EXPERT">エキスパート（年額220,000円・税込）</option>
                   </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    ※ 既存購読者は22,000円（税込）の割引が適用されます
+                  </p>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-lg text-sm">

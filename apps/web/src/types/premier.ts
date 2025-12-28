@@ -102,13 +102,16 @@ export const PLAN_FEATURES: Record<PlanType, string[]> = {
 export const PLAN_PRICES: Record<PlanType, { regular: number; current: number }> = {
   STANDARD: {
     regular: 110000,
-    current: 55000
+    current: 110000  // 正規料金（年額・税込）
   },
   EXPERT: {
     regular: 220000,
-    current: 165000
+    current: 220000  // 正規料金（年額・税込）
   }
 }
+
+// 既存購読者向け割引額（税込）
+export const EXISTING_SUBSCRIBER_DISCOUNT = 22000
 
 export interface SeminarCategory {
   id: string
