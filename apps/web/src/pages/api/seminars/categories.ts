@@ -6,7 +6,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const categories = await prisma.seminarCategory.findMany({
         orderBy: { sortOrder: 'asc' },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          sortOrder: true,
+          isVisible: true,
           _count: {
             select: {
               seminars: true,

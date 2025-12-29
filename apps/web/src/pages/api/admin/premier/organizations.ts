@@ -4,17 +4,35 @@ import { prisma } from '@/lib/prisma'
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
+      const now = new Date()
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
       const organizations = await prisma.organization.findMany({
         where: { type: 'CUSTOMER' },
         include: {
           subscriptions: {
-            where: { status: 'ACTIVE' },
+            orderBy: { createdAt: 'desc' },
             take: 1,
             select: {
               id: true,
               planType: true,
               status: true,
-              currentPeriodEnd: true
+              currentPeriodStart: true,
+              currentPeriodEnd: true,
+              createdAt: true,
+              canceledAt: true
+            }
+          },
+          users: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  lastLoginAt: true,
+                  status: true
+                }
+              }
             }
           },
           _count: {
@@ -24,14 +42,97 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { createdAt: 'desc' }
       })
 
-      // Transform to expected format
-      const transformedOrgs = organizations.map(org => ({
-        ...org,
-        subscription: org.subscriptions[0] || null,
-        subscriptions: undefined
-      }))
+      // Transform to expected format with additional data
+      const transformedOrgs = organizations.map(org => {
+        const subscription = org.subscriptions[0] || null
+        const users = org.users.map(u => u.user)
 
-      return res.status(200).json({ organizations: transformedOrgs })
+        // Calculate last login across all users
+        const lastLogins = users
+          .filter(u => u.lastLoginAt)
+          .map(u => new Date(u.lastLoginAt!).getTime())
+        const lastLoginAt = lastLogins.length > 0
+          ? new Date(Math.max(...lastLogins)).toISOString()
+          : null
+
+        // Count active users (logged in within 30 days)
+        const activeUsers = users.filter(u =>
+          u.lastLoginAt && new Date(u.lastLoginAt) >= thirtyDaysAgo
+        ).length
+
+        // Calculate days until expiration
+        let daysUntilExpiration: number | null = null
+        let expirationStatus: 'normal' | 'warning' | 'danger' | 'expired' = 'normal'
+
+        if (subscription?.currentPeriodEnd) {
+          const endDate = new Date(subscription.currentPeriodEnd)
+          daysUntilExpiration = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+          if (daysUntilExpiration < 0) {
+            expirationStatus = 'expired'
+          } else if (daysUntilExpiration <= 30) {
+            expirationStatus = 'danger'
+          } else if (daysUntilExpiration <= 60) {
+            expirationStatus = 'warning'
+          }
+        }
+
+        // Determine overall status
+        let status: 'active' | 'expiring' | 'expired' | 'canceled' | 'no_subscription' = 'no_subscription'
+        if (subscription) {
+          if (subscription.status === 'CANCELED') {
+            status = 'canceled'
+          } else if (subscription.status === 'ACTIVE') {
+            if (expirationStatus === 'expired') {
+              status = 'expired'
+            } else if (expirationStatus === 'danger' || expirationStatus === 'warning') {
+              status = 'expiring'
+            } else {
+              status = 'active'
+            }
+          }
+        }
+
+        return {
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          type: org.type,
+          createdAt: org.createdAt,
+          subscription: subscription ? {
+            ...subscription,
+            daysUntilExpiration,
+            expirationStatus
+          } : null,
+          _count: org._count,
+          lastLoginAt,
+          activeUsers,
+          status
+        }
+      })
+
+      // Calculate summary stats
+      const stats = {
+        total: transformedOrgs.length,
+        active: transformedOrgs.filter(o => o.status === 'active').length,
+        expiring: transformedOrgs.filter(o => o.status === 'expiring').length,
+        expired: transformedOrgs.filter(o => o.status === 'expired').length,
+        canceled: transformedOrgs.filter(o => o.status === 'canceled').length,
+        noSubscription: transformedOrgs.filter(o => o.status === 'no_subscription').length,
+        expiring30Days: transformedOrgs.filter(o =>
+          o.subscription !== null &&
+          o.subscription.daysUntilExpiration !== null &&
+          o.subscription.daysUntilExpiration >= 0 &&
+          o.subscription.daysUntilExpiration <= 30
+        ).length,
+        recentlyLoggedIn: transformedOrgs.filter(o => o.activeUsers > 0).length,
+        notLoggedIn: transformedOrgs.filter(o => o.activeUsers === 0).length
+      }
+
+      return res.status(200).json({
+        organizations: transformedOrgs,
+        stats
+      })
     } catch (error) {
       console.error('Get organizations error:', error)
       return res.status(500).json({ error: 'Internal server error' })

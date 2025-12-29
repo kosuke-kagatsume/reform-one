@@ -13,7 +13,11 @@ import {
   Mail,
   Calendar,
   Activity,
-  ChevronRight
+  ChevronRight,
+  Clock,
+  AlertCircle,
+  UserCheck,
+  UserX
 } from 'lucide-react'
 
 interface Member {
@@ -23,12 +27,16 @@ interface Member {
   role: string
   status: string
   createdAt: string
+  lastLoginAt: string | null
+  loginStatus: 'recent' | 'normal' | 'inactive' | 'never'
+  daysSinceLogin: number | null
   organization: {
     id: string
     name: string
     subscription: {
       planType: string
       status: string
+      currentPeriodEnd: string
     } | null
   }
   _count: {
@@ -36,12 +44,41 @@ interface Member {
   }
 }
 
+interface MemberStats {
+  total: number
+  active: number
+  inactive: number
+  recentLogin: number
+  notLoggedIn30Days: number
+  neverLoggedIn: number
+  byPlan: {
+    expert: number
+    standard: number
+    noSubscription: number
+  }
+}
+
+interface Organization {
+  id: string
+  name: string
+}
+
+type SortOption = 'name_asc' | 'login_desc' | 'activity_desc' | 'created_desc'
+type LoginFilter = 'all' | 'recent' | 'normal' | 'inactive' | 'never'
+type PlanFilter = 'all' | 'expert' | 'standard' | 'none'
+
 export default function MembersAdminPage() {
   const router = useRouter()
   const { isLoading, isAuthenticated, isReformCompany } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
+  const [stats, setStats] = useState<MemberStats | null>(null)
+  const [organizations, setOrganizations] = useState<Organization[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sortBy, setSortBy] = useState<SortOption>('login_desc')
+  const [loginFilter, setLoginFilter] = useState<LoginFilter>('all')
+  const [planFilter, setPlanFilter] = useState<PlanFilter>('all')
+  const [orgFilter, setOrgFilter] = useState('all')
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -61,6 +98,8 @@ export default function MembersAdminPage() {
       if (res.ok) {
         const data = await res.json()
         setMembers(data.members)
+        setStats(data.stats)
+        setOrganizations(data.organizations || [])
       }
     } catch (error) {
       console.error('Failed to fetch members:', error)
@@ -78,14 +117,98 @@ export default function MembersAdminPage() {
     })
   }
 
-  const filteredMembers = members.filter(m =>
-    (m.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.organization.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const formatRelativeDate = (dateString: string | null) => {
+    if (!dateString) return '未ログイン'
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
 
-  const activeMembers = members.filter(m => m.status === 'ACTIVE')
-  const totalActivities = members.reduce((sum, m) => sum + m._count.activities, 0)
+    if (diffDays === 0) return '今日'
+    if (diffDays === 1) return '昨日'
+    if (diffDays < 7) return `${diffDays}日前`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}ヶ月前`
+    return `${Math.floor(diffDays / 365)}年前`
+  }
+
+  const getLoginStatusColor = (loginStatus: string) => {
+    switch (loginStatus) {
+      case 'recent': return 'text-green-600'
+      case 'normal': return 'text-yellow-600'
+      case 'inactive': return 'text-red-600'
+      case 'never': return 'text-slate-400'
+      default: return 'text-slate-400'
+    }
+  }
+
+  const getLoginStatusBadge = (loginStatus: string) => {
+    switch (loginStatus) {
+      case 'recent':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">アクティブ</Badge>
+      case 'normal':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">やや不活発</Badge>
+      case 'inactive':
+        return <Badge className="bg-red-100 text-red-800 border-red-200">非アクティブ</Badge>
+      case 'never':
+        return <Badge className="bg-slate-100 text-slate-600 border-slate-200">未ログイン</Badge>
+      default:
+        return null
+    }
+  }
+
+  // Apply filters
+  const getFilteredMembers = () => {
+    let filtered = members.filter(m => {
+      // Search filter
+      const matchesSearch =
+        (m.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.organization.name.toLowerCase().includes(searchQuery.toLowerCase())
+
+      // Login status filter
+      const matchesLogin = loginFilter === 'all' || m.loginStatus === loginFilter
+
+      // Plan filter
+      let matchesPlan = true
+      if (planFilter === 'expert') {
+        matchesPlan = m.organization.subscription?.planType === 'EXPERT'
+      } else if (planFilter === 'standard') {
+        matchesPlan = m.organization.subscription?.planType === 'STANDARD'
+      } else if (planFilter === 'none') {
+        matchesPlan = !m.organization.subscription
+      }
+
+      // Organization filter
+      const matchesOrg = orgFilter === 'all' || m.organization.id === orgFilter
+
+      return matchesSearch && matchesLogin && matchesPlan && matchesOrg
+    })
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'name_asc':
+        filtered.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email, 'ja'))
+        break
+      case 'login_desc':
+        filtered.sort((a, b) => {
+          if (!a.lastLoginAt && !b.lastLoginAt) return 0
+          if (!a.lastLoginAt) return 1
+          if (!b.lastLoginAt) return -1
+          return new Date(b.lastLoginAt).getTime() - new Date(a.lastLoginAt).getTime()
+        })
+        break
+      case 'activity_desc':
+        filtered.sort((a, b) => b._count.activities - a._count.activities)
+        break
+      case 'created_desc':
+        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        break
+    }
+
+    return filtered
+  }
+
+  const filteredMembers = getFilteredMembers()
 
   if (isLoading || loading) {
     return (
@@ -105,7 +228,9 @@ export default function MembersAdminPage() {
           <p className="text-slate-600">プレミア購読の全会員を管理</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* 総会員数 */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -113,25 +238,53 @@ export default function MembersAdminPage() {
                   <Users className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{members.length}</p>
+                  <p className="text-2xl font-bold">{stats?.total || 0}</p>
                   <p className="text-sm text-slate-600">総会員数</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    アクティブ {stats?.active || 0} / 非アクティブ {stats?.inactive || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* ログイン状況 */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-green-100 p-3 rounded-lg">
-                  <Users className="h-6 w-6 text-green-600" />
+                  <UserCheck className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{activeMembers.length}</p>
-                  <p className="text-sm text-slate-600">アクティブ会員</p>
+                  <p className="text-2xl font-bold">{stats?.recentLogin || 0}</p>
+                  <p className="text-sm text-slate-600">30日以内ログイン</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    全体の {stats?.total ? Math.round((stats.recentLogin / stats.total) * 100) : 0}%
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* 未ログイン */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-red-100 p-3 rounded-lg">
+                  <UserX className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats?.notLoggedIn30Days || 0}</p>
+                  <p className="text-sm text-slate-600">30日以上未ログイン</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    うち未ログイン {stats?.neverLoggedIn || 0}名
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* プラン別 */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -139,34 +292,91 @@ export default function MembersAdminPage() {
                   <Activity className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{totalActivities}</p>
-                  <p className="text-sm text-slate-600">総アクティビティ</p>
+                  <p className="text-sm font-medium text-slate-600">プラン別</p>
+                  <div className="flex gap-3 mt-1">
+                    <div>
+                      <p className="text-lg font-bold text-purple-600">{stats?.byPlan.expert || 0}</p>
+                      <p className="text-xs text-slate-500">Expert</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-blue-600">{stats?.byPlan.standard || 0}</p>
+                      <p className="text-xs text-slate-500">Standard</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="名前、メールアドレス、組織名で検索..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Filters */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="名前、メールアドレス、組織名で検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <select
+            value={orgFilter}
+            onChange={(e) => setOrgFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="all">すべての組織</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>{org.name}</option>
+            ))}
+          </select>
+          <select
+            value={loginFilter}
+            onChange={(e) => setLoginFilter(e.target.value as LoginFilter)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="all">すべてのログイン状況</option>
+            <option value="recent">アクティブ（7日以内）</option>
+            <option value="normal">やや不活発（8-30日）</option>
+            <option value="inactive">非アクティブ（30日超）</option>
+            <option value="never">未ログイン</option>
+          </select>
+          <select
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value as PlanFilter)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="all">すべてのプラン</option>
+            <option value="expert">エキスパート</option>
+            <option value="standard">スタンダード</option>
+            <option value="none">未契約</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="login_desc">最終ログイン順</option>
+            <option value="name_asc">名前順</option>
+            <option value="activity_desc">アクティビティ順</option>
+            <option value="created_desc">登録日順</option>
+          </select>
         </div>
 
+        {/* Members List */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">会員一覧</CardTitle>
+            <p className="text-sm text-slate-500">{filteredMembers.length}件表示</p>
           </CardHeader>
           <CardContent>
             {filteredMembers.length === 0 ? (
               <div className="py-8 text-center">
                 <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                 <p className="text-slate-500">
-                  {searchQuery ? '検索条件に一致する会員がいません' : '会員がいません'}
+                  {searchQuery || loginFilter !== 'all' || planFilter !== 'all' || orgFilter !== 'all'
+                    ? '検索条件に一致する会員がいません'
+                    : '会員がいません'}
                 </p>
               </div>
             ) : (
@@ -186,9 +396,7 @@ export default function MembersAdminPage() {
                           {member.role === 'ADMIN' && (
                             <Badge variant="secondary" className="text-xs">管理者</Badge>
                           )}
-                          {member.status !== 'ACTIVE' && (
-                            <Badge variant="outline" className="text-xs">{member.status}</Badge>
-                          )}
+                          {getLoginStatusBadge(member.loginStatus)}
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 mt-1">
                           <div className="flex items-center gap-1">
@@ -213,6 +421,10 @@ export default function MembersAdminPage() {
                             <Calendar className="h-3 w-3" />
                             <span>登録: {formatDate(member.createdAt)}</span>
                           </div>
+                          <div className={`flex items-center gap-1 ${getLoginStatusColor(member.loginStatus)}`}>
+                            <Clock className="h-3 w-3" />
+                            <span>最終ログイン: {formatRelativeDate(member.lastLoginAt)}</span>
+                          </div>
                           <div className="flex items-center gap-1">
                             <Activity className="h-3 w-3" />
                             <span>{member._count.activities}件の活動</span>
@@ -220,14 +432,24 @@ export default function MembersAdminPage() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push(`/admin/premier/organizations/${member.organization.id}`)}
-                    >
-                      組織を見る
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/admin/premier/members/${member.id}/contact`)}
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        連絡する
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/admin/premier/organizations/${member.organization.id}`)}
+                      >
+                        組織を見る
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

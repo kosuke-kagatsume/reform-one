@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { name, slug, description, sortOrder } = req.body
+    const { name, slug, description, sortOrder, isVisible } = req.body
 
     try {
       const category = await prisma.seminarCategory.update({
@@ -43,7 +43,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name,
           slug,
           description,
-          sortOrder
+          sortOrder,
+          ...(typeof isVisible === 'boolean' ? { isVisible } : {})
         }
       })
 

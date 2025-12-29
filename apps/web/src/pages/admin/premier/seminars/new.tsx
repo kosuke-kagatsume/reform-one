@@ -23,6 +23,7 @@ export default function NewSeminarPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [isCopy, setIsCopy] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -37,6 +38,24 @@ export default function NewSeminarPage() {
     isPublic: false,
     publicPrice: 0
   })
+
+  // Handle copy parameters from URL
+  useEffect(() => {
+    if (router.isReady && router.query.copy) {
+      setIsCopy(true)
+      setFormData(prev => ({
+        ...prev,
+        title: (router.query.title as string) || prev.title,
+        description: (router.query.description as string) || prev.description,
+        categoryId: (router.query.categoryId as string) || prev.categoryId,
+        instructor: (router.query.instructor as string) || prev.instructor,
+        duration: parseInt(router.query.duration as string) || prev.duration,
+        zoomUrl: (router.query.zoomUrl as string) || prev.zoomUrl,
+        isPublic: router.query.isPublic === 'true',
+        publicPrice: parseInt(router.query.publicPrice as string) || prev.publicPrice
+      }))
+    }
+  }, [router.isReady, router.query])
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -130,8 +149,10 @@ export default function NewSeminarPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">新規セミナー作成</h1>
-            <p className="text-slate-600">セミナーの情報を入力してください</p>
+            <h1 className="text-2xl font-bold">{isCopy ? 'セミナーを複製' : '新規セミナー作成'}</h1>
+            <p className="text-slate-600">
+              {isCopy ? '複製元の情報が入力されています。必要に応じて変更してください。' : 'セミナーの情報を入力してください'}
+            </p>
           </div>
         </div>
 
@@ -315,7 +336,7 @@ export default function NewSeminarPage() {
             </Button>
             <Button type="submit" disabled={saving}>
               <Save className="h-4 w-4 mr-2" />
-              {saving ? '作成中...' : 'セミナーを作成'}
+              {saving ? '作成中...' : isCopy ? 'セミナーを複製作成' : 'セミナーを作成'}
             </Button>
           </div>
         </form>

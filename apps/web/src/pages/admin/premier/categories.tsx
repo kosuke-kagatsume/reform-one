@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import { PremierAdminLayout } from '@/components/layout/premier-admin-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -30,14 +30,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useAuth } from '@/lib/auth-context'
 import {
-  ArrowLeft,
   Plus,
   FolderOpen,
   Edit,
   Trash2,
   Video,
   Archive,
-  GripVertical
+  GripVertical,
+  Eye,
+  EyeOff,
+  Search
 } from 'lucide-react'
 
 interface Category {
@@ -46,11 +48,15 @@ interface Category {
   slug: string
   description: string | null
   sortOrder: number
+  isVisible: boolean
   _count: {
     seminars: number
     archives: number
   }
 }
+
+type SortOption = 'order_asc' | 'name_asc' | 'seminars_desc' | 'archives_desc'
+type VisibilityFilter = 'all' | 'visible' | 'hidden'
 
 export default function CategoriesManagementPage() {
   const router = useRouter()
@@ -61,12 +67,16 @@ export default function CategoriesManagementPage() {
   const [error, setError] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<SortOption>('order_asc')
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all')
 
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     description: '',
-    sortOrder: 0
+    sortOrder: 0,
+    isVisible: true
   })
 
   useEffect(() => {
@@ -108,7 +118,8 @@ export default function CategoriesManagementPage() {
       name: '',
       slug: '',
       description: '',
-      sortOrder: categories.length
+      sortOrder: categories.length,
+      isVisible: true
     })
     setEditingCategory(null)
   }
@@ -124,7 +135,8 @@ export default function CategoriesManagementPage() {
       name: category.name,
       slug: category.slug,
       description: category.description || '',
-      sortOrder: category.sortOrder
+      sortOrder: category.sortOrder,
+      isVisible: category.isVisible
     })
     setDialogOpen(true)
   }
@@ -200,6 +212,74 @@ export default function CategoriesManagementPage() {
     }
   }
 
+  const toggleVisibility = async (category: Category) => {
+    try {
+      const res = await fetch(`/api/seminars/categories/${category.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: category.name,
+          slug: category.slug,
+          description: category.description,
+          sortOrder: category.sortOrder,
+          isVisible: !category.isVisible
+        })
+      })
+
+      if (res.ok) {
+        fetchCategories()
+      }
+    } catch (error) {
+      console.error('Failed to toggle visibility:', error)
+    }
+  }
+
+  // Filter and sort categories
+  const getFilteredCategories = () => {
+    let filtered = categories.filter(c => {
+      // Search filter
+      const matchesSearch =
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.slug.toLowerCase().includes(searchQuery.toLowerCase())
+
+      // Visibility filter
+      let matchesVisibility = true
+      if (visibilityFilter === 'visible') matchesVisibility = c.isVisible
+      if (visibilityFilter === 'hidden') matchesVisibility = !c.isVisible
+
+      return matchesSearch && matchesVisibility
+    })
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'order_asc':
+        filtered.sort((a, b) => a.sortOrder - b.sortOrder)
+        break
+      case 'name_asc':
+        filtered.sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+        break
+      case 'seminars_desc':
+        filtered.sort((a, b) => b._count.seminars - a._count.seminars)
+        break
+      case 'archives_desc':
+        filtered.sort((a, b) => b._count.archives - a._count.archives)
+        break
+    }
+
+    return filtered
+  }
+
+  const filteredCategories = getFilteredCategories()
+
+  // Stats
+  const stats = {
+    total: categories.length,
+    visible: categories.filter(c => c.isVisible).length,
+    hidden: categories.filter(c => !c.isVisible).length,
+    totalSeminars: categories.reduce((sum, c) => sum + c._count.seminars, 0),
+    totalArchives: categories.reduce((sum, c) => sum + c._count.archives, 0)
+  }
+
   if (isLoading || loading) {
     return (
       <PremierAdminLayout>
@@ -269,15 +349,29 @@ export default function CategoriesManagementPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="sortOrder">表示順序</Label>
-                  <Input
-                    id="sortOrder"
-                    type="number"
-                    value={formData.sortOrder}
-                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                    min={0}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sortOrder">表示順序</Label>
+                    <Input
+                      id="sortOrder"
+                      type="number"
+                      value={formData.sortOrder}
+                      onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                      min={0}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>表示設定</Label>
+                    <div className="flex items-center gap-2 pt-2">
+                      <Switch
+                        checked={formData.isVisible}
+                        onCheckedChange={(checked) => setFormData({ ...formData, isVisible: checked })}
+                      />
+                      <span className="text-sm text-slate-600">
+                        {formData.isVisible ? '公開' : '非公開'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {error && (
@@ -296,41 +390,152 @@ export default function CategoriesManagementPage() {
           </Dialog>
         </div>
 
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-100 p-3 rounded-lg">
+                  <FolderOpen className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-sm text-slate-600">カテゴリ数</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    公開 {stats.visible} / 非公開 {stats.hidden}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-green-100 p-3 rounded-lg">
+                  <Eye className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.visible}</p>
+                  <p className="text-sm text-slate-600">公開中</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    ユーザーに表示
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-purple-100 p-3 rounded-lg">
+                  <Video className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.totalSeminars}</p>
+                  <p className="text-sm text-slate-600">総セミナー数</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-amber-100 p-3 rounded-lg">
+                  <Archive className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.totalArchives}</p>
+                  <p className="text-sm text-slate-600">総アーカイブ数</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="カテゴリ名で検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <select
+            value={visibilityFilter}
+            onChange={(e) => setVisibilityFilter(e.target.value as VisibilityFilter)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="all">すべての表示状態</option>
+            <option value="visible">公開のみ</option>
+            <option value="hidden">非公開のみ</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="order_asc">表示順</option>
+            <option value="name_asc">名前順</option>
+            <option value="seminars_desc">セミナー数順</option>
+            <option value="archives_desc">アーカイブ数順</option>
+          </select>
+        </div>
+
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
               カテゴリ一覧
-              <Badge variant="secondary" className="ml-2">
-                {categories.length}件
-              </Badge>
             </CardTitle>
+            <p className="text-sm text-slate-500">{filteredCategories.length}件表示</p>
           </CardHeader>
           <CardContent>
-            {categories.length === 0 ? (
+            {filteredCategories.length === 0 ? (
               <div className="py-8 text-center">
                 <FolderOpen className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">カテゴリがありません</p>
-                <Button className="mt-4" onClick={openCreateDialog}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  最初のカテゴリを追加
-                </Button>
+                <p className="text-slate-500">
+                  {searchQuery || visibilityFilter !== 'all'
+                    ? '検索条件に一致するカテゴリがありません'
+                    : 'カテゴリがありません'}
+                </p>
+                {!searchQuery && visibilityFilter === 'all' && (
+                  <Button className="mt-4" onClick={openCreateDialog}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    最初のカテゴリを追加
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
-                {categories.map((category) => (
+                {filteredCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors"
+                    className={`flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors ${
+                      !category.isVisible ? 'bg-slate-50 border-slate-200' : ''
+                    }`}
                   >
                     <div className="flex items-center gap-4">
                       <GripVertical className="h-5 w-5 text-slate-300" />
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium">{category.name}</p>
+                          <p className={`font-medium ${!category.isVisible ? 'text-slate-500' : ''}`}>
+                            {category.name}
+                          </p>
                           <Badge variant="outline" className="text-xs">
                             {category.slug}
                           </Badge>
+                          {!category.isVisible && (
+                            <Badge variant="secondary" className="text-xs bg-slate-200">
+                              <EyeOff className="h-3 w-3 mr-1" />
+                              非公開
+                            </Badge>
+                          )}
                         </div>
                         {category.description && (
                           <p className="text-sm text-slate-500 mt-1">{category.description}</p>
@@ -348,6 +553,18 @@ export default function CategoriesManagementPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleVisibility(category)}
+                        title={category.isVisible ? '非公開にする' : '公開する'}
+                      >
+                        {category.isVisible ? (
+                          <Eye className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 text-slate-400" />
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -396,6 +613,7 @@ export default function CategoriesManagementPage() {
           <p className="text-sm text-amber-800">
             <strong>注意:</strong> セミナーやアーカイブが紐づいているカテゴリは削除できません。
             削除するには、先にセミナーやアーカイブのカテゴリを変更してください。
+            非公開にすると、ユーザーからは見えなくなりますがデータは保持されます。
           </p>
         </div>
       </div>
