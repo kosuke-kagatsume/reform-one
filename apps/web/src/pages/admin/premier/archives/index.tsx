@@ -63,6 +63,7 @@ export default function ArchivesAdminPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deletingArchive, setDeletingArchive] = useState<Archive | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [sortBy, setSortBy] = useState('date_desc')
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -147,11 +148,33 @@ export default function ArchivesAdminPage() {
     return `${mins}分`
   }
 
-  const filteredArchives = archives.filter(a => {
-    const matchesCategory = selectedCategory === 'all' || a.category.id === selectedCategory
-    const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+  const getFilteredAndSortedArchives = () => {
+    let filtered = archives.filter(a => {
+      const matchesCategory = selectedCategory === 'all' || a.category.id === selectedCategory
+      const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase())
+      return matchesCategory && matchesSearch
+    })
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'date_desc':
+        filtered.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+        break
+      case 'date_asc':
+        filtered.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime())
+        break
+      case 'views_desc':
+        filtered.sort((a, b) => b._count.views - a._count.views)
+        break
+      case 'title_asc':
+        filtered.sort((a, b) => a.title.localeCompare(b.title, 'ja'))
+        break
+    }
+
+    return filtered
+  }
+
+  const filteredArchives = getFilteredAndSortedArchives()
 
   const totalViews = archives.reduce((sum, a) => sum + a._count.views, 0)
 
@@ -238,18 +261,29 @@ export default function ArchivesAdminPage() {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border rounded-md"
+            className="px-3 py-2 border rounded-md bg-white"
           >
             <option value="all">すべてのカテゴリ</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="date_desc">公開日（新しい順）</option>
+            <option value="date_asc">公開日（古い順）</option>
+            <option value="views_desc">視聴回数順</option>
+            <option value="title_asc">タイトル順</option>
+          </select>
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">アーカイブ一覧</CardTitle>
+            <p className="text-sm text-slate-500">{filteredArchives.length}件表示</p>
           </CardHeader>
           <CardContent>
             {filteredArchives.length === 0 ? (

@@ -34,7 +34,10 @@ import {
   Download,
   ExternalLink,
   Edit,
-  Trash2
+  Trash2,
+  Search,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 
 interface Tool {
@@ -75,6 +78,11 @@ export default function AdminToolsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [editingTool, setEditingTool] = useState<Tool | null>(null)
   const [deletingTool, setDeletingTool] = useState<Tool | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [planFilter, setPlanFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('order_asc')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -271,6 +279,75 @@ export default function AdminToolsPage() {
     return categoryOptions.find(c => c.value === category)?.label || category
   }
 
+  const togglePublish = async (tool: Tool) => {
+    try {
+      const res = await fetch(`/api/tools/${tool.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...tool,
+          isPublished: !tool.isPublished
+        }),
+      })
+      if (res.ok) {
+        fetchTools()
+      }
+    } catch (error) {
+      console.error('Failed to toggle publish:', error)
+    }
+  }
+
+  // Filter and sort tools
+  const getFilteredTools = () => {
+    let filtered = tools.filter(tool => {
+      const matchesSearch =
+        tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (tool.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+
+      const matchesCategory = categoryFilter === 'all' || tool.category === categoryFilter
+      const matchesPlan = planFilter === 'all' || tool.requiredPlan === planFilter
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'published' && tool.isPublished) ||
+        (statusFilter === 'draft' && !tool.isPublished)
+
+      return matchesSearch && matchesCategory && matchesPlan && matchesStatus
+    })
+
+    // Sort
+    switch (sortBy) {
+      case 'order_asc':
+        filtered.sort((a, b) => a.sortOrder - b.sortOrder)
+        break
+      case 'name_asc':
+        filtered.sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+        break
+      case 'usage_desc':
+        filtered.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
+        break
+    }
+
+    return filtered
+  }
+
+  const filteredTools = getFilteredTools()
+
+  // Stats
+  const stats = {
+    total: tools.length,
+    published: tools.filter(t => t.isPublished).length,
+    draft: tools.filter(t => !t.isPublished).length,
+    expert: tools.filter(t => t.requiredPlan === 'EXPERT').length,
+    standard: tools.filter(t => t.requiredPlan === 'STANDARD').length,
+    totalUsage: tools.reduce((sum, t) => sum + (t.usageCount || 0), 0),
+    byCategory: {
+      spreadsheet: tools.filter(t => t.category === 'SPREADSHEET').length,
+      document: tools.filter(t => t.category === 'DOCUMENT').length,
+      calculator: tools.filter(t => t.category === 'CALCULATOR').length,
+      other: tools.filter(t => t.category === 'OTHER').length
+    }
+  }
+
   if (isLoading || loading) {
     return (
       <PremierAdminLayout>
@@ -436,68 +513,143 @@ export default function AdminToolsPage() {
         {/* 統計カード */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">
-                総ツール数
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{tools.length}</p>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-100 p-3 rounded-lg">
+                  <Wrench className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-sm text-slate-600">総ツール数</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    公開 {stats.published} / 下書き {stats.draft}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">
-                公開中
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-green-600">
-                {tools.filter(t => t.isPublished).length}
-              </p>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-green-100 p-3 rounded-lg">
+                  <Eye className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-600">{stats.published}</p>
+                  <p className="text-sm text-slate-600">公開中</p>
+                  <p className="text-xs text-slate-500 mt-1">ユーザーに表示</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">
-                EXPERT限定
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-purple-600">
-                {tools.filter(t => t.requiredPlan === 'EXPERT').length}
-              </p>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-purple-100 p-3 rounded-lg">
+                  <Wrench className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">プラン別</p>
+                  <div className="flex gap-3 mt-1">
+                    <div>
+                      <p className="text-lg font-bold text-purple-600">{stats.expert}</p>
+                      <p className="text-xs text-slate-500">Expert</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-blue-600">{stats.standard}</p>
+                      <p className="text-xs text-slate-500">Standard</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">
-                総利用回数
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {tools.reduce((sum, t) => sum + (t.usageCount || 0), 0)}
-              </p>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-amber-100 p-3 rounded-lg">
+                  <Download className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.totalUsage}</p>
+                  <p className="text-sm text-slate-600">総利用回数</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* フィルター */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="ツール名で検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="all">すべてのカテゴリ</option>
+            {categoryOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <select
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="all">すべてのプラン</option>
+            <option value="STANDARD">STANDARD</option>
+            <option value="EXPERT">EXPERT</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="all">すべての状態</option>
+            <option value="published">公開中</option>
+            <option value="draft">下書き</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-2 border rounded-md bg-white"
+          >
+            <option value="order_asc">表示順</option>
+            <option value="name_asc">名前順</option>
+            <option value="usage_desc">利用回数順</option>
+          </select>
+        </div>
+
         {/* ツール一覧 */}
-        {tools.length === 0 ? (
+        {filteredTools.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Wrench className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">ツールがまだありません</p>
-              <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                最初のツールを作成
-              </Button>
+              <p className="text-slate-500">
+                {searchQuery || categoryFilter !== 'all' || planFilter !== 'all' || statusFilter !== 'all'
+                  ? '検索条件に一致するツールがありません'
+                  : 'ツールがまだありません'}
+              </p>
+              {!searchQuery && categoryFilter === 'all' && planFilter === 'all' && statusFilter === 'all' && (
+                <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  最初のツールを作成
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tools.map((tool) => (
+            {filteredTools.map((tool) => (
               <Card key={tool.id}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-3">
@@ -546,6 +698,18 @@ export default function AdminToolsPage() {
                       )}
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => togglePublish(tool)}
+                        title={tool.isPublished ? '非公開にする' : '公開する'}
+                      >
+                        {tool.isPublished ? (
+                          <Eye className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 text-slate-400" />
+                        )}
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleEdit(tool)}>
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -559,6 +723,10 @@ export default function AdminToolsPage() {
             ))}
           </div>
         )}
+
+        <p className="text-sm text-slate-500 text-center">
+          {filteredTools.length}件のツールを表示中
+        </p>
 
         {/* 編集ダイアログ */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
