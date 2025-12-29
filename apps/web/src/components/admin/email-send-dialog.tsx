@@ -63,15 +63,17 @@ export function EmailSendDialog({
       if (emailType === 'CONTACT') {
         setSubject('')
         setMessage('')
+        setContactInfo('')
       } else if (emailType === 'RENEWAL_NOTICE') {
         const orgName = recipientType === 'ORGANIZATION'
           ? recipient.name
           : recipient.organizationName || ''
         setSubject(`【プレミア購読】${orgName}様 契約更新のご案内`)
+        setMessage('')
         setContactInfo('更新手続きについては、このメールに返信してお問い合わせください。')
       }
     }
-  }, [open, recipient, emailType, recipientType])
+  }, [open, recipient?.id, emailType, recipientType])
 
   const handleSubmit = async () => {
     if (!recipient) return
@@ -221,9 +223,9 @@ export function EmailSendDialog({
                   <span>契約終了日: {formatDate(recipient.expiresAt)}</span>
                   {recipient.daysRemaining !== undefined && (
                     <Badge
-                      variant={recipient.daysRemaining <= 7 ? 'destructive' : recipient.daysRemaining <= 30 ? 'secondary' : 'outline'}
+                      variant={recipient.daysRemaining <= 0 ? 'destructive' : recipient.daysRemaining <= 7 ? 'destructive' : recipient.daysRemaining <= 30 ? 'secondary' : 'outline'}
                     >
-                      残り{recipient.daysRemaining}日
+                      {recipient.daysRemaining <= 0 ? '期限切れ' : `残り${recipient.daysRemaining}日`}
                     </Badge>
                   )}
                 </div>

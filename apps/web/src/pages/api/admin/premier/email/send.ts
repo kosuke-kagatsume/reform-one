@@ -20,18 +20,70 @@ interface SendEmailRequest {
   contactInfo?: string
 }
 
+// Parse cookies from request
+function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  if (!cookieHeader) return {}
+  return cookieHeader.split(';').reduce((acc, cookie) => {
+    const [key, value] = cookie.trim().split('=')
+    if (key && value) acc[key] = value
+    return acc
+  }, {} as Record<string, string>)
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // TODO: Add proper admin authentication check
-  // For now, we'll proceed with the request
+  // Authenticate admin user
+  const cookies = parseCookies(req.headers.cookie)
+  const sessionUserId = cookies['premier_session']
+
+  if (!sessionUserId) {
+    return res.status(401).json({ error: '認証が必要です' })
+  }
+
+  // Verify user exists and is an admin (Reform Company)
+  const adminUser = await prisma.user.findUnique({
+    where: { id: sessionUserId },
+    include: {
+      organizations: {
+        include: {
+          organization: {
+            select: { type: true }
+          }
+        }
+      }
+    }
+  })
+
+  if (!adminUser) {
+    return res.status(401).json({ error: 'ユーザーが見つかりません' })
+  }
+
+  const isReformCompany = adminUser.organizations.some(
+    org => org.organization.type === 'REFORM_COMPANY'
+  )
+
+  if (!isReformCompany) {
+    return res.status(403).json({ error: '管理者権限が必要です' })
+  }
 
   const { type, recipientId, recipientType, subject, message, contactInfo } = req.body as SendEmailRequest
 
+  // Validate required fields
   if (!type || !recipientId || !recipientType || !subject) {
     return res.status(400).json({ error: 'Missing required fields' })
+  }
+
+  // Validate email type
+  if (type !== 'CONTACT' && type !== 'RENEWAL_NOTICE') {
+    return res.status(400).json({ error: 'Invalid email type' })
+  }
+
+  // Validate recipient type
+  if (recipientType !== 'USER' && recipientType !== 'ORGANIZATION') {
+    return res.status(400).json({ error: 'Invalid recipient type' })
   }
 
   try {
@@ -132,9 +184,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'No recipients found' })
     }
 
-    // TODO: Get actual admin user from session
     const senderName = 'プレミア購読運営事務局'
-    const sentById = 'admin' // Should be actual admin user ID from session
+    const sentById = adminUser.id
 
     let emailsSent = 0
     let emailsFailed = 0

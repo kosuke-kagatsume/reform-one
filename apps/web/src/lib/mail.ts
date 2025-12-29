@@ -3,6 +3,18 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// HTML escape function to prevent XSS in email content
+function escapeHtml(str: string): string {
+  const htmlEscapes: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }
+  return str.replace(/[&<>"']/g, char => htmlEscapes[char] || char)
+}
+
 const FROM_EMAIL = process.env.EMAIL_FROM || 'プレミア購読運営事務局 <premium@the-reform.co.jp>'
 const REPLY_TO = process.env.EMAIL_REPLY_TO || 'support@reform-one.jp'
 
@@ -424,6 +436,13 @@ export function getAdminContactEmailHtml(params: {
 }): string {
   const { recipientName, organizationName, subject, message, senderName } = params
 
+  // Escape all user-provided content to prevent XSS
+  const safeRecipientName = escapeHtml(recipientName)
+  const safeOrganizationName = escapeHtml(organizationName)
+  const safeSubject = escapeHtml(subject)
+  const safeMessage = escapeHtml(message)
+  const safeSenderName = escapeHtml(senderName)
+
   return `
 <!DOCTYPE html>
 <html>
@@ -444,16 +463,16 @@ export function getAdminContactEmailHtml(params: {
       <h1>プレミア購読</h1>
     </div>
     <div class="content">
-      <p><strong>${recipientName}</strong> 様 (${organizationName})</p>
+      <p><strong>${safeRecipientName}</strong> 様 (${safeOrganizationName})</p>
       <p>プレミア購読運営事務局よりご連絡です。</p>
 
-      <h3>${subject}</h3>
-      <div class="message">${message}</div>
+      <h3>${safeSubject}</h3>
+      <div class="message">${safeMessage}</div>
 
       <p>ご不明な点がございましたら、このメールに返信してお問い合わせください。</p>
     </div>
     <div class="footer">
-      <p>担当: ${senderName}</p>
+      <p>担当: ${safeSenderName}</p>
       <p>リフォーム産業新聞社 プレミア購読運営事務局</p>
     </div>
   </div>
@@ -498,12 +517,19 @@ export function getAdminRenewalNoticeEmailHtml(params: {
   contactInfo: string
 }): string {
   const { organizationName, recipientName, planType, expiresAt, daysRemaining, contactInfo } = params
+
+  // Escape user-provided content to prevent XSS
+  const safeOrganizationName = escapeHtml(organizationName)
+  const safeRecipientName = escapeHtml(recipientName)
+  const safeContactInfo = escapeHtml(contactInfo)
+
   const expiresStr = expiresAt.toLocaleDateString('ja-JP', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
   const planName = planType === 'EXPERT' ? 'エキスパート' : 'スタンダード'
+  const daysText = daysRemaining <= 0 ? '期限切れ' : `残り${daysRemaining}日`
 
   return `
 <!DOCTYPE html>
@@ -518,7 +544,7 @@ export function getAdminRenewalNoticeEmailHtml(params: {
     .info { background: white; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #f59e0b; }
     .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
     .warning { color: #dc2626; font-weight: bold; }
-    .highlight { background: #fef3c7; padding: 12px; border-radius: 6px; margin-top: 16px; }
+    .highlight { background: #fef3c7; padding: 12px; border-radius: 6px; margin-top: 16px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -527,21 +553,21 @@ export function getAdminRenewalNoticeEmailHtml(params: {
       <h1>【重要】契約更新のご案内</h1>
     </div>
     <div class="content">
-      <p><strong>${recipientName}</strong> 様</p>
+      <p><strong>${safeRecipientName}</strong> 様</p>
       <p>いつもプレミア購読をご利用いただき、誠にありがとうございます。</p>
-      <p><strong>${organizationName}</strong>様のご契約について、更新時期が近づいておりますのでご連絡いたします。</p>
+      <p><strong>${safeOrganizationName}</strong>様のご契約について、更新時期が近づいておりますのでご連絡いたします。</p>
 
       <div class="info">
         <p><strong>プラン：</strong>${planName}プラン</p>
         <p><strong>契約終了日：</strong>${expiresStr}</p>
-        <p class="warning">残り${daysRemaining}日</p>
+        <p class="warning">${daysText}</p>
       </div>
 
       <p>引き続きサービスをご利用いただける場合は、契約更新の手続きをお願いいたします。</p>
 
       <div class="highlight">
         <strong>更新手続きについて</strong><br>
-        ${contactInfo}
+        ${safeContactInfo}
       </div>
     </div>
     <div class="footer">
