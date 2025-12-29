@@ -12,18 +12,56 @@ import {
   Calendar,
   Video,
   MessageSquare,
-  TrendingUp,
   ChevronRight,
   CheckCircle,
-  Clock,
   FileText,
   Mail,
   AlertTriangle,
   Wrench,
   FolderOpen,
   Search,
-  RefreshCw
+  RefreshCw,
+  Plus
 } from 'lucide-react'
+
+interface DashboardDetails {
+  organizations: {
+    total: number
+    active: number
+    canceled: number
+  }
+  expiringSubscriptions: {
+    within30Days: number
+    within60Days: number
+  }
+  seminars: {
+    upcoming: number
+    nextSeminar: { id: string; title: string; scheduledAt: string } | null
+    totalParticipants: number
+    participantsDiff: number
+  }
+  archives: {
+    total: number
+    unpublished: number
+    draft: number
+  }
+  communities: {
+    total: number
+    active: number
+    inactive: number
+  }
+  members: {
+    total: number
+    active: number
+    inactive: number
+  }
+  plans: {
+    standard: { active: number }
+    expert: { active: number }
+    newThisMonth: number
+    canceledThisMonth: number
+  }
+}
 
 interface DashboardAlerts {
   expiringSubscriptions: number
@@ -35,11 +73,13 @@ interface DashboardAlerts {
 interface DashboardStats {
   totalOrganizations: number
   activeSubscriptions: number
+  canceledSubscriptions: number
   upcomingSeminars: number
   totalArchives: number
   communityCategories: number
   totalMembers: number
   totalTools: number
+  details: DashboardDetails
   alerts: DashboardAlerts
   lastUpdatedAt: string
 }
@@ -47,22 +87,7 @@ interface DashboardStats {
 export default function PremierAdminDashboard() {
   const router = useRouter()
   const { isLoading, isAuthenticated, isReformCompany } = useAuth()
-  const [stats, setStats] = useState<DashboardStats>({
-    totalOrganizations: 0,
-    activeSubscriptions: 0,
-    upcomingSeminars: 0,
-    totalArchives: 0,
-    communityCategories: 0,
-    totalMembers: 0,
-    totalTools: 0,
-    alerts: {
-      expiringSubscriptions: 0,
-      unpublishedUpcomingSeminars: 0,
-      unpaidInvoices: 0,
-      pendingInquiries: 0
-    },
-    lastUpdatedAt: ''
-  })
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -103,15 +128,20 @@ export default function PremierAdminDashboard() {
     return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
   }
 
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString)
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+  }
+
   const getTotalAlerts = () => {
-    if (!stats.alerts) return 0
+    if (!stats?.alerts) return 0
     return stats.alerts.expiringSubscriptions +
            stats.alerts.unpublishedUpcomingSeminars +
            stats.alerts.unpaidInvoices +
            stats.alerts.pendingInquiries
   }
 
-  if (isLoading || loading) {
+  if (isLoading || loading || !stats) {
     return (
       <PremierAdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -120,57 +150,6 @@ export default function PremierAdminDashboard() {
       </PremierAdminLayout>
     )
   }
-
-  const statCards = [
-    {
-      title: '契約組織数',
-      subtitle: '全期間',
-      value: stats.totalOrganizations,
-      icon: Building,
-      color: 'blue',
-      href: '/admin/premier/organizations'
-    },
-    {
-      title: '有効契約数',
-      subtitle: '期限内',
-      value: stats.activeSubscriptions,
-      icon: CheckCircle,
-      color: 'green',
-      href: '/admin/premier/organizations'
-    },
-    {
-      title: '開催予定セミナー',
-      subtitle: '今後の予定',
-      value: stats.upcomingSeminars,
-      icon: Calendar,
-      color: 'purple',
-      href: '/admin/premier/seminars'
-    },
-    {
-      title: '公開中アーカイブ',
-      subtitle: '本数',
-      value: stats.totalArchives,
-      icon: Video,
-      color: 'orange',
-      href: '/admin/premier/archives'
-    },
-    {
-      title: 'コミュニティ数',
-      subtitle: 'グループ数',
-      value: stats.communityCategories,
-      icon: MessageSquare,
-      color: 'teal',
-      href: '/admin/premier/community'
-    },
-    {
-      title: '登録会員数',
-      subtitle: '全組織合計',
-      value: stats.totalMembers,
-      icon: Users,
-      color: 'slate',
-      href: '/admin/premier/members'
-    }
-  ]
 
   const alertItems = [
     {
@@ -199,10 +178,22 @@ export default function PremierAdminDashboard() {
     }
   ]
 
+  // クイックアクション（よく使う順に並べ替え）
+  const quickActions = [
+    { label: '新規セミナー', href: '/admin/premier/seminars/new', icon: Calendar },
+    { label: '新規アーカイブ', href: '/admin/premier/archives/new', icon: Video },
+    { label: 'ニュースレター', href: '/admin/premier/newsletters', icon: Mail },
+    { label: '新規契約組織', href: '/admin/premier/organizations/new', icon: Building },
+    { label: '新規ツール追加', href: '/admin/premier/tools', icon: Wrench },
+    { label: 'カテゴリ追加', href: '/admin/premier/categories', icon: FolderOpen },
+    { label: 'データブック', href: '/admin/premier/databooks', icon: FileText },
+    { label: '会員検索', href: '/admin/premier/members', icon: Search },
+  ]
+
   return (
     <PremierAdminLayout>
       <div className="space-y-6">
-        {/* ヘッダー：タイトル + 最終更新時刻 */}
+        {/* ヘッダー */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">プレミア購読 管理ダッシュボード</h1>
@@ -223,7 +214,7 @@ export default function PremierAdminDashboard() {
           </div>
         </div>
 
-        {/* 運営アラート（要対応セクション） */}
+        {/* 運営アラート */}
         {getTotalAlerts() > 0 && (
           <Card className="border-amber-200 bg-amber-50">
             <CardHeader className="pb-3">
@@ -254,39 +245,200 @@ export default function PremierAdminDashboard() {
           </Card>
         )}
 
-        {/* 統計カード */}
+        {/* 統計カード - 改善版 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {statCards.map((stat) => {
-            const Icon = stat.icon
-            return (
-              <Link key={stat.title} href={stat.href}>
-                <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-lg bg-${stat.color}-100`}>
-                          <Icon className={`h-6 w-6 text-${stat.color}-600`} />
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold">{stat.value}</p>
-                          <p className="text-sm font-medium text-slate-700">{stat.title}</p>
-                          <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                        <span className="text-xs text-slate-400 group-hover:text-blue-500 transition-colors">一覧へ</span>
+          {/* 契約組織数（累計） */}
+          <Link href="/admin/premier/organizations">
+            <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-blue-100">
+                      <Building className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.details.organizations.total}</p>
+                      <p className="text-sm font-medium text-slate-700">契約組織数（累計）</p>
+                      <p className="text-xs text-slate-500">※解約済みを含む累計</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 有効契約数 - 更新期限内訳付き */}
+          <Card className="hover:shadow-md transition-all">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-green-100">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-2xl font-bold">{stats.activeSubscriptions}</p>
+                  <p className="text-sm font-medium text-slate-700">有効契約数</p>
+                  <div className="mt-2 space-y-1">
+                    {stats.details.expiringSubscriptions.within30Days > 0 && (
+                      <Link href="/admin/premier/organizations?filter=expiring30">
+                        <p className="text-xs text-red-600 hover:underline cursor-pointer">
+                          更新期限30日以内: {stats.details.expiringSubscriptions.within30Days}件
+                        </p>
+                      </Link>
+                    )}
+                    {stats.details.expiringSubscriptions.within60Days > 0 && (
+                      <Link href="/admin/premier/organizations?filter=expiring60">
+                        <p className="text-xs text-orange-500 hover:underline cursor-pointer">
+                          60日以内: {stats.details.expiringSubscriptions.within60Days}件
+                        </p>
+                      </Link>
+                    )}
+                  </div>
+                  {(stats.details.expiringSubscriptions.within30Days > 0 || stats.details.expiringSubscriptions.within60Days > 0) && (
+                    <Link href="/admin/premier/organizations?filter=expiring">
+                      <p className="text-xs text-blue-600 hover:underline mt-1 cursor-pointer">
+                        更新対象を確認 →
+                      </p>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 開催予定セミナー - 改善版 */}
+          <Card className="hover:shadow-md transition-all">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-purple-100">
+                    <Calendar className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    {stats.details.seminars.upcoming === 0 ? (
+                      <>
+                        <p className="text-2xl font-bold text-red-600">0</p>
+                        <p className="text-sm font-medium text-slate-700">開催予定セミナー</p>
+                        <p className="text-xs text-red-500">※次回未設定</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold">{stats.details.seminars.upcoming}</p>
+                        <p className="text-sm font-medium text-slate-700">開催予定セミナー</p>
+                        {stats.details.seminars.nextSeminar && (
+                          <p className="text-xs text-slate-500">
+                            次回: {formatDate(stats.details.seminars.nextSeminar.scheduledAt)}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+                {stats.details.seminars.upcoming === 0 ? (
+                  <Button size="sm" asChild>
+                    <Link href="/admin/premier/seminars/new">
+                      <Plus className="h-4 w-4 mr-1" />
+                      作成
+                    </Link>
+                  </Button>
+                ) : (
+                  <Link href="/admin/premier/seminars">
+                    <ChevronRight className="h-5 w-5 text-slate-400 hover:text-blue-500" />
+                  </Link>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 公開中アーカイブ - 内訳付き */}
+          <Link href="/admin/premier/archives">
+            <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-orange-100">
+                      <Video className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.details.archives.total}</p>
+                      <p className="text-sm font-medium text-slate-700">公開中アーカイブ</p>
+                      <p className="text-xs text-slate-500">本数</p>
+                      {(stats.details.archives.unpublished > 0 || stats.details.archives.draft > 0) && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          非公開: {stats.details.archives.unpublished}本 / 下書き: {stats.details.archives.draft}本
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* コミュニティ - アクティブ/非アクティブ */}
+          <Link href="/admin/premier/community">
+            <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-teal-100">
+                      <MessageSquare className="h-6 w-6 text-teal-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.details.communities.total}</p>
+                      <p className="text-sm font-medium text-slate-700">コミュニティ数</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-green-600">
+                          アクティブ: {stats.details.communities.active}件
+                        </span>
+                        {stats.details.communities.inactive > 0 && (
+                          <span className="text-xs text-orange-500">
+                            30日投稿なし: {stats.details.communities.inactive}件
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 登録会員数 - ログイン状況付き */}
+          <Link href="/admin/premier/members">
+            <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-slate-100">
+                      <Users className="h-6 w-6 text-slate-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.details.members.total}</p>
+                      <p className="text-sm font-medium text-slate-700">登録会員数</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-green-600">
+                          直近30日ログイン: {stats.details.members.active}人
+                        </span>
+                      </div>
+                      {stats.details.members.inactive > 0 && (
+                        <span className="text-xs text-red-500">
+                          未ログイン30日以上: {stats.details.members.inactive}人
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* クイックアクション */}
+          {/* クイックアクション - よく使う順 */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">クイックアクション</CardTitle>
@@ -294,59 +446,22 @@ export default function PremierAdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/seminars/new">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    新規セミナー
-                  </Link>
-                </Button>
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/archives/new">
-                    <Video className="mr-2 h-4 w-4" />
-                    新規アーカイブ
-                  </Link>
-                </Button>
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/organizations/new">
-                    <Building className="mr-2 h-4 w-4" />
-                    新規契約組織
-                  </Link>
-                </Button>
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/tools">
-                    <Wrench className="mr-2 h-4 w-4" />
-                    新規ツール追加
-                  </Link>
-                </Button>
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/categories">
-                    <FolderOpen className="mr-2 h-4 w-4" />
-                    カテゴリ追加
-                  </Link>
-                </Button>
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/members">
-                    <Search className="mr-2 h-4 w-4" />
-                    会員検索
-                  </Link>
-                </Button>
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/databooks">
-                    <FileText className="mr-2 h-4 w-4" />
-                    データブック
-                  </Link>
-                </Button>
-                <Button className="justify-start" variant="outline" asChild>
-                  <Link href="/admin/premier/newsletters">
-                    <Mail className="mr-2 h-4 w-4" />
-                    ニュースレター
-                  </Link>
-                </Button>
+                {quickActions.map((action) => {
+                  const Icon = action.icon
+                  return (
+                    <Button key={action.href} className="justify-start" variant="outline" asChild>
+                      <Link href={action.href}>
+                        <Icon className="mr-2 h-4 w-4" />
+                        {action.label}
+                      </Link>
+                    </Button>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
 
-          {/* システム情報 */}
+          {/* プラン情報 - 契約数・今月新規・解約数付き */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">プラン情報</CardTitle>
@@ -362,6 +477,9 @@ export default function PremierAdminDashboard() {
                   <div className="text-right">
                     <Badge>¥110,000/年</Badge>
                     <p className="text-xs text-slate-500 mt-1">電子版購読者 ¥88,000</p>
+                    <p className="text-xs font-medium text-blue-600 mt-1">
+                      契約数: {stats.details.plans.standard.active}件
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
@@ -372,6 +490,19 @@ export default function PremierAdminDashboard() {
                   <div className="text-right">
                     <Badge className="bg-blue-600">¥220,000/年</Badge>
                     <p className="text-xs text-slate-500 mt-1">電子版購読者 ¥198,000</p>
+                    <p className="text-xs font-medium text-blue-600 mt-1">
+                      契約数: {stats.details.plans.expert.active}件
+                    </p>
+                  </div>
+                </div>
+                <div className="border-t pt-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">今月の新規契約</span>
+                    <span className="font-medium text-green-600">+{stats.details.plans.newThisMonth}件</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-slate-600">今月の解約</span>
+                    <span className="font-medium text-red-500">-{stats.details.plans.canceledThisMonth}件</span>
                   </div>
                 </div>
                 <p className="text-xs text-slate-500">

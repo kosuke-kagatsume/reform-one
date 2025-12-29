@@ -63,15 +63,20 @@ model User {
   mfaEnabled    Boolean            @default(false)
   mfaSecret     String?
   emailVerified Boolean            @default(false)
+  lastLoginAt   DateTime?
+  status        String             @default("ACTIVE")
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   auditLogs     AuditLog[]
   invitations   Invitation[]
   sessions      Session[]
   organizations UserOrganization[]
+  sentEmails    EmailHistory[]     @relation("SentEmails")
 
   @@index([email])
   @@index([userType])
+  @@index([lastLoginAt])
+  @@index([status])
 }
 
 model UserOrganization {
@@ -223,12 +228,14 @@ model SeminarCategory {
   slug        String    @unique
   description String?
   sortOrder   Int       @default(0)
+  isVisible   Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   archives    Archive[]
   seminars    Seminar[]
 
   @@index([slug])
+  @@index([isVisible])
 }
 
 model Seminar {
@@ -600,4 +607,27 @@ model MfaBackupCode {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// メール送信履歴
+model EmailHistory {
+  id             String        @id @default(cuid())
+  templateType   String        // CONTACT, RENEWAL_NOTICE, SEMINAR_NOTIFICATION, etc.
+  recipientEmail String
+  recipientName  String?
+  recipientType  String        // ORGANIZATION, USER
+  recipientId    String?       // Organization ID or User ID
+  subject        String
+  body           String?
+  status         String        @default("SENT") // SENT, FAILED, PENDING
+  sentById       String
+  sentAt         DateTime      @default(now())
+  metadata       String?       // JSON string for additional data
+  sentBy         User          @relation("SentEmails", fields: [sentById], references: [id])
+
+  @@index([recipientEmail])
+  @@index([recipientType, recipientId])
+  @@index([templateType])
+  @@index([sentById])
+  @@index([sentAt])
 }
