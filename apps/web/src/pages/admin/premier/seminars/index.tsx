@@ -19,7 +19,7 @@ import {
   Edit,
   Trash2,
   Copy,
-  FileTemplate,
+  FileText,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -520,7 +520,7 @@ export default function SeminarsAdminPage() {
                                   複製
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleTemplate(seminar)}>
-                                  <FileTemplate className="h-4 w-4 mr-2" />
+                                  <FileText className="h-4 w-4 mr-2" />
                                   テンプレートとして使用
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />

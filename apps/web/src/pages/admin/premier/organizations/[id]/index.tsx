@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/lib/auth-context'
+import { EmailSendDialog } from '@/components/admin/email-send-dialog'
 import {
   ArrowLeft,
   Save,
@@ -20,7 +21,12 @@ import {
   Trash2,
   UserPlus,
   Link as LinkIcon,
-  Clock
+  Clock,
+  RefreshCw,
+  History,
+  CheckCircle,
+  XCircle,
+  Send
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -76,6 +82,33 @@ interface Organization {
   invitations: Invitation[]
 }
 
+interface EmailHistoryItem {
+  id: string
+  templateType: string
+  recipientEmail: string
+  recipientName: string | null
+  recipientType: string
+  subject: string
+  status: string
+  sentAt: string
+  metadata: {
+    organizationName?: string
+    planType?: string
+    daysRemaining?: number
+  } | null
+}
+
+type EmailType = 'CONTACT' | 'RENEWAL_NOTICE'
+
+interface EmailRecipient {
+  id: string
+  name: string
+  planType?: string
+  expiresAt?: string | null
+  daysRemaining?: number
+  userCount?: number
+}
+
 export default function OrganizationDetailPage() {
   const router = useRouter()
   const { id } = router.query
@@ -86,6 +119,11 @@ export default function OrganizationDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
+  const [emailHistory, setEmailHistory] = useState<EmailHistoryItem[]>([])
+  const [emailHistoryLoading, setEmailHistoryLoading] = useState(false)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
+  const [emailType, setEmailType] = useState<EmailType>('CONTACT')
+  const [emailRecipient, setEmailRecipient] = useState<EmailRecipient | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -107,6 +145,13 @@ export default function OrganizationDetailPage() {
       fetchOrganization()
     }
   }, [isAuthenticated, isReformCompany, id])
+
+  // Fetch email history when tab changes to email-history
+  useEffect(() => {
+    if (activeTab === 'email-history' && id) {
+      fetchEmailHistory()
+    }
+  }, [activeTab, id])
 
   const fetchOrganization = async () => {
     try {
@@ -192,6 +237,44 @@ export default function OrganizationDetailPage() {
     alert('招待URLをコピーしました')
   }
 
+  const fetchEmailHistory = async () => {
+    if (!id) return
+    setEmailHistoryLoading(true)
+    try {
+      const res = await fetch(`/api/admin/premier/email/history?recipientId=${id}&recipientType=ORGANIZATION`)
+      if (res.ok) {
+        const data = await res.json()
+        setEmailHistory(data.history)
+      }
+    } catch (error) {
+      console.error('Failed to fetch email history:', error)
+    } finally {
+      setEmailHistoryLoading(false)
+    }
+  }
+
+  const openEmailDialog = (type: EmailType) => {
+    if (!organization) return
+    const activeSubscription = organization.subscriptions.find(s => s.status === 'ACTIVE')
+
+    setEmailType(type)
+    setEmailRecipient({
+      id: organization.id,
+      name: organization.name,
+      planType: activeSubscription?.planType,
+      expiresAt: activeSubscription?.currentPeriodEnd ?? null,
+      daysRemaining: activeSubscription ? Math.ceil(
+        (new Date(activeSubscription.currentPeriodEnd).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      ) : undefined,
+      userCount: organization.users.length
+    })
+    setEmailDialogOpen(true)
+  }
+
+  const handleEmailSuccess = () => {
+    fetchEmailHistory()
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('ja-JP', {
@@ -246,7 +329,20 @@ export default function OrganizationDetailPage() {
               <p className="text-slate-600">組織詳細・設定</p>
             </div>
           </div>
-          <AlertDialog>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => openEmailDialog('CONTACT')}>
+              <Mail className="h-4 w-4 mr-2" />
+              連絡する
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => openEmailDialog('RENEWAL_NOTICE')}
+              disabled={!activeSubscription}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              契約更新案内
+            </Button>
+            <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" disabled={deleting}>
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -268,6 +364,7 @@ export default function OrganizationDetailPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -346,6 +443,10 @@ export default function OrganizationDetailPage() {
             <TabsTrigger value="subscription">
               <CreditCard className="h-4 w-4 mr-2" />
               購読
+            </TabsTrigger>
+            <TabsTrigger value="email-history">
+              <History className="h-4 w-4 mr-2" />
+              メール履歴
             </TabsTrigger>
           </TabsList>
 
@@ -594,7 +695,87 @@ export default function OrganizationDetailPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="email-history" className="mt-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>メール送信履歴</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => openEmailDialog('CONTACT')}>
+                    <Send className="h-4 w-4 mr-2" />
+                    新規メール
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={fetchEmailHistory} disabled={emailHistoryLoading}>
+                    <RefreshCw className={`h-4 w-4 ${emailHistoryLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {emailHistoryLoading ? (
+                  <div className="py-8 text-center">
+                    <p className="text-slate-500">読み込み中...</p>
+                  </div>
+                ) : emailHistory.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <History className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-500">メール送信履歴がありません</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {emailHistory.map((email) => (
+                      <div
+                        key={email.id}
+                        className="p-4 border rounded-lg"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {email.status === 'SENT' ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-red-600" />
+                            )}
+                            <Badge variant={
+                              email.templateType === 'CONTACT' ? 'secondary' :
+                              email.templateType === 'RENEWAL_NOTICE' ? 'outline' : 'default'
+                            }>
+                              {email.templateType === 'CONTACT' ? '連絡' :
+                               email.templateType === 'RENEWAL_NOTICE' ? '契約更新' : email.templateType}
+                            </Badge>
+                            <span className="font-medium">{email.subject}</span>
+                          </div>
+                          <Badge variant={email.status === 'SENT' ? 'default' : 'destructive'}>
+                            {email.status === 'SENT' ? '送信済み' : '失敗'}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-slate-500 space-y-1">
+                          <p>
+                            宛先: {email.recipientName || email.recipientEmail} ({email.recipientEmail})
+                          </p>
+                          <p>
+                            送信日時: {formatDate(email.sentAt)} {new Date(email.sentAt).toLocaleTimeString('ja-JP')}
+                          </p>
+                          {email.metadata?.daysRemaining !== undefined && (
+                            <p>残り日数: {email.metadata.daysRemaining}日</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+
+        {/* Email Dialog */}
+        <EmailSendDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          emailType={emailType}
+          recipientType="ORGANIZATION"
+          recipient={emailRecipient}
+          onSuccess={handleEmailSuccess}
+        />
       </div>
     </PremierAdminLayout>
   )

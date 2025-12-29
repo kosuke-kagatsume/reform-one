@@ -14,6 +14,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { useAuth } from '@/lib/auth-context'
+import { EmailSendDialog } from '@/components/admin/email-send-dialog'
 import {
   Building,
   Search,
@@ -68,6 +69,16 @@ interface Stats {
 type FilterStatus = 'all' | 'active' | 'expiring' | 'expired' | 'canceled' | 'no_subscription'
 type FilterPlan = 'all' | 'STANDARD' | 'EXPERT'
 type SortBy = 'name' | 'expiration' | 'lastLogin' | 'members'
+type EmailType = 'CONTACT' | 'RENEWAL_NOTICE'
+
+interface EmailRecipient {
+  id: string
+  name: string
+  planType?: string
+  expiresAt?: string | null
+  daysRemaining?: number
+  userCount?: number
+}
 
 export default function OrganizationsPage() {
   const router = useRouter()
@@ -80,6 +91,9 @@ export default function OrganizationsPage() {
   const [sortBy, setSortBy] = useState<SortBy>('expiration')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
+  const [emailType, setEmailType] = useState<EmailType>('CONTACT')
+  const [emailRecipient, setEmailRecipient] = useState<EmailRecipient | null>(null)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -162,6 +176,19 @@ export default function OrganizationsPage() {
     if (diffDays <= 7) return 'text-green-600'
     if (diffDays <= 30) return 'text-yellow-600'
     return 'text-red-500'
+  }
+
+  const openEmailDialog = (org: Organization, type: EmailType) => {
+    setEmailType(type)
+    setEmailRecipient({
+      id: org.id,
+      name: org.name,
+      planType: org.subscription?.planType,
+      expiresAt: org.subscription?.currentPeriodEnd ?? null,
+      daysRemaining: org.subscription?.daysUntilExpiration ?? undefined,
+      userCount: org._count.users
+    })
+    setEmailDialogOpen(true)
   }
 
   // Filter and sort organizations
@@ -432,17 +459,22 @@ export default function OrganizationsPage() {
                           詳細
                         </Link>
                       </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/premier/organizations/${org.id}?tab=renewal`}>
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                          契約更新
-                        </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEmailDialog(org, 'RENEWAL_NOTICE')}
+                        disabled={!org.subscription}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        契約更新
                       </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/premier/organizations/${org.id}?action=contact`}>
-                          <Mail className="h-3 w-3 mr-1" />
-                          連絡する
-                        </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEmailDialog(org, 'CONTACT')}
+                      >
+                        <Mail className="h-3 w-3 mr-1" />
+                        連絡する
                       </Button>
                     </div>
                   </div>
@@ -451,6 +483,16 @@ export default function OrganizationsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Email Dialog */}
+        <EmailSendDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          emailType={emailType}
+          recipientType="ORGANIZATION"
+          recipient={emailRecipient}
+          onSuccess={() => fetchOrganizations(true)}
+        />
       </div>
     </PremierAdminLayout>
   )

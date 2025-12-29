@@ -413,3 +413,182 @@ ${organizationName} 様
 リフォーム産業新聞社
   `.trim()
 }
+
+// Admin contact email template
+export function getAdminContactEmailHtml(params: {
+  recipientName: string
+  organizationName: string
+  subject: string
+  message: string
+  senderName: string
+}): string {
+  const { recipientName, organizationName, subject, message, senderName } = params
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9fafb; }
+    .message { background: white; padding: 16px; border-radius: 8px; margin: 16px 0; white-space: pre-wrap; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>プレミア購読</h1>
+    </div>
+    <div class="content">
+      <p><strong>${recipientName}</strong> 様 (${organizationName})</p>
+      <p>プレミア購読運営事務局よりご連絡です。</p>
+
+      <h3>${subject}</h3>
+      <div class="message">${message}</div>
+
+      <p>ご不明な点がございましたら、このメールに返信してお問い合わせください。</p>
+    </div>
+    <div class="footer">
+      <p>担当: ${senderName}</p>
+      <p>リフォーム産業新聞社 プレミア購読運営事務局</p>
+    </div>
+  </div>
+</body>
+</html>
+  `
+}
+
+export function getAdminContactEmailText(params: {
+  recipientName: string
+  organizationName: string
+  subject: string
+  message: string
+  senderName: string
+}): string {
+  const { recipientName, organizationName, subject, message, senderName } = params
+
+  return `
+${recipientName} 様 (${organizationName})
+
+プレミア購読運営事務局よりご連絡です。
+
+【${subject}】
+
+${message}
+
+---
+ご不明な点がございましたら、このメールに返信してお問い合わせください。
+
+担当: ${senderName}
+リフォーム産業新聞社 プレミア購読運営事務局
+  `.trim()
+}
+
+// Renewal notice email template (for admin-initiated renewal reminders)
+export function getAdminRenewalNoticeEmailHtml(params: {
+  organizationName: string
+  recipientName: string
+  planType: string
+  expiresAt: Date
+  daysRemaining: number
+  contactInfo: string
+}): string {
+  const { organizationName, recipientName, planType, expiresAt, daysRemaining, contactInfo } = params
+  const expiresStr = expiresAt.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+  const planName = planType === 'EXPERT' ? 'エキスパート' : 'スタンダード'
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #f59e0b; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9fafb; }
+    .info { background: white; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #f59e0b; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    .warning { color: #dc2626; font-weight: bold; }
+    .highlight { background: #fef3c7; padding: 12px; border-radius: 6px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>【重要】契約更新のご案内</h1>
+    </div>
+    <div class="content">
+      <p><strong>${recipientName}</strong> 様</p>
+      <p>いつもプレミア購読をご利用いただき、誠にありがとうございます。</p>
+      <p><strong>${organizationName}</strong>様のご契約について、更新時期が近づいておりますのでご連絡いたします。</p>
+
+      <div class="info">
+        <p><strong>プラン：</strong>${planName}プラン</p>
+        <p><strong>契約終了日：</strong>${expiresStr}</p>
+        <p class="warning">残り${daysRemaining}日</p>
+      </div>
+
+      <p>引き続きサービスをご利用いただける場合は、契約更新の手続きをお願いいたします。</p>
+
+      <div class="highlight">
+        <strong>更新手続きについて</strong><br>
+        ${contactInfo}
+      </div>
+    </div>
+    <div class="footer">
+      <p>ご質問がございましたら、このメールに返信してお問い合わせください。</p>
+      <p>リフォーム産業新聞社 プレミア購読運営事務局</p>
+    </div>
+  </div>
+</body>
+</html>
+  `
+}
+
+export function getAdminRenewalNoticeEmailText(params: {
+  organizationName: string
+  recipientName: string
+  planType: string
+  expiresAt: Date
+  daysRemaining: number
+  contactInfo: string
+}): string {
+  const { organizationName, recipientName, planType, expiresAt, daysRemaining, contactInfo } = params
+  const expiresStr = expiresAt.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+  const planName = planType === 'EXPERT' ? 'エキスパート' : 'スタンダード'
+
+  return `
+【重要】契約更新のご案内
+
+${recipientName} 様
+
+いつもプレミア購読をご利用いただき、誠にありがとうございます。
+${organizationName}様のご契約について、更新時期が近づいておりますのでご連絡いたします。
+
+プラン：${planName}プラン
+契約終了日：${expiresStr}
+残り${daysRemaining}日
+
+引き続きサービスをご利用いただける場合は、契約更新の手続きをお願いいたします。
+
+【更新手続きについて】
+${contactInfo}
+
+---
+ご質問がございましたら、このメールに返信してお問い合わせください。
+リフォーム産業新聞社 プレミア購読運営事務局
+  `.trim()
+}
