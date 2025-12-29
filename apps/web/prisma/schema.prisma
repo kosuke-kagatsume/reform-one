@@ -61,25 +61,29 @@ model Department {
 
 // Users
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   name          String?
-  userType      String   @default("CUSTOMER") // EMPLOYEE, CUSTOMER, EXTERNAL_INSTRUCTOR
-  password      String?  // null for magic link users
-  mfaEnabled    Boolean  @default(false)
+  userType      String    @default("CUSTOMER") // EMPLOYEE, CUSTOMER, EXTERNAL_INSTRUCTOR
+  password      String?   // null for magic link users
+  mfaEnabled    Boolean   @default(false)
   mfaSecret     String?
-  emailVerified Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  emailVerified Boolean   @default(false)
+  status        String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   organizations UserOrganization[]
   sessions      Session[]
   auditLogs     AuditLog[]
   invitations   Invitation[]
   notifications Notification[]
+  sentEmails    EmailHistory[] @relation("SentEmails")
 
   @@index([email])
   @@index([userType])
+  @@index([lastLoginAt])
 }
 
 model UserOrganization {
@@ -248,6 +252,7 @@ model SeminarCategory {
   slug        String   @unique
   description String?
   sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -255,6 +260,7 @@ model SeminarCategory {
   archives Archive[]
 
   @@index([slug])
+  @@index([isVisible])
 }
 
 // Seminars
@@ -696,4 +702,28 @@ model Notification {
   @@index([userId])
   @@index([userId, read])
   @@index([createdAt])
+}
+
+// メール送信履歴
+model EmailHistory {
+  id             String   @id @default(cuid())
+  templateType   String   // CONTACT, RENEWAL_NOTICE, SEMINAR_NOTIFICATION, etc.
+  recipientEmail String
+  recipientName  String?
+  recipientType  String   // ORGANIZATION, USER
+  recipientId    String?  // Organization ID or User ID
+  subject        String
+  body           String?
+  status         String   @default("SENT") // SENT, FAILED, PENDING
+  sentById       String
+  sentAt         DateTime @default(now())
+  metadata       String?  // JSON string for additional data
+
+  sentBy         User     @relation("SentEmails", fields: [sentById], references: [id])
+
+  @@index([recipientEmail])
+  @@index([recipientType, recipientId])
+  @@index([templateType])
+  @@index([sentById])
+  @@index([sentAt])
 }
