@@ -54,8 +54,12 @@ export function EmailSendDialog({
   const [result, setResult] = useState<{ emailsSent: number; emailsFailed: number } | null>(null)
 
   // Reset form when dialog opens with new recipient
+  const recipientId = recipient?.id
+  const recipientName = recipient?.name
+  const recipientOrgName = recipient?.organizationName
+
   useEffect(() => {
-    if (open && recipient) {
+    if (open && recipientId) {
       setError(null)
       setSuccess(false)
       setResult(null)
@@ -66,14 +70,14 @@ export function EmailSendDialog({
         setContactInfo('')
       } else if (emailType === 'RENEWAL_NOTICE') {
         const orgName = recipientType === 'ORGANIZATION'
-          ? recipient.name
-          : recipient.organizationName || ''
+          ? recipientName || ''
+          : recipientOrgName || ''
         setSubject(`【プレミア購読】${orgName}様 契約更新のご案内`)
         setMessage('')
         setContactInfo('更新手続きについては、このメールに返信してお問い合わせください。')
       }
     }
-  }, [open, recipient?.id, emailType, recipientType])
+  }, [open, recipientId, recipientName, recipientOrgName, emailType, recipientType])
 
   const handleSubmit = async () => {
     if (!recipient) return
