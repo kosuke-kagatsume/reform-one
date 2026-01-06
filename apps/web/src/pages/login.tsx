@@ -60,7 +60,7 @@ export default function Login() {
     }
   }, [email, password, login, router])
 
-  const fillDemoAccount = useCallback((accountType: string) => {
+  const fillDemoAccount = useCallback(async (accountType: string) => {
     const accounts: { [key: string]: { email: string; password: string }} = {
       'reform-admin': { email: 'admin@the-reform.co.jp', password: 'Admin123!' },
       'expert-admin': { email: 'admin@expert-reform.co.jp', password: 'Admin123!' },
@@ -73,8 +73,30 @@ export default function Login() {
       setEmail(account.email)
       setPassword(account.password)
       setError('')
+      setIsLoading(true)
+
+      try {
+        const result = await login(account.email, account.password)
+        if (result.success) {
+          const savedUser = localStorage.getItem('premier_user')
+          if (savedUser) {
+            const userData = JSON.parse(savedUser)
+            if (userData.organization?.type === 'REFORM_COMPANY') {
+              router.push('/admin/premier')
+              return
+            }
+          }
+          router.push('/dashboard')
+        } else {
+          setError(result.error || 'ログインに失敗しました')
+        }
+      } catch (err) {
+        setError('ログイン中にエラーが発生しました')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [])
+  }, [login, router])
 
   const loading = isLoading || authLoading
 
@@ -279,7 +301,7 @@ export default function Login() {
               </div>
 
               <p className="text-xs text-slate-500 text-center">
-                ボタンをクリックすると、自動的にフォームに入力されます
+                ボタンをクリックすると自動ログインします
               </p>
             </div>
           )}
