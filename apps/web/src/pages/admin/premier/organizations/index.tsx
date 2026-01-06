@@ -13,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { StatCard, StatCardGrid } from '@/components/ui/stat-card'
+import { AlertRow } from '@/components/ui/alert-row'
+import { StatusBadge, DaysAgoBadge, PlanBadge, ContractStatusBadge } from '@/components/ui/status-badge'
 import { useAuth } from '@/lib/auth-context'
 import { EmailSendDialog } from '@/components/admin/email-send-dialog'
 import {
@@ -28,7 +31,8 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Send
 } from 'lucide-react'
 
 interface Organization {
@@ -66,10 +70,10 @@ interface Stats {
   notLoggedIn: number
 }
 
-type FilterStatus = 'all' | 'active' | 'expiring' | 'expired' | 'canceled' | 'no_subscription'
+type FilterStatus = 'all' | 'active' | 'expiring' | 'expired' | 'canceled' | 'no_subscription' | 'not_logged_in'
 type FilterPlan = 'all' | 'STANDARD' | 'EXPERT'
-type SortBy = 'name' | 'expiration' | 'lastLogin' | 'members'
-type EmailType = 'CONTACT' | 'RENEWAL_NOTICE'
+type SortBy = 'danger' | 'name' | 'expiration' | 'lastLogin' | 'members'
+type EmailType = 'CONTACT' | 'RENEWAL_NOTICE' | 'USAGE_PROMOTION'
 
 interface EmailRecipient {
   id: string
@@ -88,7 +92,7 @@ export default function OrganizationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterPlan, setFilterPlan] = useState<FilterPlan>('all')
-  const [sortBy, setSortBy] = useState<SortBy>('expiration')
+  const [sortBy, setSortBy] = useState<SortBy>('danger')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [emailDialogOpen, setEmailDialogOpen] = useState(false)
@@ -199,7 +203,15 @@ export default function OrganizationsPage() {
         return false
       }
       // Status filter
-      if (filterStatus !== 'all' && org.status !== filterStatus) {
+      if (filterStatus === 'not_logged_in') {
+        // 未ログインまたは30日以上ログインなし
+        if (org.lastLoginAt) {
+          const daysSinceLogin = Math.floor(
+            (Date.now() - new Date(org.lastLoginAt).getTime()) / (1000 * 60 * 60 * 24)
+          )
+          if (daysSinceLogin < 30) return false
+        }
+      } else if (filterStatus !== 'all' && org.status !== filterStatus) {
         return false
       }
       // Plan filter
@@ -212,6 +224,24 @@ export default function OrganizationsPage() {
     })
     .sort((a, b) => {
       switch (sortBy) {
+        case 'danger':
+          // 危険順: 1.未契約 2.未ログイン日数が長い 3.契約期限が近い
+          const getDangerScore = (org: Organization) => {
+            // 未契約は最優先
+            if (org.status === 'no_subscription') return 0
+            // 未ログインの場合
+            if (!org.lastLoginAt) return 1
+            // ログイン日数を計算
+            const daysSinceLogin = Math.floor(
+              (Date.now() - new Date(org.lastLoginAt).getTime()) / (1000 * 60 * 60 * 24)
+            )
+            // 30日以上未ログインは契約期限より優先
+            if (daysSinceLogin >= 30) return 2 + (1000 - daysSinceLogin) / 1000
+            // 契約期限が近い順
+            const daysUntilExp = org.subscription?.daysUntilExpiration ?? 9999
+            return 3 + daysUntilExp / 10000
+          }
+          return getDangerScore(a) - getDangerScore(b)
         case 'name':
           return a.name.localeCompare(b.name)
         case 'expiration':
@@ -271,58 +301,44 @@ export default function OrganizationsPage() {
 
         {/* Summary Stats */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-blue-100 p-3 rounded-lg">
-                    <Building className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                    <p className="text-sm text-slate-600">
-                      総組織数（有効: {stats.active} | 解約済: {stats.canceled}）
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card
-              className={`cursor-pointer hover:shadow-md transition-shadow ${stats.expiring30Days > 0 ? 'border-red-200' : ''}`}
+          <StatCardGrid>
+            <StatCard
+              title="総組織数"
+              value={stats.total}
+              subtitle={`有効: ${stats.active} | 解約済: ${stats.canceled}`}
+              icon={Building}
+              iconColor="text-blue-600"
+            />
+            <StatCard
+              title="更新期限30日以内"
+              value={stats.expiring30Days}
+              description={stats.expiring30Days > 0 ? '更新案内が必要です' : '対応が必要な組織はありません'}
+              icon={AlertTriangle}
+              iconColor={stats.expiring30Days > 0 ? 'text-red-600' : 'text-green-600'}
+              variant={stats.expiring30Days > 0 ? 'warning' : 'default'}
               onClick={() => setFilterStatus('expiring')}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-lg ${stats.expiring30Days > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-                    <AlertTriangle className={`h-6 w-6 ${stats.expiring30Days > 0 ? 'text-red-600' : 'text-green-600'}`} />
-                  </div>
-                  <div>
-                    <p className={`text-2xl font-bold ${stats.expiring30Days > 0 ? 'text-red-600' : ''}`}>
-                      {stats.expiring30Days}
-                    </p>
-                    <p className="text-sm text-slate-600">更新期限30日以内</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-purple-100 p-3 rounded-lg">
-                    <Users className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600">
-                      30日以内ログイン: <span className="font-bold text-green-600">{stats.recentlyLoggedIn}</span>
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      未ログイン: <span className="font-bold text-red-500">{stats.notLoggedIn}</span>
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              hoverHint="更新対象を表示"
+            />
+            <StatCard
+              title="未ログイン組織"
+              value={stats.notLoggedIn}
+              description={stats.notLoggedIn > 0 ? '利用されていません' : '全組織がアクティブです'}
+              icon={Users}
+              iconColor={stats.notLoggedIn > 0 ? 'text-red-600' : 'text-green-600'}
+              variant={stats.notLoggedIn > 0 ? 'danger' : 'default'}
+              onClick={() => setFilterStatus('not_logged_in')}
+              hoverHint="未ログイン組織を表示"
+              cta={stats.notLoggedIn > 0 ? '要対応' : undefined}
+              ctaAction={stats.notLoggedIn > 0 ? {
+                label: '一斉フォローメールを送る',
+                onClick: () => {
+                  setEmailType('USAGE_PROMOTION')
+                  setEmailRecipient(null)
+                  setEmailDialogOpen(true)
+                }
+              } : undefined}
+            />
+          </StatCardGrid>
         )}
 
         {/* Search and Filters */}
@@ -349,6 +365,7 @@ export default function OrganizationsPage() {
                   <SelectItem value="expired">期限切れ</SelectItem>
                   <SelectItem value="canceled">解約済</SelectItem>
                   <SelectItem value="no_subscription">未契約</SelectItem>
+                  <SelectItem value="not_logged_in">未ログイン</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterPlan} onValueChange={(v) => setFilterPlan(v as FilterPlan)}>
@@ -366,6 +383,7 @@ export default function OrganizationsPage() {
                   <SelectValue placeholder="並び替え" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="danger">危険順</SelectItem>
                   <SelectItem value="expiration">期限が近い順</SelectItem>
                   <SelectItem value="lastLogin">最終ログイン順</SelectItem>
                   <SelectItem value="name">名前順</SelectItem>
@@ -393,92 +411,124 @@ export default function OrganizationsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredOrganizations.map((org) => (
-                  <div
-                    key={org.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors ${
-                      org.status === 'expired' ? 'border-red-200 bg-red-50' :
-                      org.status === 'expiring' ? 'border-yellow-200 bg-yellow-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className={`p-2 rounded-lg ${
-                        org.status === 'active' ? 'bg-green-100' :
-                        org.status === 'expiring' ? 'bg-yellow-100' :
-                        org.status === 'expired' ? 'bg-red-100' : 'bg-slate-100'
-                      }`}>
-                        <Building className={`h-5 w-5 ${
-                          org.status === 'active' ? 'text-green-600' :
-                          org.status === 'expiring' ? 'text-yellow-600' :
-                          org.status === 'expired' ? 'text-red-600' : 'text-slate-600'
-                        }`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium truncate">{org.name}</p>
-                          {org.subscription && (
-                            <Badge
-                              variant={org.subscription.planType === 'EXPERT' ? 'default' : 'secondary'}
-                            >
-                              {org.subscription.planType === 'EXPERT' ? 'エキスパート' : 'スタンダード'}
-                            </Badge>
-                          )}
-                          {getStatusBadge(org)}
+                {filteredOrganizations.map((org) => {
+                  // 未ログイン日数を計算
+                  const daysSinceLogin = org.lastLoginAt
+                    ? Math.floor((Date.now() - new Date(org.lastLoginAt).getTime()) / (1000 * 60 * 60 * 24))
+                    : null
+                  const isNotLoggedIn = !org.lastLoginAt || (daysSinceLogin !== null && daysSinceLogin >= 30)
+
+                  // 行の背景色を決定
+                  const getRowClassName = () => {
+                    if (org.status === 'no_subscription') return 'border-orange-200 bg-orange-50'
+                    if (isNotLoggedIn) return 'border-red-200 bg-red-50'
+                    if (org.status === 'expired') return 'border-red-200 bg-red-50'
+                    if (org.status === 'expiring') return 'border-yellow-200 bg-yellow-50'
+                    return ''
+                  }
+
+                  return (
+                    <div
+                      key={org.id}
+                      className={`flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors ${getRowClassName()}`}
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className={`p-2 rounded-lg ${
+                          org.status === 'no_subscription' ? 'bg-orange-100' :
+                          isNotLoggedIn ? 'bg-red-100' :
+                          org.status === 'active' ? 'bg-green-100' :
+                          org.status === 'expiring' ? 'bg-yellow-100' :
+                          org.status === 'expired' ? 'bg-red-100' : 'bg-slate-100'
+                        }`}>
+                          <Building className={`h-5 w-5 ${
+                            org.status === 'no_subscription' ? 'text-orange-600' :
+                            isNotLoggedIn ? 'text-red-600' :
+                            org.status === 'active' ? 'text-green-600' :
+                            org.status === 'expiring' ? 'text-yellow-600' :
+                            org.status === 'expired' ? 'text-red-600' : 'text-slate-600'
+                          }`} />
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-500 mt-1 flex-wrap">
-                          {org.subscription && (
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium truncate">{org.name}</p>
+                            {org.subscription && (
+                              <PlanBadge plan={org.subscription.planType} />
+                            )}
+                            {getStatusBadge(org)}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-slate-500 mt-1 flex-wrap">
+                            {org.subscription && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  契約期限: {formatDate(org.subscription.currentPeriodEnd)}
+                                  {org.subscription.daysUntilExpiration !== null && (
+                                    <span className={`ml-1 ${
+                                      org.subscription.expirationStatus === 'danger' ? 'text-red-600 font-medium' :
+                                      org.subscription.expirationStatus === 'warning' ? 'text-yellow-600' : ''
+                                    }`}>
+                                      （残り{org.subscription.daysUntilExpiration}日）
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
+                              <Users className="h-3 w-3" />
+                              <span>{org._count.users}名</span>
+                            </div>
+                            <div className={`flex items-center gap-1 ${getLoginStatusColor(org.lastLoginAt)}`}>
+                              <Clock className="h-3 w-3" />
                               <span>
-                                契約期限: {formatDate(org.subscription.currentPeriodEnd)}
-                                {org.subscription.daysUntilExpiration !== null && (
-                                  <span className={`ml-1 ${
-                                    org.subscription.expirationStatus === 'danger' ? 'text-red-600 font-medium' :
-                                    org.subscription.expirationStatus === 'warning' ? 'text-yellow-600' : ''
-                                  }`}>
-                                    （残り{org.subscription.daysUntilExpiration}日）
-                                  </span>
-                                )}
+                                {!org.lastLoginAt
+                                  ? '最終ログイン: 未ログイン'
+                                  : daysSinceLogin !== null && daysSinceLogin >= 30
+                                    ? `${daysSinceLogin}日間ログインなし`
+                                    : `最終ログイン: ${getRelativeTime(org.lastLoginAt)}`
+                                }
                               </span>
                             </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            <span>{org._count.users}名</span>
-                          </div>
-                          <div className={`flex items-center gap-1 ${getLoginStatusColor(org.lastLoginAt)}`}>
-                            <Clock className="h-3 w-3" />
-                            <span>最終ログイン: {getRelativeTime(org.lastLoginAt)}</span>
                           </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/admin/premier/organizations/${org.id}`}>
+                            管理画面
+                          </Link>
+                        </Button>
+                        {isNotLoggedIn && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEmailDialog(org, 'USAGE_PROMOTION')}
+                            className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                          >
+                            <Send className="h-3 w-3 mr-1" />
+                            利用促進メール
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEmailDialog(org, 'RENEWAL_NOTICE')}
+                          disabled={!org.subscription}
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          契約更新
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEmailDialog(org, 'CONTACT')}
+                        >
+                          <Mail className="h-3 w-3 mr-1" />
+                          メール送信
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-4">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/premier/organizations/${org.id}`}>
-                          詳細
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEmailDialog(org, 'RENEWAL_NOTICE')}
-                        disabled={!org.subscription}
-                      >
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                        契約更新
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEmailDialog(org, 'CONTACT')}
-                      >
-                        <Mail className="h-3 w-3 mr-1" />
-                        連絡する
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>

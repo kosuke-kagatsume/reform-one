@@ -32,7 +32,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { categoryId, title, description, youtubeUrl, thumbnailUrl, duration, publishedAt } = req.body
+    const {
+      categoryId,
+      title,
+      description,
+      youtubeUrl,
+      thumbnailUrl,
+      duration,
+      publishedAt,
+      shortVersionUrl,
+      shortVersionDuration
+    } = req.body
 
     if (!categoryId || !title || !youtubeUrl) {
       return res.status(400).json({ error: 'Missing required fields' })
@@ -48,7 +58,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           youtubeUrl,
           thumbnailUrl,
           duration,
-          publishedAt: publishedAt ? new Date(publishedAt) : undefined
+          publishedAt: publishedAt ? new Date(publishedAt) : undefined,
+          shortVersionUrl,
+          shortVersionDuration
         },
         include: { category: true }
       })

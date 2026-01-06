@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { StatCard } from '@/components/ui/stat-card'
+import { AlertRow } from '@/components/ui/alert-row'
 import { useAuth } from '@/lib/auth-context'
 import {
   Video,
@@ -13,11 +15,14 @@ import {
   Plus,
   Clock,
   Eye,
+  EyeOff,
   Calendar,
   MoreVertical,
   Edit,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Film,
+  AlertTriangle
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -49,6 +54,8 @@ interface Archive {
   duration: number | null
   publishedAt: string
   category: Category
+  shortVersionUrl: string | null
+  shortVersionDuration: number | null
   _count: { views: number }
 }
 
@@ -64,6 +71,7 @@ export default function ArchivesAdminPage() {
   const [deletingArchive, setDeletingArchive] = useState<Archive | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [sortBy, setSortBy] = useState('date_desc')
+  const [filterUnwatched, setFilterUnwatched] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -152,7 +160,8 @@ export default function ArchivesAdminPage() {
     let filtered = archives.filter(a => {
       const matchesCategory = selectedCategory === 'all' || a.category.id === selectedCategory
       const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase())
-      return matchesCategory && matchesSearch
+      const matchesUnwatched = !filterUnwatched || a._count.views === 0
+      return matchesCategory && matchesSearch && matchesUnwatched
     })
 
     // Apply sorting
@@ -177,6 +186,9 @@ export default function ArchivesAdminPage() {
   const filteredArchives = getFilteredAndSortedArchives()
 
   const totalViews = archives.reduce((sum, a) => sum + a._count.views, 0)
+  const unwatchedCount = archives.filter(a => a._count.views === 0).length
+  const withShortVersionCount = archives.filter(a => a.shortVersionUrl).length
+  const totalHours = Math.round(archives.reduce((sum, a) => sum + (a.duration || 0), 0) / 60)
 
   if (isLoading || loading) {
     return (
@@ -204,49 +216,69 @@ export default function ArchivesAdminPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Video className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{archives.length}</p>
-                  <p className="text-sm text-slate-600">総アーカイブ数</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <Eye className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalViews}</p>
-                  <p className="text-sm text-slate-600">総視聴回数</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <Clock className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {Math.round(archives.reduce((sum, a) => sum + (a.duration || 0), 0) / 60)}時間
-                  </p>
-                  <p className="text-sm text-slate-600">総コンテンツ時間</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Summary Cards - クリックでフィルター適用 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatCard
+            title="総アーカイブ数"
+            value={archives.length}
+            subtitle={`ショートバージョン: ${withShortVersionCount}件`}
+            icon={Video}
+            iconColor="text-purple-600"
+            onClick={() => {
+              setFilterUnwatched(false)
+              setSortBy('date_desc')
+            }}
+            hoverHint="クリックで全一覧を表示"
+          />
+
+          <StatCard
+            title="総視聴回数"
+            value={totalViews}
+            description="各アーカイブの視聴回数の合計"
+            icon={Eye}
+            iconColor="text-blue-600"
+            onClick={() => {
+              setFilterUnwatched(false)
+              setSortBy('views_desc')
+            }}
+            hoverHint="クリックで視聴回数順にソート"
+          />
+
+          <StatCard
+            title="未視聴アーカイブ"
+            value={unwatchedCount}
+            subtitle="視聴回数0のアーカイブ"
+            icon={EyeOff}
+            iconColor="text-amber-600"
+            variant={unwatchedCount > 0 ? 'warning' : 'default'}
+            onClick={() => {
+              setFilterUnwatched(true)
+              setSortBy('date_desc')
+            }}
+            hoverHint="クリックで未視聴一覧を表示"
+            cta={unwatchedCount > 0 ? '要確認' : undefined}
+          />
+
+          <StatCard
+            title="総コンテンツ時間"
+            value={`${totalHours}時間`}
+            icon={Clock}
+            iconColor="text-green-600"
+          />
         </div>
+
+        {/* 未視聴フィルター表示中の通知 */}
+        {filterUnwatched && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <span className="text-sm text-amber-800">未視聴アーカイブのみ表示中（{unwatchedCount}件）</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setFilterUnwatched(false)}>
+              フィルター解除
+            </Button>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
@@ -293,73 +325,101 @@ export default function ArchivesAdminPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredArchives.map((archive) => (
-                  <div
-                    key={archive.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      {archive.thumbnailUrl ? (
-                        <img
-                          src={archive.thumbnailUrl}
-                          alt={archive.title}
-                          className="w-24 h-14 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-24 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded flex items-center justify-center">
-                          <Video className="h-6 w-6 text-white/80" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline">{archive.category.name}</Badge>
-                          <span className="font-medium">{archive.title}</span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{formatDate(archive.publishedAt)}</span>
+                {filteredArchives.map((archive) => {
+                  const isUnwatched = archive._count.views === 0
+                  const hasShortVersion = !!archive.shortVersionUrl
+
+                  return (
+                    <AlertRow
+                      key={archive.id}
+                      alertLevel={isUnwatched ? 'warning' : 'none'}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        {archive.thumbnailUrl ? (
+                          <img
+                            src={archive.thumbnailUrl}
+                            alt={archive.title}
+                            className="w-24 h-14 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-24 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded flex items-center justify-center">
+                            <Video className="h-6 w-6 text-white/80" />
                           </div>
-                          {archive.duration && (
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline">{archive.category.name}</Badge>
+                            <span className="font-medium">{archive.title}</span>
+                            {isUnwatched && (
+                              <Badge variant="unused">未視聴</Badge>
+                            )}
+                            {hasShortVersion && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <Film className="h-3 w-3" />
+                                ショート版あり
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
                             <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{formatDuration(archive.duration)}</span>
+                              <Calendar className="h-3 w-3" />
+                              <span>{formatDate(archive.publishedAt)}</span>
                             </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" />
-                            <span>{archive._count.views}回視聴</span>
+                            {archive.duration && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{formatDuration(archive.duration)}</span>
+                                {hasShortVersion && archive.shortVersionDuration && (
+                                  <span className="text-purple-600">
+                                    （ショート: {formatDuration(archive.shortVersionDuration)}）
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              <span>{archive._count.views}回視聴</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={archive.youtubeUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          YouTube
-                        </a>
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={archive.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            YouTube
+                          </a>
+                        </Button>
+                        {hasShortVersion && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={archive.shortVersionUrl!} target="_blank" rel="noopener noreferrer">
+                              <Film className="h-4 w-4 mr-1" />
+                              ショート版
+                            </a>
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/admin/premier/archives/${archive.id}/edit`)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            編集
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(archive)}>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            削除
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push(`/admin/premier/archives/${archive.id}/edit`)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              編集
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(archive)}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              削除
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </AlertRow>
+                  )
+                })}
               </div>
             )}
           </CardContent>

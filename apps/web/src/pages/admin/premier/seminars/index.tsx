@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { StatCard } from '@/components/ui/stat-card'
 import { useAuth } from '@/lib/auth-context'
 import {
   Calendar,
@@ -24,7 +25,8 @@ import {
   TrendingDown,
   Minus,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  History
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -309,86 +311,58 @@ export default function SeminarsAdminPage() {
           </Button>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - クリックでフィルター適用 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* 今後のセミナー */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <Calendar className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-2xl font-bold">{stats?.upcoming || 0}</p>
-                  <p className="text-sm text-slate-600">今後のセミナー</p>
-                  {stats?.nextSeminar ? (
-                    <p className="text-xs text-blue-600 mt-1">
-                      次回: {formatShortDate(stats.nextSeminar.scheduledAt)} {formatTime(stats.nextSeminar.scheduledAt)}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      未設定
-                    </p>
-                  )}
-                </div>
-                {stats?.upcomingWithin7Days && stats.upcomingWithin7Days > 0 && (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                    {stats.upcomingWithin7Days}件が7日以内
-                  </Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="今後のセミナー"
+            value={stats?.upcoming || 0}
+            subtitle={stats?.nextSeminar
+              ? `次回: ${formatShortDate(stats.nextSeminar.scheduledAt)} ${formatTime(stats.nextSeminar.scheduledAt)}`
+              : undefined
+            }
+            icon={Calendar}
+            iconColor="text-blue-600"
+            variant={!stats?.nextSeminar ? 'warning' : 'default'}
+            onClick={() => setActiveTab('upcoming')}
+            hoverHint="クリックで今後のセミナー一覧を表示"
+            cta={stats?.upcomingWithin7Days && stats.upcomingWithin7Days > 0
+              ? `${stats.upcomingWithin7Days}件が7日以内`
+              : undefined
+            }
+          />
 
           {/* 過去のセミナー */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <Calendar className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-2xl font-bold">{stats?.past || 0}</p>
-                  <p className="text-sm text-slate-600">過去のセミナー</p>
-                  <p className="text-xs text-slate-500 mt-1">累計開催数</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="過去のセミナー"
+            value={stats?.past || 0}
+            subtitle="累計開催数"
+            icon={History}
+            iconColor="text-green-600"
+            onClick={() => setActiveTab('past')}
+            hoverHint="クリックで過去のセミナー一覧を表示"
+          />
 
           {/* 参加者数 */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Users className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-2xl font-bold">{stats?.totalParticipants || 0}</p>
-                  <p className="text-sm text-slate-600">累計参加者数</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {participantsDiff > 0 ? (
-                      <>
-                        <TrendingUp className="h-3 w-3 text-green-600" />
-                        <span className="text-xs text-green-600">+{participantsDiff} 前月比</span>
-                      </>
-                    ) : participantsDiff < 0 ? (
-                      <>
-                        <TrendingDown className="h-3 w-3 text-red-600" />
-                        <span className="text-xs text-red-600">{participantsDiff} 前月比</span>
-                      </>
-                    ) : (
-                      <>
-                        <Minus className="h-3 w-3 text-slate-400" />
-                        <span className="text-xs text-slate-500">前月比 ±0</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="累計参加者数"
+            value={stats?.totalParticipants || 0}
+            description="各セミナーの参加者数の合計"
+            subtitle={
+              participantsDiff > 0
+                ? `+${participantsDiff} 前月比`
+                : participantsDiff < 0
+                  ? `${participantsDiff} 前月比`
+                  : '前月比 ±0'
+            }
+            icon={Users}
+            iconColor="text-purple-600"
+            onClick={() => {
+              setSortBy('participants_desc')
+              setActiveTab('past')
+            }}
+            hoverHint="クリックで参加者数順にソート"
+          />
         </div>
 
         {/* Filters and Search */}

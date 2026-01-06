@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { StatCard } from '@/components/ui/stat-card'
+import { AlertRow } from '@/components/ui/alert-row'
+import { DaysAgoBadge, PlanBadge } from '@/components/ui/status-badge'
 import { useAuth } from '@/lib/auth-context'
 import {
   Users,
@@ -16,8 +19,10 @@ import {
   ChevronRight,
   Clock,
   AlertCircle,
+  AlertTriangle,
   UserCheck,
-  UserX
+  UserX,
+  Send
 } from 'lucide-react'
 
 interface Member {
@@ -228,86 +233,81 @@ export default function MembersAdminPage() {
           <p className="text-slate-600">プレミア購読の全会員を管理</p>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - クリックでフィルター適用 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* 総会員数 */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats?.total || 0}</p>
-                  <p className="text-sm text-slate-600">総会員数</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    アクティブ {stats?.active || 0} / 非アクティブ {stats?.inactive || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="総会員数"
+            value={stats?.total || 0}
+            subtitle={`アクティブ ${stats?.active || 0} / 非アクティブ ${stats?.inactive || 0}`}
+            icon={Users}
+            iconColor="text-blue-600"
+            onClick={() => {
+              setLoginFilter('all')
+              setPlanFilter('all')
+            }}
+            hoverHint="クリックで全一覧を表示"
+          />
 
-          {/* ログイン状況 */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <UserCheck className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats?.recentLogin || 0}</p>
-                  <p className="text-sm text-slate-600">30日以内ログイン</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    全体の {stats?.total ? Math.round((stats.recentLogin / stats.total) * 100) : 0}%
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* 30日以内ログイン */}
+          <StatCard
+            title="30日以内ログイン"
+            value={stats?.recentLogin || 0}
+            subtitle={`全体の ${stats?.total ? Math.round((stats.recentLogin / stats.total) * 100) : 0}%`}
+            icon={UserCheck}
+            iconColor="text-green-600"
+            variant="success"
+            onClick={() => setLoginFilter('recent')}
+            hoverHint="クリックでアクティブユーザーを表示"
+          />
 
-          {/* 未ログイン */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-red-100 p-3 rounded-lg">
-                  <UserX className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats?.notLoggedIn30Days || 0}</p>
-                  <p className="text-sm text-slate-600">30日以上未ログイン</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    うち未ログイン {stats?.neverLoggedIn || 0}名
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* 30日以上未ログイン（休眠） */}
+          <StatCard
+            title="30日以上未ログイン"
+            value={stats?.notLoggedIn30Days || 0}
+            subtitle={`うち未ログイン ${stats?.neverLoggedIn || 0}名`}
+            icon={UserX}
+            iconColor="text-red-600"
+            variant={(stats?.notLoggedIn30Days || 0) > 0 ? 'danger' : 'default'}
+            onClick={() => setLoginFilter('inactive')}
+            hoverHint="クリックで休眠ユーザーを表示"
+            cta={(stats?.notLoggedIn30Days || 0) > 0 ? '要対応' : undefined}
+          />
 
-          {/* プラン別 */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Activity className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-600">プラン別</p>
-                  <div className="flex gap-3 mt-1">
-                    <div>
-                      <p className="text-lg font-bold text-purple-600">{stats?.byPlan.expert || 0}</p>
-                      <p className="text-xs text-slate-500">Expert</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-blue-600">{stats?.byPlan.standard || 0}</p>
-                      <p className="text-xs text-slate-500">Standard</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* 未ログインユーザー */}
+          <StatCard
+            title="未ログインユーザー"
+            value={stats?.neverLoggedIn || 0}
+            subtitle="一度もログインしていない"
+            icon={AlertTriangle}
+            iconColor="text-amber-600"
+            variant={(stats?.neverLoggedIn || 0) > 0 ? 'warning' : 'default'}
+            onClick={() => setLoginFilter('never')}
+            hoverHint="クリックで未ログインユーザーを表示"
+            cta={(stats?.neverLoggedIn || 0) > 0 ? '要確認' : undefined}
+          />
         </div>
+
+        {/* 休眠ユーザー一括メール通知 */}
+        {loginFilter === 'inactive' && filteredMembers.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-800">
+                  {filteredMembers.length}名の休眠ユーザーがいます
+                </p>
+                <p className="text-sm text-amber-700">
+                  利用促進メールを送信して、サービスの活用を促しましょう
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" className="border-amber-400 text-amber-700 hover:bg-amber-100">
+              <Send className="h-4 w-4 mr-2" />
+              利用促進メールを一括送信
+            </Button>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-col lg:flex-row gap-4">
@@ -381,77 +381,96 @@ export default function MembersAdminPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="bg-slate-100 p-2 rounded-full">
-                        <Users className="h-5 w-5 text-slate-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{member.name || member.email}</p>
-                          {member.role === 'ADMIN' && (
-                            <Badge variant="secondary" className="text-xs">管理者</Badge>
-                          )}
-                          {getLoginStatusBadge(member.loginStatus)}
+                {filteredMembers.map((member) => {
+                  const isDormant = member.loginStatus === 'inactive' || member.loginStatus === 'never'
+                  const alertLevel = member.loginStatus === 'never' ? 'danger' :
+                    member.loginStatus === 'inactive' ? 'warning' : 'none'
+
+                  return (
+                    <AlertRow
+                      key={member.id}
+                      alertLevel={alertLevel}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="bg-slate-100 p-2 rounded-full">
+                          <Users className="h-5 w-5 text-slate-600" />
                         </div>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 mt-1">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <span>{member.email}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Building className="h-3 w-3" />
-                            <span>{member.organization.name}</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{member.name || member.email}</p>
+                            {member.role === 'ADMIN' && (
+                              <Badge variant="secondary" className="text-xs">管理者</Badge>
+                            )}
                             {member.organization.subscription && (
-                              <Badge
-                                variant={member.organization.subscription.planType === 'EXPERT' ? 'default' : 'secondary'}
-                                className="text-xs ml-1"
-                              >
-                                {member.organization.subscription.planType === 'EXPERT' ? 'エキスパート' : 'スタンダード'}
-                              </Badge>
+                              <PlanBadge plan={member.organization.subscription.planType} />
+                            )}
+                            {isDormant && (
+                              <DaysAgoBadge days={member.daysSinceLogin} />
                             )}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>登録: {formatDate(member.createdAt)}</span>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 mt-1">
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              <span>{member.email}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Building className="h-3 w-3" />
+                              <span>{member.organization.name}</span>
+                            </div>
                           </div>
-                          <div className={`flex items-center gap-1 ${getLoginStatusColor(member.loginStatus)}`}>
-                            <Clock className="h-3 w-3" />
-                            <span>最終ログイン: {formatRelativeDate(member.lastLoginAt)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Activity className="h-3 w-3" />
-                            <span>{member._count.activities}件の活動</span>
+                          <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>登録: {formatDate(member.createdAt)}</span>
+                            </div>
+                            <div className={`flex items-center gap-1 ${getLoginStatusColor(member.loginStatus)}`}>
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {member.daysSinceLogin !== null
+                                  ? `${member.daysSinceLogin}日間ログインなし`
+                                  : '未ログイン'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Activity className="h-3 w-3" />
+                              <span>{member._count.activities}件の活動</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/admin/premier/members/${member.id}/contact`)}
-                      >
-                        <Mail className="h-4 w-4 mr-1" />
-                        連絡する
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/admin/premier/organizations/${member.organization.id}`)}
-                      >
-                        組織を見る
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-2">
+                        {isDormant && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-amber-400 text-amber-700 hover:bg-amber-50"
+                            onClick={() => router.push(`/admin/premier/members/${member.id}/contact?type=promotion`)}
+                          >
+                            <Send className="h-4 w-4 mr-1" />
+                            利用促進
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/admin/premier/members/${member.id}/contact`)}
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          メール送信
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/admin/premier/organizations/${member.organization.id}`)}
+                        >
+                          組織管理
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </AlertRow>
+                  )
+                })}
               </div>
             )}
           </CardContent>

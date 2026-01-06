@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { StatCard } from '@/components/ui/stat-card'
+import { AlertRow } from '@/components/ui/alert-row'
+import { RoleBadge } from '@/components/ui/status-badge'
 import {
   Dialog,
   DialogContent,
@@ -39,8 +42,16 @@ import {
   GripVertical,
   Eye,
   EyeOff,
-  Search
+  Search,
+  AlertTriangle,
+  Users
 } from 'lucide-react'
+
+interface CategoryRole {
+  id: string
+  name: string
+  color: string | null
+}
 
 interface Category {
   id: string
@@ -49,6 +60,7 @@ interface Category {
   description: string | null
   sortOrder: number
   isVisible: boolean
+  role: CategoryRole | null
   _count: {
     seminars: number
     archives: number
@@ -62,6 +74,7 @@ export default function CategoriesManagementPage() {
   const router = useRouter()
   const { isLoading, isAuthenticated, isReformCompany } = useAuth()
   const [categories, setCategories] = useState<Category[]>([])
+  const [roles, setRoles] = useState<CategoryRole[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -70,13 +83,15 @@ export default function CategoriesManagementPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('order_asc')
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all')
+  const [filterUnused, setFilterUnused] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     description: '',
     sortOrder: 0,
-    isVisible: true
+    isVisible: true,
+    roleId: ''
   })
 
   useEffect(() => {
@@ -119,7 +134,8 @@ export default function CategoriesManagementPage() {
       slug: '',
       description: '',
       sortOrder: categories.length,
-      isVisible: true
+      isVisible: true,
+      roleId: ''
     })
     setEditingCategory(null)
   }
@@ -136,7 +152,8 @@ export default function CategoriesManagementPage() {
       slug: category.slug,
       description: category.description || '',
       sortOrder: category.sortOrder,
-      isVisible: category.isVisible
+      isVisible: category.isVisible,
+      roleId: category.role?.id || ''
     })
     setDialogOpen(true)
   }
@@ -247,7 +264,11 @@ export default function CategoriesManagementPage() {
       if (visibilityFilter === 'visible') matchesVisibility = c.isVisible
       if (visibilityFilter === 'hidden') matchesVisibility = !c.isVisible
 
-      return matchesSearch && matchesVisibility
+      // Unused filter
+      const isUnused = c._count.seminars === 0 && c._count.archives === 0
+      const matchesUnused = !filterUnused || isUnused
+
+      return matchesSearch && matchesVisibility && matchesUnused
     })
 
     // Apply sorting
@@ -272,10 +293,14 @@ export default function CategoriesManagementPage() {
   const filteredCategories = getFilteredCategories()
 
   // Stats
+  const unusedCategories = categories.filter(c => c._count.seminars === 0 && c._count.archives === 0)
+  const noRoleCategories = categories.filter(c => !c.role)
   const stats = {
     total: categories.length,
     visible: categories.filter(c => c.isVisible).length,
     hidden: categories.filter(c => !c.isVisible).length,
+    unused: unusedCategories.length,
+    noRole: noRoleCategories.length,
     totalSeminars: categories.reduce((sum, c) => sum + c._count.seminars, 0),
     totalArchives: categories.reduce((sum, c) => sum + c._count.archives, 0)
   }
@@ -390,70 +415,65 @@ export default function CategoriesManagementPage() {
           </Dialog>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - クリックでフィルター適用 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <FolderOpen className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-sm text-slate-600">カテゴリ数</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    公開 {stats.visible} / 非公開 {stats.hidden}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="カテゴリ数"
+            value={stats.total}
+            subtitle={`公開 ${stats.visible} / 非公開 ${stats.hidden}`}
+            icon={FolderOpen}
+            iconColor="text-blue-600"
+            onClick={() => {
+              setFilterUnused(false)
+              setVisibilityFilter('all')
+            }}
+            hoverHint="クリックで全一覧を表示"
+          />
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <Eye className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.visible}</p>
-                  <p className="text-sm text-slate-600">公開中</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    ユーザーに表示
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="未使用カテゴリ"
+            value={stats.unused}
+            subtitle="セミナー・アーカイブ0件"
+            icon={AlertTriangle}
+            iconColor="text-amber-600"
+            variant={stats.unused > 0 ? 'warning' : 'default'}
+            onClick={() => setFilterUnused(true)}
+            hoverHint="クリックで未使用カテゴリを表示"
+            cta={stats.unused > 0 ? '要確認' : undefined}
+          />
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Video className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.totalSeminars}</p>
-                  <p className="text-sm text-slate-600">総セミナー数</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="役割未設定"
+            value={stats.noRole}
+            subtitle="対象者が未設定"
+            icon={Users}
+            iconColor="text-slate-500"
+            variant={stats.noRole > 0 ? 'warning' : 'default'}
+            hoverHint="役割ラベルを設定してください"
+            cta={stats.noRole > 0 ? '要設定' : undefined}
+          />
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-amber-100 p-3 rounded-lg">
-                  <Archive className="h-6 w-6 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.totalArchives}</p>
-                  <p className="text-sm text-slate-600">総アーカイブ数</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="総コンテンツ"
+            value={stats.totalSeminars + stats.totalArchives}
+            subtitle={`セミナー ${stats.totalSeminars} / アーカイブ ${stats.totalArchives}`}
+            icon={Video}
+            iconColor="text-purple-600"
+          />
         </div>
+
+        {/* 未使用フィルター表示中の通知 */}
+        {filterUnused && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <span className="text-sm text-amber-800">未使用カテゴリのみ表示中（{stats.unused}件）</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setFilterUnused(false)}>
+              フィルター解除
+            </Button>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -513,97 +533,121 @@ export default function CategoriesManagementPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {filteredCategories.map((category) => (
-                  <div
-                    key={category.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors ${
-                      !category.isVisible ? 'bg-slate-50 border-slate-200' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <GripVertical className="h-5 w-5 text-slate-300" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className={`font-medium ${!category.isVisible ? 'text-slate-500' : ''}`}>
-                            {category.name}
-                          </p>
-                          <Badge variant="outline" className="text-xs">
-                            {category.slug}
-                          </Badge>
-                          {!category.isVisible && (
-                            <Badge variant="secondary" className="text-xs bg-slate-200">
-                              <EyeOff className="h-3 w-3 mr-1" />
-                              非公開
+                {filteredCategories.map((category) => {
+                  const isUnused = category._count.seminars === 0 && category._count.archives === 0
+                  const alertLevel = isUnused ? 'inactive' : 'none'
+
+                  return (
+                    <AlertRow
+                      key={category.id}
+                      alertLevel={alertLevel}
+                      className={`flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50/50 transition-colors ${
+                        !category.isVisible ? 'opacity-60' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <GripVertical className="h-5 w-5 text-slate-300" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium ${!category.isVisible ? 'text-slate-500' : ''}`}>
+                              {category.name}
+                            </p>
+                            <Badge variant="outline" className="text-xs">
+                              {category.slug}
                             </Badge>
-                          )}
-                        </div>
-                        {category.description && (
-                          <p className="text-sm text-slate-500 mt-1">{category.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <Video className="h-3 w-3" />
-                            <span>セミナー: {category._count.seminars}件</span>
+                            {category.role && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs"
+                                style={category.role.color ? { backgroundColor: `${category.role.color}20`, color: category.role.color } : undefined}
+                              >
+                                <Users className="h-3 w-3 mr-1" />
+                                {category.role.name}
+                              </Badge>
+                            )}
+                            {!category.role && (
+                              <RoleBadge role={null} className="text-xs" />
+                            )}
+                            {!category.isVisible && (
+                              <Badge variant="secondary" className="text-xs bg-slate-200">
+                                <EyeOff className="h-3 w-3 mr-1" />
+                                非公開
+                              </Badge>
+                            )}
+                            {isUnused && (
+                              <Badge variant="unused" className="text-xs">
+                                未使用
+                              </Badge>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Archive className="h-3 w-3" />
-                            <span>アーカイブ: {category._count.archives}件</span>
+                          {category.description && (
+                            <p className="text-sm text-slate-500 mt-1">{category.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                            <div className="flex items-center gap-1">
+                              <Video className="h-3 w-3" />
+                              <span>セミナー: {category._count.seminars}件</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Archive className="h-3 w-3" />
+                              <span>アーカイブ: {category._count.archives}件</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleVisibility(category)}
-                        title={category.isVisible ? '非公開にする' : '公開する'}
-                      >
-                        {category.isVisible ? (
-                          <Eye className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-slate-400" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(category)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-600"
-                            disabled={category._count.seminars > 0 || category._count.archives > 0}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>カテゴリを削除しますか？</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              「{category.name}」を削除します。この操作は取り消せません。
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(category.id)}
-                              className="bg-red-600 hover:bg-red-700"
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleVisibility(category)}
+                          title={category.isVisible ? '非公開にする' : '公開する'}
+                        >
+                          {category.isVisible ? (
+                            <Eye className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-slate-400" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(category)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-600"
+                              disabled={category._count.seminars > 0 || category._count.archives > 0}
                             >
-                              削除する
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>カテゴリを削除しますか？</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                「{category.name}」を削除します。この操作は取り消せません。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(category.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                削除する
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </AlertRow>
+                  )
+                })}
               </div>
             )}
           </CardContent>

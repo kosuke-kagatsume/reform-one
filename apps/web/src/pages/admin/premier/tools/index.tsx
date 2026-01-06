@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { StatCard } from '@/components/ui/stat-card'
+import { PlanBadge } from '@/components/ui/status-badge'
 import {
   Select,
   SelectContent,
@@ -37,8 +39,16 @@ import {
   Trash2,
   Search,
   Eye,
-  EyeOff
+  EyeOff,
+  AlertTriangle,
+  Target
 } from 'lucide-react'
+
+interface ToolPurpose {
+  id: string
+  name: string
+  color: string | null
+}
 
 interface Tool {
   id: string
@@ -53,6 +63,8 @@ interface Tool {
   sortOrder: number
   isPublished: boolean
   usageCount?: number
+  fileFormat: string | null
+  purpose: ToolPurpose | null
 }
 
 const categoryOptions = [
@@ -83,6 +95,7 @@ export default function AdminToolsPage() {
   const [planFilter, setPlanFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy] = useState('order_asc')
+  const [filterUnused, setFilterUnused] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -311,7 +324,11 @@ export default function AdminToolsPage() {
         (statusFilter === 'published' && tool.isPublished) ||
         (statusFilter === 'draft' && !tool.isPublished)
 
-      return matchesSearch && matchesCategory && matchesPlan && matchesStatus
+      // Unused filter
+      const isUnused = !tool.usageCount || tool.usageCount === 0
+      const matchesUnused = !filterUnused || isUnused
+
+      return matchesSearch && matchesCategory && matchesPlan && matchesStatus && matchesUnused
     })
 
     // Sort
@@ -333,12 +350,16 @@ export default function AdminToolsPage() {
   const filteredTools = getFilteredTools()
 
   // Stats
+  const unusedTools = tools.filter(t => !t.usageCount || t.usageCount === 0)
+  const noPurposeTools = tools.filter(t => !t.purpose)
   const stats = {
     total: tools.length,
     published: tools.filter(t => t.isPublished).length,
     draft: tools.filter(t => !t.isPublished).length,
     expert: tools.filter(t => t.requiredPlan === 'EXPERT').length,
     standard: tools.filter(t => t.requiredPlan === 'STANDARD').length,
+    unused: unusedTools.length,
+    noPurpose: noPurposeTools.length,
     totalUsage: tools.reduce((sum, t) => sum + (t.usageCount || 0), 0),
     byCategory: {
       spreadsheet: tools.filter(t => t.category === 'SPREADSHEET').length,
@@ -510,74 +531,65 @@ export default function AdminToolsPage() {
           </Dialog>
         </div>
 
-        {/* 統計カード */}
+        {/* 統計カード - クリックでフィルター適用 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <Wrench className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-sm text-slate-600">総ツール数</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    公開 {stats.published} / 下書き {stats.draft}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <Eye className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-green-600">{stats.published}</p>
-                  <p className="text-sm text-slate-600">公開中</p>
-                  <p className="text-xs text-slate-500 mt-1">ユーザーに表示</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Wrench className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-600">プラン別</p>
-                  <div className="flex gap-3 mt-1">
-                    <div>
-                      <p className="text-lg font-bold text-purple-600">{stats.expert}</p>
-                      <p className="text-xs text-slate-500">Expert</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-blue-600">{stats.standard}</p>
-                      <p className="text-xs text-slate-500">Standard</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-amber-100 p-3 rounded-lg">
-                  <Download className="h-6 w-6 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.totalUsage}</p>
-                  <p className="text-sm text-slate-600">総利用回数</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="総ツール数"
+            value={stats.total}
+            subtitle={`公開 ${stats.published} / 下書き ${stats.draft}`}
+            icon={Wrench}
+            iconColor="text-blue-600"
+            onClick={() => {
+              setFilterUnused(false)
+              setStatusFilter('all')
+            }}
+            hoverHint="クリックで全一覧を表示"
+          />
+
+          <StatCard
+            title="未使用ツール"
+            value={stats.unused}
+            subtitle="利用回数0のツール"
+            icon={AlertTriangle}
+            iconColor="text-amber-600"
+            variant={stats.unused > 0 ? 'warning' : 'default'}
+            onClick={() => setFilterUnused(true)}
+            hoverHint="クリックで未使用ツールを表示"
+            cta={stats.unused > 0 ? '要確認' : undefined}
+          />
+
+          <StatCard
+            title="目的未設定"
+            value={stats.noPurpose}
+            subtitle="用途ラベルなし"
+            icon={Target}
+            iconColor="text-slate-500"
+            variant={stats.noPurpose > 0 ? 'warning' : 'default'}
+            hoverHint="目的ラベルを設定してください"
+            cta={stats.noPurpose > 0 ? '要設定' : undefined}
+          />
+
+          <StatCard
+            title="総利用回数"
+            value={stats.totalUsage}
+            subtitle={`Expert: ${stats.expert} / Standard: ${stats.standard}`}
+            icon={Download}
+            iconColor="text-green-600"
+          />
         </div>
+
+        {/* 未使用フィルター表示中の通知 */}
+        {filterUnused && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <span className="text-sm text-amber-800">未使用ツールのみ表示中（{stats.unused}件）</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setFilterUnused(false)}>
+              フィルター解除
+            </Button>
+          </div>
+        )}
 
         {/* フィルター */}
         <div className="flex flex-col lg:flex-row gap-4">
@@ -649,78 +661,107 @@ export default function AdminToolsPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTools.map((tool) => (
-              <Card key={tool.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`p-2 rounded-lg ${tool.isPublished ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
-                      {getCategoryIcon(tool.category)}
-                    </div>
-                    <div className="flex gap-1">
-                      {tool.requiredPlan === 'EXPERT' && (
-                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
-                          EXPERT
-                        </Badge>
-                      )}
-                      {tool.isPublished ? (
-                        <Badge className="bg-green-100 text-green-700 text-xs">公開</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">下書き</Badge>
-                      )}
-                    </div>
-                  </div>
+            {filteredTools.map((tool) => {
+              const isUnused = !tool.usageCount || tool.usageCount === 0
 
-                  <h3 className="font-semibold mb-1">{tool.name}</h3>
-                  <p className="text-sm text-slate-500 mb-3 line-clamp-2">
-                    {tool.description || 'No description'}
-                  </p>
-
-                  <div className="flex items-center justify-between text-sm text-slate-600 mb-4">
-                    <Badge variant="outline" className="text-xs">
-                      {getCategoryLabel(tool.category)}
-                    </Badge>
-                    <span>{tool.usageCount || 0}回利用</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-1">
-                      {tool.fileUrl && (
-                        <Badge variant="outline" className="text-xs">
-                          <Download className="h-3 w-3 mr-1" />
-                          DL
-                        </Badge>
-                      )}
-                      {tool.externalUrl && (
-                        <Badge variant="outline" className="text-xs">
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          外部
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => togglePublish(tool)}
-                        title={tool.isPublished ? '非公開にする' : '公開する'}
-                      >
+              return (
+                <Card
+                  key={tool.id}
+                  className={isUnused ? 'border-amber-200 bg-amber-50/30' : ''}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`p-2 rounded-lg ${tool.isPublished ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                        {getCategoryIcon(tool.category)}
+                      </div>
+                      <div className="flex gap-1 flex-wrap justify-end">
+                        <PlanBadge plan={tool.requiredPlan} className="text-xs" />
                         {tool.isPublished ? (
-                          <Eye className="h-4 w-4 text-green-600" />
+                          <Badge className="bg-green-100 text-green-700 text-xs">公開</Badge>
                         ) : (
-                          <EyeOff className="h-4 w-4 text-slate-400" />
+                          <Badge variant="outline" className="text-xs">下書き</Badge>
                         )}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(tool)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(tool)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        {isUnused && (
+                          <Badge variant="unused" className="text-xs">未使用</Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                    <h3 className="font-semibold mb-1">{tool.name}</h3>
+                    <p className="text-sm text-slate-500 mb-3 line-clamp-2">
+                      {tool.description || 'No description'}
+                    </p>
+
+                    <div className="flex items-center justify-between text-sm text-slate-600 mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        {getCategoryLabel(tool.category)}
+                      </Badge>
+                      <span className={isUnused ? 'text-amber-600' : ''}>{tool.usageCount || 0}回利用</span>
+                    </div>
+
+                    {/* 目的ラベル */}
+                    <div className="mb-4">
+                      {tool.purpose ? (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs"
+                          style={tool.purpose.color ? { backgroundColor: `${tool.purpose.color}20`, color: tool.purpose.color } : undefined}
+                        >
+                          <Target className="h-3 w-3 mr-1" />
+                          {tool.purpose.name}
+                        </Badge>
+                      ) : (
+                        <Badge variant="warning" className="text-xs">
+                          目的未設定
+                        </Badge>
+                      )}
+                      {tool.fileFormat && (
+                        <Badge variant="outline" className="text-xs ml-1">
+                          {tool.fileFormat}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-1">
+                        {tool.fileUrl && (
+                          <Badge variant="outline" className="text-xs">
+                            <Download className="h-3 w-3 mr-1" />
+                            DL
+                          </Badge>
+                        )}
+                        {tool.externalUrl && (
+                          <Badge variant="outline" className="text-xs">
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            外部
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => togglePublish(tool)}
+                          title={tool.isPublished ? '非公開にする' : '公開する'}
+                        >
+                          {tool.isPublished ? (
+                            <Eye className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-slate-400" />
+                          )}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(tool)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(tool)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
 

@@ -245,6 +245,21 @@ model AuditLog {
 // Premier Subscription System Models
 // ============================================
 
+// Category Roles (for SeminarCategory)
+model CategoryRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categories SeminarCategory[]
+
+  @@index([sortOrder])
+}
+
 // Seminar Categories
 model SeminarCategory {
   id          String   @id @default(cuid())
@@ -253,14 +268,17 @@ model SeminarCategory {
   description String?
   sortOrder   Int      @default(0)
   isVisible   Boolean  @default(true)
+  roleId      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  role     CategoryRole? @relation(fields: [roleId], references: [id])
   seminars Seminar[]
   archives Archive[]
 
   @@index([slug])
   @@index([isVisible])
+  @@index([roleId])
 }
 
 // Seminars
@@ -312,6 +330,8 @@ model Archive {
   youtubeUrl  String
   thumbnailUrl String?
   duration    Int?     // minutes
+  shortVersionUrl      String?  // ショートバージョン（10分版）のURL
+  shortVersionDuration Int?     // ショートバージョンの長さ（分）
   publishedAt DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -547,6 +567,21 @@ model UserQualification {
   @@index([status])
 }
 
+// Tool Purposes
+model ToolPurpose {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tools Tool[]
+
+  @@index([sortOrder])
+}
+
 // Tools (追加ツール)
 model Tool {
   id           String   @id @default(cuid())
@@ -560,15 +595,19 @@ model Tool {
   requiredPlan String   @default("STANDARD") // STANDARD, EXPERT
   sortOrder    Int      @default(0)
   isPublished  Boolean  @default(true)
+  fileFormat   String?  // ファイル形式
+  purposeId    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  purpose   ToolPurpose?   @relation(fields: [purposeId], references: [id])
   usageLogs ToolUsageLog[]
 
   @@index([slug])
   @@index([category])
   @@index([requiredPlan])
   @@index([isPublished])
+  @@index([purposeId])
 }
 
 // Tool Usage Log
@@ -702,6 +741,24 @@ model Notification {
   @@index([userId])
   @@index([userId, read])
   @@index([createdAt])
+}
+
+// メールテンプレート
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  subject     String
+  bodyHtml    String
+  bodyText    String?
+  variables   String   @default("[]") // JSON array of variable names
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
 }
 
 // メール送信履歴

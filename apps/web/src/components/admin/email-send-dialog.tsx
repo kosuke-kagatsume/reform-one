@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Mail, AlertCircle, CheckCircle, Users, User, Calendar } from 'lucide-react'
 
-type EmailType = 'CONTACT' | 'RENEWAL_NOTICE'
+type EmailType = 'CONTACT' | 'RENEWAL_NOTICE' | 'USAGE_PROMOTION'
 type RecipientType = 'USER' | 'ORGANIZATION'
 
 interface Recipient {
@@ -75,6 +75,13 @@ export function EmailSendDialog({
         setSubject(`【プレミア購読】${orgName}様 契約更新のご案内`)
         setMessage('')
         setContactInfo('更新手続きについては、このメールに返信してお問い合わせください。')
+      } else if (emailType === 'USAGE_PROMOTION') {
+        const orgName = recipientType === 'ORGANIZATION'
+          ? recipientName || ''
+          : recipientOrgName || ''
+        setSubject(`【Reform One】${orgName}様 サービスご活用のご案内`)
+        setMessage('Reform Oneをご契約いただきありがとうございます。\n\nサービスをより効果的にご活用いただくため、以下の機能をご紹介します。\n\n・セミナー：毎月開催の各種セミナーにご参加いただけます\n・アーカイブ：過去のセミナー動画をいつでも視聴可能\n・ツール：業務効率化のための各種テンプレートをダウンロード\n\nぜひログインしてご活用ください。')
+        setContactInfo('')
       }
     }
   }, [open, recipientId, recipientName, recipientOrgName, emailType, recipientType])
@@ -87,7 +94,7 @@ export function EmailSendDialog({
       return
     }
 
-    if (emailType === 'CONTACT' && !message.trim()) {
+    if ((emailType === 'CONTACT' || emailType === 'USAGE_PROMOTION') && !message.trim()) {
       setError('メッセージを入力してください')
       return
     }
@@ -104,7 +111,7 @@ export function EmailSendDialog({
           recipientId: recipient.id,
           recipientType,
           subject,
-          message: emailType === 'CONTACT' ? message : undefined,
+          message: (emailType === 'CONTACT' || emailType === 'USAGE_PROMOTION') ? message : undefined,
           contactInfo: emailType === 'RENEWAL_NOTICE' ? contactInfo : undefined
         })
       })
@@ -141,6 +148,9 @@ export function EmailSendDialog({
   const getTitle = () => {
     if (emailType === 'CONTACT') {
       return '連絡メールを送信'
+    }
+    if (emailType === 'USAGE_PROMOTION') {
+      return '利用促進メールを送信'
     }
     return '契約更新のお知らせを送信'
   }
@@ -255,8 +265,8 @@ export function EmailSendDialog({
               />
             </div>
 
-            {/* Message (for CONTACT type) */}
-            {emailType === 'CONTACT' && (
+            {/* Message (for CONTACT and USAGE_PROMOTION type) */}
+            {(emailType === 'CONTACT' || emailType === 'USAGE_PROMOTION') && (
               <div className="space-y-2">
                 <Label htmlFor="message">メッセージ *</Label>
                 <Textarea

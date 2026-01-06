@@ -223,19 +223,36 @@ model AuditLog {
 }
 
 model SeminarCategory {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
-  slug        String    @unique
+  slug        String        @unique
   description String?
-  sortOrder   Int       @default(0)
-  isVisible   Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  roleId      String?
+  sortOrder   Int           @default(0)
+  isVisible   Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  role        CategoryRole? @relation(fields: [roleId], references: [id])
   archives    Archive[]
   seminars    Seminar[]
 
   @@index([slug])
   @@index([isVisible])
+  @@index([roleId])
+}
+
+// カテゴリ役割マスタ（集客用/研修用/アーカイブ専用等）
+model CategoryRole {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  description String?
+  color       String?
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  categories  SeminarCategory[]
+
+  @@index([sortOrder])
 }
 
 model Seminar {
@@ -275,18 +292,21 @@ model SeminarParticipant {
 }
 
 model Archive {
-  id           String          @id @default(cuid())
-  categoryId   String
-  title        String
-  description  String?
-  youtubeUrl   String
-  thumbnailUrl String?
-  duration     Int?
-  publishedAt  DateTime        @default(now())
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  category     SeminarCategory @relation(fields: [categoryId], references: [id])
-  views        ArchiveView[]
+  id                   String          @id @default(cuid())
+  categoryId           String
+  title                String
+  description          String?
+  youtubeUrl           String
+  thumbnailUrl         String?
+  duration             Int?
+  // ショートバージョン（10分版）
+  shortVersionUrl      String?
+  shortVersionDuration Int?
+  publishedAt          DateTime        @default(now())
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  category             SeminarCategory @relation(fields: [categoryId], references: [id])
+  views                ArchiveView[]
 
   @@index([categoryId])
   @@index([publishedAt])
@@ -492,7 +512,9 @@ model Tool {
   slug         String         @unique
   description  String?
   category     String
+  purposeId    String?
   fileUrl      String?
+  fileFormat   String?        // Excel, Word, PDF等
   externalUrl  String?
   iconName     String?
   requiredPlan String         @default("STANDARD")
@@ -500,12 +522,28 @@ model Tool {
   isPublished  Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  purpose      ToolPurpose?   @relation(fields: [purposeId], references: [id])
   usageLogs    ToolUsageLog[]
 
   @@index([slug])
   @@index([category])
+  @@index([purposeId])
   @@index([requiredPlan])
   @@index([isPublished])
+}
+
+// ツール用途マスタ（現調用/見積用/契約用/安全管理/顧客満足等）
+model ToolPurpose {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tools       Tool[]
+
+  @@index([sortOrder])
 }
 
 model ToolUsageLog {
@@ -607,6 +645,24 @@ model MfaBackupCode {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// メールテンプレート（管理画面で編集可能）
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  code        String   @unique  // FOLLOW_UP, USAGE_PROMOTION, RENEWAL_NOTICE等
+  name        String
+  description String?
+  subject     String
+  bodyHtml    String
+  bodyText    String?
+  variables   String   @default("[]")  // 利用可能な変数リスト（JSON）
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
 }
 
 // メール送信履歴
