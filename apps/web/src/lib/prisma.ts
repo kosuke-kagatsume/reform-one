@@ -1,15 +1,41 @@
 import { PrismaClient } from '@prisma/client'
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined
+  // eslint-disable-next-line no-var
+  var prismaConnected: boolean | undefined
 }
 
-// Serverless環境向けに接続プール設定を最適化
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'warn', 'error'] : ['error'],
-  // データソースURLにpgbouncerパラメータが含まれている場合は
-  // Prismaが自動的にトランザクションモードを調整
-})
+// Prismaクライアントの作成
+const createPrismaClient = () => {
+  const client = new PrismaClient({
+    log: process.env.NODE_ENV === 'development'
+      ? ['warn', 'error']
+      : ['error'],
+  })
+  return client
+}
 
-// 開発環境でもグローバルにキャッシュ（Hot Reload対策）
-globalForPrisma.prisma = prisma
+// シングルトンパターン
+export const prisma = global.prisma ?? createPrismaClient()
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma
+}
+
+// 接続をリセットする関数（prepared statement エラー対策）
+export async function resetConnection() {
+  try {
+    // 全てのprepared statementsを解放
+    await prisma.$executeRawUnsafe('DEALLOCATE ALL')
+  } catch (e) {
+    console.error('Failed to deallocate statements:', e)
+    try {
+      await prisma.$disconnect()
+      await prisma.$connect()
+    } catch (e2) {
+      console.error('Failed to reset connection:', e2)
+    }
+  }
+}
