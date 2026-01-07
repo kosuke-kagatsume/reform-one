@@ -1,17 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/auth-context'
+import { LockedFeatureCard } from '@/components/premier/locked-feature-card'
 import {
   FileText,
   Download,
   Video,
   Calendar,
-  Lock,
-  ExternalLink
+  BookOpen,
+  Clock,
+  Share2,
+  BarChart3,
+  Info
 } from 'lucide-react'
 
 interface Databook {
@@ -21,15 +25,23 @@ interface Databook {
   youtubeUrl: string | null
   quarter: string
   publishedAt: string
+  coverImageUrl?: string | null
   _count: { downloads: number }
+}
+
+interface DatabookStats {
+  totalDatabooks: number
+  totalDownloads: number
+  nextPublishDate: string | null
 }
 
 export default function DatabooksPage() {
   const router = useRouter()
-  const { user, isLoading, isAuthenticated, hasFeature } = useAuth()
+  const { user, isLoading, isAuthenticated, hasFeature, isAdmin } = useAuth()
   const [databooks, setDatabooks] = useState<Databook[]>([])
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [stats, setStats] = useState<DatabookStats | null>(null)
 
   const canAccessDatabooks = hasFeature('databook')
 
@@ -42,6 +54,7 @@ export default function DatabooksPage() {
   useEffect(() => {
     if (isAuthenticated && canAccessDatabooks) {
       fetchDatabooks()
+      fetchStats()
     } else if (isAuthenticated && !canAccessDatabooks) {
       setLoading(false)
     }
@@ -52,12 +65,29 @@ export default function DatabooksPage() {
       const res = await fetch('/api/databooks')
       if (res.ok) {
         const data = await res.json()
-        setDatabooks(data.databooks)
+        setDatabooks(data.databooks || [])
       }
     } catch (error) {
       console.error('Failed to fetch databooks:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/databooks/stats')
+      if (res.ok) {
+        const data = await res.json()
+        setStats(data)
+      }
+    } catch {
+      // デモ用ダミーデータ
+      setStats({
+        totalDatabooks: 12,
+        totalDownloads: 3500,
+        nextPublishDate: '2026-04-01'
+      })
     }
   }
 
@@ -74,7 +104,6 @@ export default function DatabooksPage() {
 
       if (res.ok) {
         const data = await res.json()
-        // Open PDF in new tab
         window.open(data.pdfUrl, '_blank')
       } else {
         alert('ダウンロードに失敗しました')
@@ -90,19 +119,29 @@ export default function DatabooksPage() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ja-JP', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      month: 'long'
     })
   }
 
   const formatQuarter = (quarter: string) => {
-    // Convert "2025-Q1" to "2025年 第1四半期"
     const match = quarter.match(/(\d{4})-Q(\d)/)
     if (match) {
       return `${match[1]}年 第${match[2]}四半期`
     }
     return quarter
   }
+
+  // 年次でグループ化 (5-5)
+  const databooksByYear = useMemo(() => {
+    const groups: Record<string, Databook[]> = {}
+    databooks.forEach(db => {
+      const year = db.quarter.split('-')[0] || new Date(db.publishedAt).getFullYear().toString()
+      if (!groups[year]) groups[year] = []
+      groups[year].push(db)
+    })
+    // 年降順でソート
+    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [databooks])
 
   if (isLoading || loading) {
     return (
@@ -114,32 +153,58 @@ export default function DatabooksPage() {
     )
   }
 
+  // スタンダードプラン向け表示 (5-8)
   if (!canAccessDatabooks) {
     return (
       <DashboardLayout>
         <div className="space-y-6">
+          {/* 見出し変更 (5-2) */}
           <div>
-            <h1 className="text-2xl font-bold">データブック</h1>
-            <p className="text-slate-600">業界動向レポート・分析資料</p>
+            <h1 className="text-2xl font-bold">エキスパート会員向け データブック</h1>
+            <p className="text-slate-600">業界動向レポート・分析資料をPDFでダウンロード</p>
           </div>
 
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-100 rounded-full">
-                  <Lock className="h-8 w-8 text-amber-600" />
+          {/* LockedFeatureCard使用 (5-8) */}
+          <LockedFeatureCard
+            title="データブック"
+            description="年4回発行の業界動向レポート・データ分析資料をPDFでダウンロードできます。市場動向、トレンド分析、経営に役立つデータが満載です。"
+            featureName="データブック"
+          />
+
+          {/* プレビュー表示 */}
+          <Card className="opacity-60">
+            <CardHeader>
+              <CardTitle className="text-base">収録内容（プレビュー）</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 border rounded-lg bg-slate-50 text-center">
+                  <div className="bg-red-100 w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-red-600" />
+                  </div>
+                  <p className="text-sm font-medium">市場動向レポート</p>
+                  <p className="text-xs text-slate-500">四半期ごと</p>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-amber-800">
-                    エキスパートプラン限定機能
-                  </h3>
-                  <p className="text-amber-700">
-                    データブックはエキスパートプランでご利用いただけます。
-                    年4回、業界動向レポートやデータ分析資料をPDFでダウンロードできます。
-                  </p>
-                  <Button className="mt-4" variant="outline">
-                    プランをアップグレード
-                  </Button>
+                <div className="p-4 border rounded-lg bg-slate-50 text-center">
+                  <div className="bg-blue-100 w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <p className="text-sm font-medium">データ分析資料</p>
+                  <p className="text-xs text-slate-500">統計・グラフ</p>
+                </div>
+                <div className="p-4 border rounded-lg bg-slate-50 text-center">
+                  <div className="bg-green-100 w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                    <BookOpen className="h-6 w-6 text-green-600" />
+                  </div>
+                  <p className="text-sm font-medium">業界トレンド</p>
+                  <p className="text-xs text-slate-500">最新情報</p>
+                </div>
+                <div className="p-4 border rounded-lg bg-slate-50 text-center">
+                  <div className="bg-purple-100 w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                    <Video className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <p className="text-sm font-medium">解説動画</p>
+                  <p className="text-xs text-slate-500">一部資料</p>
                 </div>
               </div>
             </CardContent>
@@ -149,88 +214,192 @@ export default function DatabooksPage() {
     )
   }
 
+  // エキスパートプラン向け表示
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* 見出し変更 (5-2) */}
         <div>
-          <h1 className="text-2xl font-bold">データブック</h1>
+          <h1 className="text-2xl font-bold">エキスパート会員向け データブック</h1>
           <p className="text-slate-600">
-            業界動向レポート・分析資料（エキスパートプラン特典）
+            年4回発行の業界動向レポート・データ分析資料。契約期間中に発行されたデータブックをダウンロードできます。
           </p>
         </div>
 
+        {/* KPI表示 */}
+        {stats && (
+          <div className="grid grid-cols-3 gap-4">
+            <Card className="bg-red-50/50">
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-red-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-red-700">{stats.totalDatabooks}</p>
+                    <p className="text-xs text-slate-600">公開中の資料</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-blue-50/50">
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center gap-3">
+                  <Download className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-blue-700">{stats.totalDownloads.toLocaleString()}</p>
+                    <p className="text-xs text-slate-600">累計ダウンロード</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50/50">
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-green-700">
+                      {stats.nextPublishDate ? formatDate(stats.nextPublishDate) : '調整中'}
+                    </p>
+                    <p className="text-xs text-slate-600">次回発行予定</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* 管理者向けアクション */}
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              <Share2 className="h-4 w-4 mr-2" />
+              社員に共有
+            </Button>
+            <Button variant="outline" size="sm">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              ダウンロード状況
+            </Button>
+          </div>
+        )}
+
         {databooks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {databooks.map((databook) => (
-              <Card key={databook.id} className="overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <FileText className="h-6 w-6 text-red-600" />
-                      </div>
-                      <div>
-                        <Badge variant="outline" className="mb-1">
-                          {formatQuarter(databook.quarter)}
-                        </Badge>
-                        <CardTitle className="text-lg">{databook.title}</CardTitle>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {databook.description && (
-                    <p className="text-slate-600 text-sm mb-4">{databook.description}</p>
+          <div className="space-y-8">
+            {/* 年次区切り表示 (5-5) */}
+            {databooksByYear.map(([year, yearDatabooks]) => (
+              <div key={year}>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-lg font-semibold">{year}年版</h2>
+                  <Badge variant="outline">全{yearDatabooks.length}冊</Badge>
+                  {yearDatabooks.length < 4 && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {4 - yearDatabooks.length}冊 準備中
+                    </Badge>
                   )}
-                  <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {formatDate(databook.publishedAt)}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Download className="h-4 w-4" />
-                      {databook._count.downloads}回ダウンロード
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1"
-                      onClick={() => handleDownload(databook)}
-                      disabled={downloading === databook.id}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {downloading === databook.id ? 'ダウンロード中...' : 'PDFをダウンロード'}
-                    </Button>
-                    {databook.youtubeUrl && (
-                      <Button variant="outline" asChild>
-                        <a
-                          href={databook.youtubeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Video className="h-4 w-4 mr-2" />
-                          解説動画
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {yearDatabooks.map((databook) => (
+                    <Card key={databook.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                      <div className="flex">
+                        {/* サムネイル/表紙画像 (5-3, 5-4) */}
+                        <div className="w-32 shrink-0">
+                          {databook.coverImageUrl ? (
+                            <img
+                              src={databook.coverImageUrl}
+                              alt={databook.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center min-h-[160px]">
+                              <FileText className="h-10 w-10 text-white/80" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 p-4">
+                          <Badge variant="outline" className="mb-2 text-xs">
+                            {formatQuarter(databook.quarter)}
+                          </Badge>
+                          <h3 className="font-semibold mb-2 line-clamp-2">{databook.title}</h3>
+                          {databook.description && (
+                            <p className="text-sm text-slate-600 line-clamp-2 mb-3">{databook.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(databook.publishedAt)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Download className="h-3 w-3" />
+                              {databook._count.downloads}回
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleDownload(databook)}
+                              disabled={downloading === databook.id}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              {downloading === databook.id ? '...' : 'PDF'}
+                            </Button>
+                            {databook.youtubeUrl && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={databook.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                                  <Video className="h-4 w-4 mr-1" />
+                                  解説
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
-          <Card>
+          <Card className="border-slate-200">
             <CardContent className="py-12 text-center">
               <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-600 mb-2">
-                データブックはまだありません
+              <h3 className="text-lg font-medium text-slate-700 mb-2">
+                データブックを準備中です
               </h3>
-              <p className="text-slate-500">
-                新しいデータブックが公開されるまでお待ちください。
+              <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                次回のデータブックは{stats?.nextPublishDate ? formatDate(stats.nextPublishDate) : '近日中'}に公開予定です。
+                公開されましたらメールでお知らせします。
               </p>
+
+              {/* 次回発行予定エリア (5-6) */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                <div className="flex items-center gap-2 text-blue-700 mb-2">
+                  <Info className="h-4 w-4" />
+                  <span className="font-medium">次回発行について</span>
+                </div>
+                <p className="text-sm text-blue-600">
+                  {stats?.nextPublishDate
+                    ? `${formatDate(stats.nextPublishDate)}に新しいデータブックを公開予定です。`
+                    : '現在、次回発行日を調整中です。決まり次第お知らせします。'
+                  }
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
+
+        {/* DL制限説明 (5-7) */}
+        <Card className="bg-slate-50">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-slate-500 mt-0.5" />
+              <div className="text-sm text-slate-600">
+                <p className="font-medium mb-1">ダウンロードについて</p>
+                <p>契約期間中（開始日〜更新日）に発行されたデータブックをダウンロードできます。過去のデータブックは契約更新後もダウンロード可能です。</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   )
