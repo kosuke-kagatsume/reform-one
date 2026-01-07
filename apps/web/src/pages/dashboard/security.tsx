@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/lib/auth-context'
 import {
   Shield,
@@ -15,13 +16,17 @@ import {
   MapPin,
   Clock,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   XCircle,
   Copy,
   RefreshCw,
   LogOut,
   Eye,
-  EyeOff
+  EyeOff,
+  Mail,
+  Laptop,
+  Globe
 } from 'lucide-react'
 
 interface Session {
@@ -42,9 +47,24 @@ interface LoginHistory {
   success: boolean
 }
 
+// パスワード強度計算（13-2）
+const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
+  let score = 0
+  if (password.length >= 8) score += 25
+  if (password.length >= 12) score += 15
+  if (/[A-Z]/.test(password)) score += 20
+  if (/[a-z]/.test(password)) score += 15
+  if (/[0-9]/.test(password)) score += 15
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 10
+
+  if (score < 40) return { score, label: '弱い', color: 'bg-red-500' }
+  if (score < 70) return { score, label: '普通', color: 'bg-yellow-500' }
+  return { score, label: '強い', color: 'bg-green-500' }
+}
+
 export default function SecurityPage() {
   const router = useRouter()
-  const { user, isLoading, isAuthenticated } = useAuth()
+  const { user, isLoading, isAuthenticated, isAdmin } = useAuth()
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -71,6 +91,8 @@ export default function SecurityPage() {
   // Login history state
   const [loginHistory, setLoginHistory] = useState<LoginHistory[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+
+  const passwordStrength = calculatePasswordStrength(newPassword)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -158,7 +180,6 @@ export default function SecurityPage() {
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
-        setTimeout(() => setPasswordSuccess(false), 5000)
       } else {
         setPasswordError(data.message || 'パスワード変更に失敗しました')
       }
@@ -311,11 +332,12 @@ export default function SecurityPage() {
   }
 
   const parseUserAgent = (userAgent: string) => {
-    if (userAgent.includes('Chrome')) return 'Chrome'
-    if (userAgent.includes('Firefox')) return 'Firefox'
-    if (userAgent.includes('Safari')) return 'Safari'
-    if (userAgent.includes('Edge')) return 'Edge'
-    return 'Unknown Browser'
+    if (userAgent.includes('Chrome')) return { name: 'Chrome', icon: Globe }
+    if (userAgent.includes('Firefox')) return { name: 'Firefox', icon: Globe }
+    if (userAgent.includes('Safari')) return { name: 'Safari', icon: Globe }
+    if (userAgent.includes('Edge')) return { name: 'Edge', icon: Globe }
+    if (userAgent.includes('Mobile')) return { name: 'モバイル', icon: Smartphone }
+    return { name: 'ブラウザ', icon: Laptop }
   }
 
   if (isLoading) {
@@ -333,15 +355,30 @@ export default function SecurityPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* タイトル（13-9: メニュー強調） */}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Shield className="h-6 w-6" />
+            <Shield className="h-6 w-6 text-red-600" />
             セキュリティ設定
           </h1>
           <p className="text-slate-600">アカウントのセキュリティを管理</p>
         </div>
 
-        {/* Password Change */}
+        {/* 警告文（13-1） */}
+        {isAdmin && (
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-2 text-amber-700">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="font-medium">
+                  セキュリティ設定は重要な操作です。不明な点がある場合は管理者以外の方は操作を控えてください。
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Password Change（13-2, 13-3） */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -349,7 +386,8 @@ export default function SecurityPage() {
               パスワード変更
             </CardTitle>
             <CardDescription>
-              定期的にパスワードを変更することをお勧めします
+              {/* パスワード条件明示（13-2） */}
+              8文字以上、英大文字・小文字・数字を含む。記号の使用を推奨します。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -391,7 +429,18 @@ export default function SecurityPage() {
                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-500">8文字以上、大文字・小文字・数字を含む</p>
+              {/* パスワード強度表示（13-2） */}
+              {newPassword && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">パスワード強度</span>
+                    <span className={`font-medium ${passwordStrength.score >= 70 ? 'text-green-600' : passwordStrength.score >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  <Progress value={passwordStrength.score} className={`h-1 ${passwordStrength.color}`} />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -412,10 +461,13 @@ export default function SecurityPage() {
               </div>
             )}
 
+            {/* 成功メッセージ（13-3） */}
             {passwordSuccess && (
-              <div className="flex items-center gap-2 text-green-600 text-sm">
-                <CheckCircle className="h-4 w-4" />
-                パスワードを変更しました
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">パスワードを変更しました。セキュリティのため再ログインをお勧めします。</span>
+                </div>
               </div>
             )}
 
@@ -428,15 +480,21 @@ export default function SecurityPage() {
           </CardContent>
         </Card>
 
-        {/* Two-Factor Authentication */}
+        {/* Two-Factor Authentication（13-4, 13-5） */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Smartphone className="h-5 w-5" />
+              {/* 2FA見出し強化（13-4） */}
               二要素認証（2FA）
+              <Badge className="ml-2 bg-red-100 text-red-700 border-red-200">
+                【強く推奨】
+              </Badge>
             </CardTitle>
+            {/* 認証アプリ説明（13-5） */}
             <CardDescription>
-              認証アプリを使用してアカウントのセキュリティを強化
+              スマートフォンの認証アプリ（Google Authenticator, Authy等）を使用して、
+              ログイン時に6桁の確認コードを入力する追加のセキュリティ層を設定します。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -448,8 +506,13 @@ export default function SecurityPage() {
                   <p className="text-sm text-slate-500">Google Authenticator, Authy など</p>
                 </div>
               </div>
-              <Badge className={mfaEnabled ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-600 border-slate-200'}>
-                {mfaEnabled ? '有効' : '無効'}
+              {/* 有効/無効表示（13-4） */}
+              <Badge className={mfaEnabled ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}>
+                {mfaEnabled ? (
+                  <><CheckCircle className="h-3 w-3 mr-1" />有効</>
+                ) : (
+                  <><XCircle className="h-3 w-3 mr-1" />無効</>
+                )}
               </Badge>
             </div>
 
@@ -474,12 +537,12 @@ export default function SecurityPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="mfa-code">認証コード</Label>
+                  <Label htmlFor="mfa-code">認証コード（6桁）</Label>
                   <Input
                     id="mfa-code"
                     value={mfaVerifyCode}
                     onChange={(e) => setMfaVerifyCode(e.target.value)}
-                    placeholder="6桁のコードを入力"
+                    placeholder="認証アプリに表示された6桁のコードを入力"
                     maxLength={6}
                   />
                 </div>
@@ -528,17 +591,18 @@ export default function SecurityPage() {
           </CardContent>
         </Card>
 
-        {/* Active Sessions */}
+        {/* Active Sessions（13-6） */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Monitor className="h-5 w-5" />
-                  アクティブセッション
+                  {/* セッション管理改善（13-6） */}
+                  ログイン中の端末
                 </CardTitle>
                 <CardDescription>
-                  現在ログインしているデバイス
+                  現在ログインしているデバイス一覧
                 </CardDescription>
               </div>
               <div className="flex gap-2">
@@ -546,10 +610,11 @@ export default function SecurityPage() {
                   <RefreshCw className={`h-4 w-4 mr-2 ${sessionsLoading ? 'animate-spin' : ''}`} />
                   更新
                 </Button>
+                {/* 全ログアウト機能（13-6） */}
                 {sessions.length > 1 && (
-                  <Button variant="outline" size="sm" onClick={handleRevokeAllSessions}>
+                  <Button variant="outline" size="sm" onClick={handleRevokeAllSessions} className="text-red-600 hover:text-red-700">
                     <LogOut className="h-4 w-4 mr-2" />
-                    他をすべて終了
+                    他をすべてログアウト
                   </Button>
                 )}
               </div>
@@ -562,51 +627,58 @@ export default function SecurityPage() {
               <p className="text-slate-500 text-center py-4">セッション情報がありません</p>
             ) : (
               <div className="space-y-3">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg ${
-                      session.isCurrent ? 'border-blue-200 bg-blue-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Monitor className="h-5 w-5 text-slate-500" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{parseUserAgent(session.userAgent)}</p>
-                          {session.isCurrent && (
-                            <Badge variant="outline" className="text-xs">現在のセッション</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {session.ipAddress || '不明'}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDate(session.createdAt)}
-                          </span>
+                {sessions.map((session) => {
+                  const browser = parseUserAgent(session.userAgent)
+                  const BrowserIcon = browser.icon
+
+                  return (
+                    <div
+                      key={session.id}
+                      className={`flex items-center justify-between p-4 border rounded-lg ${
+                        session.isCurrent ? 'border-blue-200 bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* 端末種別アイコン（13-7） */}
+                        <BrowserIcon className="h-5 w-5 text-slate-500" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{browser.name}</p>
+                            {session.isCurrent && (
+                              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700">現在のセッション</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {session.ipAddress || '不明'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDate(session.createdAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      {!session.isCurrent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRevokeSession(session.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    {!session.isCurrent && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRevokeSession(session.id)}
-                      >
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Login History */}
+        {/* Login History（13-7） */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -632,44 +704,69 @@ export default function SecurityPage() {
               <p className="text-slate-500 text-center py-4">ログイン履歴がありません</p>
             ) : (
               <div className="space-y-3">
-                {loginHistory.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      {entry.success ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
-                      <div>
-                        <p className="font-medium">
-                          {entry.action === 'user.login' ? 'ログイン' : entry.action}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {entry.ip || '不明'}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Monitor className="h-3 w-3" />
-                            {parseUserAgent(entry.userAgent || '')}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDate(entry.createdAt)}
-                          </span>
+                {loginHistory.map((entry) => {
+                  const browser = parseUserAgent(entry.userAgent || '')
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`flex items-center justify-between p-4 border rounded-lg ${
+                        !entry.success ? 'border-red-200 bg-red-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* 成功/失敗アイコン（13-7） */}
+                        {entry.success ? (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-red-500" />
+                        )}
+                        <div>
+                          <p className="font-medium">
+                            {entry.action === 'user.login' ? 'ログイン' : entry.action}
+                          </p>
+                          <div className="flex items-center gap-4 text-sm text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {entry.ip || '不明'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Monitor className="h-3 w-3" />
+                              {browser.name}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDate(entry.createdAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <Badge variant={entry.success ? 'default' : 'destructive'}>
+                        {entry.success ? '成功' : '失敗'}
+                      </Badge>
                     </div>
-                    <Badge variant={entry.success ? 'default' : 'destructive'}>
-                      {entry.success ? '成功' : '失敗'}
-                    </Badge>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* サポート導線（13-8） */}
+        <Card className="bg-slate-50">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <span>不審なログインやセキュリティに関する問題がある場合</span>
+              </div>
+              <Button variant="link" asChild className="p-0 h-auto">
+                <a href="mailto:support@the-reform.co.jp">
+                  <Mail className="h-4 w-4 mr-1" />
+                  サポートに連絡
+                </a>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -22,10 +22,14 @@ import {
   CheckCircle,
   Clock,
   Receipt,
-  RefreshCw,
   Building,
   Zap,
-  XCircle
+  XCircle,
+  Shield,
+  ExternalLink,
+  Mail,
+  Info,
+  Lock
 } from 'lucide-react'
 
 interface Invoice {
@@ -36,6 +40,7 @@ interface Invoice {
   createdAt: string
   paidAt: string | null
   dueDate: string | null
+  receiptUrl?: string
 }
 
 interface Subscription {
@@ -55,7 +60,7 @@ interface Subscription {
 
 export default function BillingManagement() {
   const router = useRouter()
-  const { user, isLoading, isAuthenticated } = useAuth()
+  const { user, isLoading, isAuthenticated, isAdmin } = useAuth()
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
@@ -126,6 +131,10 @@ export default function BillingManagement() {
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ja-JP').format(price)
   }
 
   const getPlanName = (planType: string) => {
@@ -204,27 +213,88 @@ export default function BillingManagement() {
     )
   }
 
+  // 空状態（12-2, 12-3）
   if (!subscription) {
     return (
       <DashboardLayout>
         <div className="space-y-6">
+          {/* タイトル（12-1） */}
           <div>
             <h2 className="text-2xl font-bold">請求・支払い</h2>
-            <p className="text-slate-600">サブスクリプションと請求情報を管理</p>
+            <p className="text-slate-600">契約内容・支払状況・請求履歴を確認</p>
           </div>
 
+          {/* 管理者限定表示（12-7） */}
+          {!isAdmin && (
+            <Card className="bg-amber-50 border-amber-200">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-2 text-amber-700">
+                  <Lock className="h-5 w-5" />
+                  <span>※ 契約・請求情報は管理者のみ閲覧・操作できます</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 空状態3ブロック（12-2） */}
           <Card>
-            <CardContent className="py-12 text-center">
-              <Receipt className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-600 mb-2">
-                アクティブな契約がありません
-              </h3>
-              <p className="text-slate-500 mb-4">
-                プレミア購読に加入してセミナーやアーカイブにアクセスしましょう
-              </p>
-              <Button asChild>
-                <a href="/pricing">プランを選択</a>
-              </Button>
+            <CardContent className="py-12">
+              <div className="text-center max-w-md mx-auto">
+                {/* ブロック1: 状態 */}
+                <Receipt className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-700 mb-2">
+                  契約情報がありません
+                </h3>
+
+                {/* ブロック2: 補足 */}
+                <p className="text-slate-500 mb-6">
+                  プレミア購読に加入すると、セミナー・アーカイブ・データブックなど
+                  すべてのコンテンツにアクセスできます。
+                </p>
+
+                {/* ブロック3: 行動導線（12-3） */}
+                <Button asChild size="lg">
+                  <a href="/pricing">
+                    契約手続きへ
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </a>
+                </Button>
+
+                {/* 注意文（12-3） */}
+                <p className="text-xs text-slate-400 mt-4">
+                  ※ 契約手続きは組織の管理者のみ行えます
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 外部決済明示（12-4） */}
+          <Card className="bg-slate-50">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-slate-500" />
+                <div className="text-sm text-slate-600">
+                  <span className="font-medium">安全な決済サービスを利用しています</span>
+                  <span className="ml-2">（Stripe による決済処理）</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 問い合わせ導線（12-8） */}
+          <Card>
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Mail className="h-4 w-4" />
+                  <span>契約・請求に関するお問い合わせ</span>
+                </div>
+                <Button variant="link" asChild className="p-0 h-auto">
+                  <a href="mailto:premier@the-reform.co.jp">
+                    premier@the-reform.co.jp
+                  </a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -240,170 +310,171 @@ export default function BillingManagement() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* ヘッダー（12-1） */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold">請求・支払い</h2>
-            <p className="text-slate-600">サブスクリプションと請求情報を管理</p>
+            <p className="text-slate-600">契約内容・支払状況・請求履歴を確認</p>
           </div>
-          {subscription.status === 'ACTIVE' && !subscription.cancelAt && (
+          {subscription.status === 'ACTIVE' && !subscription.cancelAt && isAdmin && (
             <Button variant="outline" onClick={() => setCancelDialogOpen(true)}>
               契約を解約
             </Button>
           )}
         </div>
 
-        {/* Current Plan */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 管理者限定明示（12-7） */}
+        {!isAdmin && (
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-2 text-amber-700">
+                <Lock className="h-5 w-5" />
+                <span>※ 契約・請求情報は管理者のみ変更できます（閲覧のみ可能）</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 契約情報（12-5, 12-9レイアウト最適化） */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* 現在のプラン */}
           <Card className="lg:col-span-2">
-            <CardHeader>
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>現在のプラン</CardTitle>
-                  <CardDescription>サブスクリプションの詳細</CardDescription>
-                </div>
+                <CardTitle className="text-lg">現在のプラン</CardTitle>
                 {getStatusBadge(subscription.status)}
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white rounded-lg shadow-sm">
-                      <Zap className="h-6 w-6 text-blue-600" />
-                    </div>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white rounded-lg shadow-sm">
+                    <Zap className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">
+                      {getPlanName(subscription.planType)}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      ¥{formatPrice(subscription.finalPrice)} / 年
+                      {subscription.discountPercent > 0 && (
+                        <span className="ml-2 text-red-500">
+                          ({subscription.discountPercent}% OFF)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 契約情報プレースホルダ（12-5） */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="p-3 border rounded-lg">
+                  <p className="text-xs text-slate-500 mb-1">状況</p>
+                  <p className="font-medium text-sm">
+                    {subscription.status === 'ACTIVE' ? 'アクティブ' : subscription.status}
+                  </p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <p className="text-xs text-slate-500 mb-1">開始日</p>
+                  <p className="font-medium text-sm">{formatDate(subscription.currentPeriodStart)}</p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <p className="text-xs text-slate-500 mb-1">更新日</p>
+                  <p className="font-medium text-sm">{formatDate(subscription.currentPeriodEnd)}</p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <p className="text-xs text-slate-500 mb-1">支払方法</p>
+                  <p className="font-medium text-sm">{getPaymentMethodName(subscription.paymentMethod)}</p>
+                </div>
+              </div>
+
+              {subscription.cancelAt && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                     <div>
-                      <h3 className="font-semibold text-lg">
-                        {getPlanName(subscription.planType)}
-                      </h3>
-                      <p className="text-sm text-slate-600">
-                        ¥{subscription.finalPrice.toLocaleString()} / 年
-                        {subscription.discountPercent > 0 && (
-                          <span className="ml-2 text-red-500">
-                            ({subscription.discountPercent}% OFF)
-                          </span>
-                        )}
+                      <p className="font-medium text-yellow-800">解約予定</p>
+                      <p className="text-sm text-yellow-700">
+                        この契約は {formatDate(subscription.cancelAt)} に解約されます。
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-slate-600">契約期間終了</p>
-                    <p className="font-semibold">
-                      {formatDate(subscription.currentPeriodEnd)}
-                    </p>
-                  </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building className="h-4 w-4 text-slate-500" />
-                      <span className="text-sm text-slate-600">組織</span>
-                    </div>
-                    <p className="font-semibold">{user?.organization.name}</p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-4 w-4 text-slate-500" />
-                      <span className="text-sm text-slate-600">残り日数</span>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {daysRemaining}
-                      <span className="text-sm text-slate-500 ml-1">日</span>
-                    </p>
-                  </div>
-                </div>
-
-                {subscription.cancelAt && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-yellow-800">解約予定</p>
-                        <p className="text-sm text-yellow-700">
-                          この契約は {formatDate(subscription.cancelAt)} に解約されます。
-                          それまでは引き続きサービスをご利用いただけます。
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Payment Method */}
-          <Card>
-            <CardHeader>
-              <CardTitle>支払い方法</CardTitle>
-              <CardDescription>登録済みの支払い方法</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-slate-500" />
-                      <span className="font-medium">
-                        {getPaymentMethodName(subscription.paymentMethod)}
-                      </span>
-                    </div>
-                    <Badge variant="outline">デフォルト</Badge>
-                  </div>
+          {/* サイドカード */}
+          <div className="space-y-4">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <p className="text-sm text-slate-500 mb-1">契約残り日数</p>
+                  <p className="text-4xl font-bold text-blue-600">{daysRemaining}</p>
+                  <p className="text-sm text-slate-500">日</p>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <div className="w-full p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium">
-                      {subscription.autoRenewal ? '自動更新が有効です' : '自動更新は無効です'}
-                    </p>
-                    <p className="text-xs mt-1">
-                      {subscription.autoRenewal
-                        ? `${formatDate(subscription.currentPeriodEnd)} に自動的に更新されます`
-                        : '契約期間終了後、手動で更新が必要です'}
-                    </p>
-                  </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CreditCard className="h-4 w-4 text-slate-500" />
+                  <span className="text-sm font-medium">自動更新</span>
                 </div>
-              </div>
-            </CardFooter>
-          </Card>
+                <Badge variant={subscription.autoRenewal ? 'default' : 'outline'}>
+                  {subscription.autoRenewal ? '有効' : '無効'}
+                </Badge>
+                <p className="text-xs text-slate-500 mt-2">
+                  {subscription.autoRenewal
+                    ? `${formatDate(subscription.currentPeriodEnd)} に自動更新`
+                    : '手動で更新が必要です'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Invoices */}
-        {subscription.invoices.length > 0 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>請求履歴</CardTitle>
-                  <CardDescription>過去の請求書と支払い状況</CardDescription>
-                </div>
+        {/* 外部決済明示（12-4） */}
+        <Card className="bg-slate-50">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-green-600" />
+              <div className="text-sm text-slate-600">
+                <span className="font-medium text-green-700">安全な決済サービスを利用</span>
+                <span className="ml-2">- Stripe による決済処理で、カード情報は当社サーバーに保存されません</span>
               </div>
-            </CardHeader>
-            <CardContent>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 請求履歴（12-6） */}
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">請求履歴</CardTitle>
+                <CardDescription>過去の請求書と支払い状況</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {subscription.invoices.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                <p>請求履歴はありません</p>
+              </div>
+            ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">
-                        請求書番号
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">
-                        発行日
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">
-                        金額
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">
-                        ステータス
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">
-                        支払い日
-                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">請求書番号</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">発行日</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">金額</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">ステータス</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">領収書</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -412,35 +483,53 @@ export default function BillingManagement() {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-slate-400" />
-                            <span className="font-medium text-sm">
-                              {invoice.invoiceNumber}
-                            </span>
+                            <span className="font-medium text-sm">{invoice.invoiceNumber}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-sm">{formatDate(invoice.createdAt)}</span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="font-medium">
-                            ¥{invoice.amount.toLocaleString()}
-                          </span>
+                          <span className="font-medium">¥{formatPrice(invoice.amount)}</span>
                         </td>
                         <td className="py-3 px-4">
                           {getInvoiceStatusBadge(invoice.status)}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm">
-                            {invoice.paidAt ? formatDate(invoice.paidAt) : '-'}
-                          </span>
+                          {invoice.status === 'paid' && (
+                            <Button variant="ghost" size="sm" asChild>
+                              <a href={invoice.receiptUrl || '#'} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4 mr-1" />
+                                領収書
+                              </a>
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 問い合わせ導線（12-8） */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <Mail className="h-4 w-4" />
+                <span>契約・請求に関するお問い合わせ</span>
+              </div>
+              <Button variant="link" asChild className="p-0 h-auto">
+                <a href="mailto:premier@the-reform.co.jp">
+                  premier@the-reform.co.jp
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Cancel Dialog */}
@@ -470,8 +559,7 @@ export default function BillingManagement() {
             <div className="p-4 border border-red-200 rounded-lg">
               <h4 className="font-medium mb-2 text-red-700">今すぐ解約</h4>
               <p className="text-sm text-slate-600">
-                即時解約します。サービスは直ちに利用できなくなります。
-                返金はございません。
+                即時解約します。サービスは直ちに利用できなくなります。返金はございません。
               </p>
               <Button
                 className="mt-3"
