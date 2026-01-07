@@ -9,19 +9,29 @@ datasource db {
 }
 
 model Organization {
-  id                String                @id @default(cuid())
-  name              String
-  slug              String                @unique
-  type              String                @default("CUSTOMER")
-  domainRestriction String                @default("[]")
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  auditLogs         AuditLog[]
-  departments       Department[]
-  invitations       Invitation[]
-  settings          OrganizationSettings?
-  subscriptions     Subscription[]
-  users             UserOrganization[]
+  id                   String                  @id @default(cuid())
+  name                 String
+  slug                 String                  @unique
+  type                 String                  @default("CUSTOMER")
+  domainRestriction    String                  @default("[]")
+  // 組織追加情報
+  logoUrl              String?
+  email                String?
+  phone                String?
+  address              String?
+  website              String?
+  industry             String?
+  description          String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  auditLogs            AuditLog[]
+  departments          Department[]
+  invitations          Invitation[]
+  settings             OrganizationSettings?
+  subscriptions        Subscription[]
+  users                UserOrganization[]
+  reminderSetting      ReminderSetting?
+  changeLogs           OrganizationChangeLog[]
 
   @@index([slug])
   @@index([type])
@@ -55,27 +65,31 @@ model Department {
 }
 
 model User {
-  id            String             @id @default(cuid())
-  email         String             @unique
-  name          String?
-  userType      String             @default("CUSTOMER")
-  password      String?
-  mfaEnabled    Boolean            @default(false)
-  mfaSecret     String?
-  emailVerified Boolean            @default(false)
-  lastLoginAt   DateTime?
-  status        String             @default("ACTIVE")
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  auditLogs     AuditLog[]
-  invitations   Invitation[]
-  sessions      Session[]
-  organizations UserOrganization[]
-  sentEmails    EmailHistory[]     @relation("SentEmails")
+  id              String             @id @default(cuid())
+  email           String             @unique
+  name            String?
+  userType        String             @default("CUSTOMER")
+  password        String?
+  mfaEnabled      Boolean            @default(false)
+  mfaSecret       String?
+  emailVerified   Boolean            @default(false)
+  lastLoginAt     DateTime?
+  lastActivityAt  DateTime?          // 最終アクティビティ日時（セミナー参加、アーカイブ視聴等）
+  status          String             @default("ACTIVE")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  auditLogs       AuditLog[]
+  invitations     Invitation[]
+  sessions        Session[]
+  organizations   UserOrganization[]
+  sentEmails      EmailHistory[]     @relation("SentEmails")
+  notifications   Notification[]
+  notificationPref NotificationPreference?
 
   @@index([email])
   @@index([userType])
   @@index([lastLoginAt])
+  @@index([lastActivityAt])
   @@index([status])
 }
 
@@ -302,6 +316,11 @@ model Archive {
   // ショートバージョン（10分版）
   shortVersionUrl      String?
   shortVersionDuration Int?
+  // Phase 2追加: 対象者・おすすめ情報
+  targetAudience       String?         // 対象者（例：経営者向け、営業責任者向け）
+  recommendReason      String?         // おすすめ理由（1行）
+  learningOutcome      String?         // 得られること
+  viewCount            Int             @default(0) // 視聴回数（キャッシュ用）
   publishedAt          DateTime        @default(now())
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
@@ -310,6 +329,7 @@ model Archive {
 
   @@index([categoryId])
   @@index([publishedAt])
+  @@index([viewCount])
 }
 
 model ArchiveView {
@@ -325,18 +345,22 @@ model ArchiveView {
 }
 
 model CommunityCategory {
-  id              String           @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
-  slug            String           @unique
+  slug            String             @unique
   description     String?
-  meetingUrl      String?
-  sortOrder       Int              @default(0)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  meetingUrl      String?            // 常設ZoomリンクURL
+  frequency       String?            // 開催頻度（例：月1回）
+  nextMeetingAt   DateTime?          // 次回開催日時
+  sortOrder       Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   posts           CommunityPost[]
   meetingArchives MeetingArchive[]
+  meetings        CommunityMeeting[]
 
   @@index([slug])
+  @@index([nextMeetingAt])
 }
 
 model CommunityPost {
@@ -387,19 +411,22 @@ model ActivityLog {
 }
 
 model Databook {
-  id          String             @id @default(cuid())
-  title       String
-  description String?
-  pdfUrl      String
-  youtubeUrl  String?
-  quarter     String
-  publishedAt DateTime           @default(now())
-  isPublished Boolean            @default(false)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  downloads   DatabookDownload[]
+  id            String             @id @default(cuid())
+  title         String
+  description   String?
+  coverImageUrl String?            // 表紙画像URL
+  pdfUrl        String
+  youtubeUrl    String?
+  quarter       String
+  year          Int?               // 発行年
+  publishedAt   DateTime           @default(now())
+  isPublished   Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  downloads     DatabookDownload[]
 
   @@index([quarter])
+  @@index([year])
   @@index([publishedAt])
   @@index([isPublished])
 }
@@ -421,6 +448,8 @@ model Newsletter {
   title       String
   content     String
   summary     String?
+  pdfUrl      String?   // PDFファイルURL
+  issueDate   String?   // 発行年月（例：2026年1月号）
   authorId    String
   sentAt      DateTime?
   isPublished Boolean   @default(false)
@@ -433,21 +462,32 @@ model Newsletter {
 }
 
 model SiteVisit {
-  id           String                 @id @default(cuid())
-  title        String
-  description  String?
-  location     String
-  address      String?
-  imageUrl     String?
-  scheduledAt  DateTime
-  duration     Int?
-  capacity     Int                    @default(20)
-  price        Float
-  isPublished  Boolean                @default(false)
-  isCanceled   Boolean                @default(false)
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
-  participants SiteVisitParticipant[]
+  id                    String                 @id @default(cuid())
+  title                 String
+  description           String?
+  companyName           String?                // 視察先企業名
+  location              String                 // 都道府県＋市
+  address               String?
+  imageUrl              String?
+  scheduledAt           DateTime
+  duration              Int?
+  capacity              Int                    @default(20)
+  maxPerOrganization    Int                    @default(2) // 1社あたり最大人数
+  // プラン別価格
+  priceStandard         Float                  // スタンダード価格（例：20000）
+  priceExpert           Float                  @default(0) // エキスパート価格（通常0=無料）
+  expertFreeQuota       Int                    @default(2) // エキスパート無料枠（人数）
+  // 懇親会
+  hasAfterParty         Boolean                @default(false)
+  afterPartyPrice       Float?                 // 懇親会価格（例：5000-6000）
+  afterPartyCapacity    Int?
+  afterPartyLocation    String?
+  // ステータス
+  isPublished           Boolean                @default(false)
+  isCanceled            Boolean                @default(false)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  participants          SiteVisitParticipant[]
 
   @@index([scheduledAt])
   @@index([isPublished])
@@ -458,9 +498,19 @@ model SiteVisitParticipant {
   siteVisitId           String
   userId                String
   organizationId        String?
-  status                String    @default("PENDING")
-  paymentStatus         String    @default("UNPAID")
+  // 参加情報
+  numberOfPeople        Int       @default(1) // 参加人数（1-2人）
+  status                String    @default("PENDING") // PENDING, CONFIRMED, CANCELED
+  // 支払い
+  paymentStatus         String    @default("UNPAID") // UNPAID, PAID, REFUNDED
+  paymentMethod         String?   // STRIPE, ONSITE（当日支払い）
+  amount                Float?    // 支払い金額
   stripePaymentIntentId String?
+  // 懇親会
+  joinAfterParty        Boolean   @default(false)
+  afterPartyPeople      Int       @default(0) // 懇親会参加人数
+  afterPartyPaymentStatus String? // UNPAID, PAID
+  // タイムスタンプ
   registeredAt          DateTime  @default(now())
   paidAt                DateTime?
   attendedAt            DateTime?
@@ -471,6 +521,7 @@ model SiteVisitParticipant {
   @@index([userId])
   @@index([organizationId])
   @@index([status])
+  @@index([paymentStatus])
 }
 
 model Qualification {
@@ -518,6 +569,7 @@ model Tool {
   externalUrl  String?
   iconName     String?
   requiredPlan String         @default("STANDARD")
+  status       String         @default("AVAILABLE") // AVAILABLE, PREPARING, COMING_SOON
   sortOrder    Int            @default(0)
   isPublished  Boolean        @default(true)
   createdAt    DateTime       @default(now())
@@ -529,6 +581,7 @@ model Tool {
   @@index([category])
   @@index([purposeId])
   @@index([requiredPlan])
+  @@index([status])
   @@index([isPublished])
 }
 
@@ -686,4 +739,148 @@ model EmailHistory {
   @@index([templateType])
   @@index([sentById])
   @@index([sentAt])
+}
+
+// =====================================================
+// Phase 2: 通知・リマインド・管理機能
+// =====================================================
+
+// 通知（アプリ内通知）
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String    // SEMINAR, ARCHIVE, DATABOOK, NEWSLETTER, COMMUNITY, SITE_VISIT, SYSTEM
+  title     String
+  body      String?
+  link      String?   // クリック時の遷移先
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// 通知設定（ユーザーごと）
+model NotificationPreference {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  // セミナー関連
+  seminarEmail          Boolean  @default(true)
+  seminarInApp          Boolean  @default(true)
+  // アーカイブ関連
+  archiveEmail          Boolean  @default(true)
+  archiveInApp          Boolean  @default(true)
+  // データブック関連
+  databookEmail         Boolean  @default(true)
+  databookInApp         Boolean  @default(true)
+  // ニュースレター関連
+  newsletterEmail       Boolean  @default(true)
+  newsletterInApp       Boolean  @default(true)
+  // コミュニティ関連
+  communityEmail        Boolean  @default(true)
+  communityInApp        Boolean  @default(true)
+  // 視察会関連
+  siteVisitEmail        Boolean  @default(true)
+  siteVisitInApp        Boolean  @default(true)
+  // システム通知（重要なお知らせ）
+  systemEmail           Boolean  @default(true)
+  systemInApp           Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// リマインド設定（組織ごと）
+model ReminderSetting {
+  id                  String       @id @default(cuid())
+  organizationId      String       @unique
+  isEnabled           Boolean      @default(true)
+  daysThreshold       Int          @default(14)  // 何日未ログインでリマインド
+  targetType          String       @default("ALL") // ALL, SELECTED
+  selectedUserIds     String       @default("[]") // JSON array of user IDs
+  customSubject       String?
+  customBody          String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  logs                ReminderLog[]
+
+  @@index([organizationId])
+  @@index([isEnabled])
+}
+
+// リマインド送信履歴
+model ReminderLog {
+  id                String          @id @default(cuid())
+  reminderSettingId String
+  userId            String
+  email             String
+  status            String          @default("SENT") // SENT, FAILED
+  sentAt            DateTime        @default(now())
+  reminderSetting   ReminderSetting @relation(fields: [reminderSettingId], references: [id], onDelete: Cascade)
+
+  @@index([reminderSettingId])
+  @@index([userId])
+  @@index([sentAt])
+}
+
+// 組織変更履歴
+model OrganizationChangeLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  changedById    String
+  changeType     String       // NAME, EMAIL, ADDRESS, DOMAIN_ADD, DOMAIN_REMOVE, LOGO, SETTINGS
+  fieldName      String?
+  oldValue       String?
+  newValue       String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([changedById])
+  @@index([changeType])
+  @@index([createdAt])
+}
+
+// コミュニティ定例会
+model CommunityMeeting {
+  id          String            @id @default(cuid())
+  categoryId  String
+  title       String
+  description String?
+  zoomUrl     String?
+  scheduledAt DateTime
+  duration    Int?              // 分
+  isPublished Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  category    CommunityCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@index([scheduledAt])
+  @@index([isPublished])
+}
+
+// 資格無料枠管理（組織・契約期間ごと）
+model QualificationFreeQuota {
+  id               String   @id @default(cuid())
+  organizationId   String
+  qualificationId  String
+  periodStart      DateTime // 契約開始日
+  periodEnd        DateTime // 契約終了日
+  totalQuota       Int      @default(1) // 無料枠数（通常1）
+  usedQuota        Int      @default(0) // 使用済み枠数
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([organizationId, qualificationId, periodStart])
+  @@index([organizationId])
+  @@index([qualificationId])
+  @@index([periodEnd])
 }
