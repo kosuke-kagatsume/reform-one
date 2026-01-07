@@ -761,6 +761,32 @@ model EmailTemplate {
   @@index([isActive])
 }
 
+// 決済履歴 (Stripe連携)
+model Payment {
+  id                    String   @id @default(cuid())
+  organizationId        String?
+  userId                String?
+  type                  String   // SITE_VISIT, QUALIFICATION, SUBSCRIPTION, AFTER_PARTY
+  amount                Int      // 金額（円）
+  currency              String   @default("jpy")
+  status                String   @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+  stripeSessionId       String?  @unique
+  stripePaymentIntentId String?
+  stripeInvoiceId       String?
+  metadata              String?  // JSON: { siteVisitId, qualificationId, participantCount, etc. }
+  description           String?
+  paidAt                DateTime?
+  refundedAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([stripeSessionId])
+}
+
 // メール送信履歴
 model EmailHistory {
   id             String   @id @default(cuid())

@@ -20,6 +20,28 @@ export const PLAN_PRICES = {
   },
 }
 
+// 商品/価格マスタ (C-2)
+export const PRODUCT_PRICES = {
+  // 視察会
+  SITE_VISIT: {
+    standard: 20000, // スタンダード: 20,000円/人
+    expert: 0,       // エキスパート: 無料（2名まで）
+    expertFreeSlots: 2,
+    extraPerPerson: 20000, // 追加1名あたり
+  },
+  // 懇親会
+  AFTER_PARTY: {
+    price: 5000, // 5,000円/人
+  },
+  // 資格受講
+  QUALIFICATION: {
+    standard: 15000, // スタンダード: 15,000円/人
+    expert: 0,       // エキスパート: 無料（1名/年）
+    expertFreeSlots: 1,
+    extraPerPerson: 15000, // 追加受講: 15,000円/人
+  },
+}
+
 interface CreateCheckoutSessionParams {
   organizationId: string
   organizationName: string
