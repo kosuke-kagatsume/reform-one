@@ -37,6 +37,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: parsed.id })
           })
+          // Refresh user data from API to get latest subscription info
+          const response = await fetch('/api/auth/me')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.data?.user) {
+              setUser(data.data.user)
+              localStorage.setItem('premier_user', JSON.stringify(data.data.user))
+            }
+          }
         } catch {
           localStorage.removeItem('premier_user')
         }
