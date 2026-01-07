@@ -44,6 +44,15 @@ export interface Organization {
   type: 'REFORM_COMPANY' | 'CUSTOMER'
   createdAt: Date
   updatedAt: Date
+  // 追加フィールド（オプショナル）
+  maxMembers?: number
+  memberCount?: number
+  email?: string
+  phone?: string
+  address?: string
+  website?: string
+  industry?: string
+  description?: string
 }
 
 export interface User {
