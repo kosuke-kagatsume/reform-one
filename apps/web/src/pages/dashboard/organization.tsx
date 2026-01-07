@@ -36,7 +36,10 @@ import {
   Plus,
   Trash2,
   ChevronRight,
-  Info
+  Info,
+  Mail,
+  Send,
+  CheckCircle
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -92,6 +95,15 @@ export default function OrganizationSettings() {
   const [deleteConfirmName, setDeleteConfirmName] = useState('')
   const [deleteStep, setDeleteStep] = useState(1)
 
+  // Reminder settings (B-3)
+  const [reminderSettings, setReminderSettings] = useState({
+    enabled: false,
+    daysThreshold: 14,
+    targetType: 'ALL'
+  })
+  const [reminderSaving, setReminderSaving] = useState(false)
+  const [reminderSaveSuccess, setReminderSaveSuccess] = useState(false)
+
   // Change logs
   const [changeLogs, setChangeLogs] = useState<ChangeLog[]>([
     {
@@ -133,8 +145,43 @@ export default function OrganizationSettings() {
         industry: org.industry || 'リフォーム・建設',
         description: org.description || ''
       })
+      // リマインド設定を取得
+      fetchReminderSettings()
     }
   }, [user])
+
+  const fetchReminderSettings = async () => {
+    try {
+      const res = await fetch('/api/organization/reminder-settings')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success && data.data) {
+          setReminderSettings(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch reminder settings:', error)
+    }
+  }
+
+  const handleSaveReminderSettings = async () => {
+    setReminderSaving(true)
+    try {
+      const res = await fetch('/api/organization/reminder-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reminderSettings)
+      })
+      if (res.ok) {
+        setReminderSaveSuccess(true)
+        setTimeout(() => setReminderSaveSuccess(false), 3000)
+      }
+    } catch (error) {
+      console.error('Failed to save reminder settings:', error)
+    } finally {
+      setReminderSaving(false)
+    }
+  }
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -442,6 +489,91 @@ export default function OrganizationSettings() {
                   <p className="text-xs text-slate-500 text-center mt-2">
                     複数のドメインを追加すると、それぞれのドメインからメンバーが参加できます
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* リマインドメール設定 (B-3) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  リマインドメール設定
+                </CardTitle>
+                <CardDescription>
+                  未ログインメンバーへの自動リマインドメールを設定
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Send className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium">自動リマインドメール</p>
+                      <p className="text-sm text-slate-500">
+                        一定期間ログインしていないメンバーに自動でメールを送信
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={reminderSettings.enabled}
+                    onCheckedChange={(checked) =>
+                      setReminderSettings(prev => ({ ...prev, enabled: checked }))
+                    }
+                  />
+                </div>
+
+                {reminderSettings.enabled && (
+                  <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
+                    <div className="space-y-2">
+                      <Label>未ログイン日数の閾値</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={90}
+                          value={reminderSettings.daysThreshold}
+                          onChange={(e) =>
+                            setReminderSettings(prev => ({
+                              ...prev,
+                              daysThreshold: parseInt(e.target.value, 10) || 14
+                            }))
+                          }
+                          className="w-24"
+                        />
+                        <span className="text-sm text-slate-600">日以上未ログインで送信</span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        7日以内に既に送信済みのユーザーには再送信されません
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      {reminderSaveSuccess && (
+                        <p className="text-sm text-green-600 flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4" />
+                          設定を保存しました
+                        </p>
+                      )}
+                      <Button
+                        onClick={handleSaveReminderSettings}
+                        disabled={reminderSaving}
+                        className="ml-auto"
+                      >
+                        {reminderSaving ? '保存中...' : '設定を保存'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="text-sm text-slate-600">送信履歴を確認</span>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/dashboard/organization/reminder-logs">
+                      履歴を見る
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

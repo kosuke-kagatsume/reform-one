@@ -810,3 +810,81 @@ model EmailHistory {
   @@index([sentById])
   @@index([sentAt])
 }
+
+// ============================================
+// Phase 7: 通知・リマインドメール Models
+// ============================================
+
+// 通知設定 (A-2)
+model NotificationPreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+
+  // セミナー関連
+  seminarEmail      Boolean  @default(true)
+  seminarInApp      Boolean  @default(true)
+
+  // アーカイブ関連
+  archiveEmail      Boolean  @default(true)
+  archiveInApp      Boolean  @default(true)
+
+  // データブック関連
+  databookEmail     Boolean  @default(true)
+  databookInApp     Boolean  @default(true)
+
+  // ニュースレター関連
+  newsletterEmail   Boolean  @default(true)
+  newsletterInApp   Boolean  @default(true)
+
+  // コミュニティ関連
+  communityEmail    Boolean  @default(true)
+  communityInApp    Boolean  @default(true)
+
+  // 視察会関連
+  siteVisitEmail    Boolean  @default(true)
+  siteVisitInApp    Boolean  @default(true)
+
+  // システム通知（必須）
+  systemEmail       Boolean  @default(true)
+  systemInApp       Boolean  @default(true)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// リマインドメール設定 (B-1)
+model ReminderSetting {
+  id               String   @id @default(cuid())
+  organizationId   String   @unique
+  enabled          Boolean  @default(true)
+  daysThreshold    Int      @default(14) // 何日未ログインでリマインド送信
+  targetType       String   @default("ALL") // ALL, INACTIVE_ONLY
+  emailTemplateId  String?  // カスタムテンプレートID
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([enabled])
+}
+
+// リマインドメール送信履歴 (B-5)
+model ReminderLog {
+  id               String   @id @default(cuid())
+  organizationId   String
+  userId           String
+  sentAt           DateTime @default(now())
+  daysInactive     Int      // 送信時点での未ログイン日数
+  emailAddress     String
+  status           String   @default("SENT") // SENT, FAILED, OPENED, CLICKED
+  openedAt         DateTime?
+  clickedAt        DateTime?
+
+  createdAt        DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([sentAt])
+  @@index([status])
+}
