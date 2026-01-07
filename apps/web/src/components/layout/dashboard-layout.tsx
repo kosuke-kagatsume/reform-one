@@ -34,6 +34,20 @@ import {
   Crown
 } from 'lucide-react'
 
+interface NavItem {
+  menuId: string
+  name: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  subLabel?: string
+}
+
+interface NavGroup {
+  label: string
+  isAdminSection?: boolean
+  items: NavItem[]
+}
+
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
@@ -44,19 +58,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
-  // プラン名を取得
-  const getPlanDisplayName = () => {
-    if (user?.organization?.type === 'REFORM_COMPANY') {
-      return 'プレミア購読 管理者'
-    }
-    if (planType === 'EXPERT') {
-      return 'プレミア購読 エキスパートコース'
-    }
-    return 'プレミア購読 スタンダードコース'
-  }
-
   // ユーザーのロールを取得（後方互換性のためMEMBERをデフォルトに）
   const userRole = (user?.role || 'MEMBER') as UserRole
+
+  // 管理者かどうかを判定
+  const isAdmin = userRole === 'ADMIN' || userRole === 'OWNER'
+
+  // プラン名を取得（統一表記）
+  const getPlanDisplayName = () => {
+    if (user?.organization?.type === 'REFORM_COMPANY') {
+      return 'プレミア購読｜管理者'
+    }
+    const roleLabel = isAdmin ? '（管理者）' : ''
+
+    if (planType === 'EXPERT') {
+      return `プレミア購読｜エキスパートプラン${roleLabel}`
+    }
+    return `プレミア購読｜スタンダードプラン${roleLabel}`
+  }
 
   // ロールに基づいてアクセス可能なメニューをチェック
   const canAccessMenu = (menuId: string) => {
@@ -69,7 +88,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // グループ分けされたナビゲーション（menuIdを追加）
-  const navigationGroups = [
+  const navigationGroups: NavGroup[] = [
     {
       label: 'よく使う',
       items: [
@@ -86,11 +105,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { menuId: 'newsletters', name: 'ニュースレター', href: '/dashboard/newsletters', icon: Mail, subLabel: '経営レポート配信' },
         { menuId: 'site-visits', name: '視察会', href: '/dashboard/site-visits', icon: Building2, subLabel: '他社見学ツアー' },
         { menuId: 'tools', name: 'ツール', href: '/dashboard/tools', icon: Wrench, subLabel: '診断・フォーマット集' },
-        { menuId: 'qualifications', name: '資格・研修', href: '/dashboard/qualifications', icon: Award },
+        { menuId: 'qualifications', name: '資格', href: '/dashboard/qualifications', icon: Award },
       ]
     },
     {
       label: '管理',
+      isAdminSection: true, // 管理者セクションとしてマーク
       items: [
         { menuId: 'members', name: 'メンバー管理', href: '/dashboard/members', icon: Users },
         { menuId: 'organization', name: '組織設定', href: '/dashboard/organization', icon: Building },
@@ -150,38 +170,51 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         <nav className="flex-1 px-4 py-4 overflow-y-auto">
-          {filteredNavigationGroups.map((group, groupIndex) => (
-            <div key={group.label} className={groupIndex > 0 ? 'mt-6' : ''}>
-              <h3 className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                {group.label}
-              </h3>
-              <ul className="space-y-1">
-                {group.items.map((item) => {
-                  const isActive = router.pathname === item.href
-                  return (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-blue-50 text-blue-600'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                        }`}
-                      >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <div className="flex flex-col">
-                          <span>{item.name}</span>
-                          {'subLabel' in item && item.subLabel && (
-                            <span className="text-xs text-slate-400">{item.subLabel}</span>
-                          )}
-                        </div>
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ))}
+          {filteredNavigationGroups.map((group, groupIndex) => {
+            const isAdminSection = 'isAdminSection' in group && group.isAdminSection
+            return (
+              <div key={group.label} className={groupIndex > 0 ? 'mt-6' : ''}>
+                {/* 管理セクションは上に区切り線を追加 */}
+                {isAdminSection && (
+                  <div className="border-t border-slate-200 pt-4 mb-2" />
+                )}
+                <h3 className={`px-3 mb-2 text-xs uppercase tracking-wider ${
+                  isAdminSection
+                    ? 'font-bold text-slate-600'
+                    : 'font-semibold text-slate-400'
+                }`}>
+                  {group.label}
+                </h3>
+                <ul className="space-y-1">
+                  {group.items.map((item) => {
+                    const isActive = router.pathname === item.href
+                    // エキスパートプランの場合は紫系、それ以外は青系
+                    const activeColor = planType === 'EXPERT' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={item.href}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isActive
+                              ? activeColor
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          }`}
+                        >
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          <div className="flex flex-col">
+                            <span>{item.name}</span>
+                            {item.subLabel && (
+                              <span className="text-xs text-slate-400">{item.subLabel}</span>
+                            )}
+                          </div>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )
+          })}
         </nav>
       </aside>
 
