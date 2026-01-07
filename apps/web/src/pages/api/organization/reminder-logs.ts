@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
+import { Prisma } from '@prisma/client'
 import {
   success,
   error,
@@ -33,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { memberId, limit = '50', offset = '0' } = req.query
 
-    const where: any = {
+    const where: Prisma.ReminderLogWhereInput = {
       organizationId: userOrg.organizationId
     }
 
@@ -80,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       clicked: 0
     }
 
-    stats.forEach(s => {
+    stats.forEach((s: { status: string; _count: number }) => {
       const key = s.status.toLowerCase() as keyof typeof statsMap
       if (key in statsMap) {
         statsMap[key] = s._count

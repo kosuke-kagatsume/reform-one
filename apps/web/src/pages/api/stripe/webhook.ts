@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { buffer } from 'micro'
-import { constructWebhookEvent, stripe } from '@/lib/stripe'
+import { constructWebhookEvent } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import type Stripe from 'stripe'
 

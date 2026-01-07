@@ -253,7 +253,7 @@ export default function CategoriesManagementPage() {
 
   // Filter and sort categories
   const getFilteredCategories = () => {
-    let filtered = categories.filter(c => {
+    const filtered = categories.filter(c => {
       // Search filter
       const matchesSearch =
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

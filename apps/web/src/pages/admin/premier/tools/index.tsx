@@ -312,7 +312,7 @@ export default function AdminToolsPage() {
 
   // Filter and sort tools
   const getFilteredTools = () => {
-    let filtered = tools.filter(tool => {
+    const filtered = tools.filter(tool => {
       const matchesSearch =
         tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (tool.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())

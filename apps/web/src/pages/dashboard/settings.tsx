@@ -248,8 +248,8 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-blue-600" />
-                        <Badge className={planType === 'expert' ? 'bg-blue-600' : ''}>
-                          {planType === 'expert' ? 'エキスパートプラン' : 'スタンダードプラン'}
+                        <Badge className={planType === 'EXPERT' ? 'bg-blue-600' : ''}>
+                          {planType === 'EXPERT' ? 'エキスパートプラン' : 'スタンダードプラン'}
                         </Badge>
                       </div>
                       <Button variant="link" asChild className="p-0 h-auto text-sm">

@@ -163,7 +163,7 @@ export default function MembersAdminPage() {
 
   // Apply filters
   const getFilteredMembers = () => {
-    let filtered = members.filter(m => {
+    const filtered = members.filter(m => {
       // Search filter
       const matchesSearch =
         (m.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||

@@ -302,11 +302,12 @@ export default function MembersPage() {
         case 'name':
           comparison = (a.name || a.email).localeCompare(b.name || b.email)
           break
-        case 'lastActivity':
+        case 'lastActivity': {
           const aDate = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0
           const bDate = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0
           comparison = bDate - aDate
           break
+        }
         case 'createdAt':
           comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           break

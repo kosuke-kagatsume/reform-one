@@ -86,7 +86,7 @@ export default function SiteVisitsPage() {
     includeAfterParty: false
   })
 
-  const isExpert = planType === 'expert'
+  const isExpert = planType === 'EXPERT'
   const freeSlots = 2 // エキスパート無料枠
 
   useEffect(() => {

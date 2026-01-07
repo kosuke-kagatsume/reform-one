@@ -157,7 +157,7 @@ export default function ArchivesAdminPage() {
   }
 
   const getFilteredAndSortedArchives = () => {
-    let filtered = archives.filter(a => {
+    const filtered = archives.filter(a => {
       const matchesCategory = selectedCategory === 'all' || a.category.id === selectedCategory
       const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesUnwatched = !filterUnwatched || a._count.views === 0

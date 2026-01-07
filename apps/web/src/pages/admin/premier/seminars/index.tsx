@@ -255,7 +255,7 @@ export default function SeminarsAdminPage() {
 
   // Apply filters and sorting
   const getFilteredSeminars = () => {
-    let filtered = (activeTab === 'upcoming' ? upcomingSeminars : pastSeminars)
+    const filtered = (activeTab === 'upcoming' ? upcomingSeminars : pastSeminars)
       .filter(s => {
         const matchesCategory = selectedCategory === 'all' || s.category.id === selectedCategory
         const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase())

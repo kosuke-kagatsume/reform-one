@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -254,10 +255,10 @@ export default function BillingManagement() {
 
                 {/* ブロック3: 行動導線（12-3） */}
                 <Button asChild size="lg">
-                  <a href="/pricing">
+                  <Link href="/pricing">
                     契約手続きへ
                     <ExternalLink className="h-4 w-4 ml-2" />
-                  </a>
+                  </Link>
                 </Button>
 
                 {/* 注意文（12-3） */}

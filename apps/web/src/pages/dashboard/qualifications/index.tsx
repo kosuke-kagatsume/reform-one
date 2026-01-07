@@ -69,7 +69,7 @@ export default function QualificationsPage() {
   const [enrolling, setEnrolling] = useState<string | null>(null)
   const [completedMembers, setCompletedMembers] = useState<{ name: string; completedAt: string }[]>([])
 
-  const isExpert = planType === 'expert'
+  const isExpert = planType === 'EXPERT'
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

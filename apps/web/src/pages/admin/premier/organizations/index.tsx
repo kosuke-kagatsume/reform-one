@@ -224,7 +224,7 @@ export default function OrganizationsPage() {
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'danger':
+        case 'danger': {
           // 危険順: 1.未契約 2.未ログイン日数が長い 3.契約期限が近い
           const getDangerScore = (org: Organization) => {
             // 未契約は最優先
@@ -242,13 +242,15 @@ export default function OrganizationsPage() {
             return 3 + daysUntilExp / 10000
           }
           return getDangerScore(a) - getDangerScore(b)
+        }
         case 'name':
           return a.name.localeCompare(b.name)
-        case 'expiration':
+        case 'expiration': {
           // Sort by days until expiration (ascending, nulls last)
           const daysA = a.subscription?.daysUntilExpiration ?? 9999
           const daysB = b.subscription?.daysUntilExpiration ?? 9999
           return daysA - daysB
+        }
         case 'lastLogin':
           // Sort by last login (nulls first to show inactive ones)
           if (!a.lastLoginAt && !b.lastLoginAt) return 0

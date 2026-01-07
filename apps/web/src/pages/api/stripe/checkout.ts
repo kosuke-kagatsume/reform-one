@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { id: auth.userId },
       include: {
         organizations: {
-          include: { organization: { include: { subscription: true } } },
+          include: { organization: { include: { subscriptions: true } } },
           take: 1,
         },
       },
@@ -40,11 +40,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const org = user.organizations[0]?.organization
-    const planType = org?.subscription?.planType || 'STANDARD'
+    const subscription = org?.subscriptions?.[0]
+    const planType = subscription?.planType || 'STANDARD'
     const isExpert = planType === 'EXPERT'
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    let lineItems: { price_data: { currency: string; product_data: { name: string; description?: string }; unit_amount: number }; quantity: number }[] = []
+    const lineItems: { price_data: { currency: string; product_data: { name: string; description?: string }; unit_amount: number }; quantity: number }[] = []
     let totalAmount = 0
     let description = ''
     let successUrl = `${baseUrl}/dashboard`
