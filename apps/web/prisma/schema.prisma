@@ -332,12 +332,15 @@ model Archive {
   duration    Int?     // minutes
   shortVersionUrl      String?  // ショートバージョン（10分版）のURL
   shortVersionDuration Int?     // ショートバージョンの長さ（分）
+  benefitText String?  // 1行ベネフィット（例：この動画でわかること：初回商談で価格の話を切り出すタイミング）
+  targetAudience String? // 対象者（例：新人〜中堅向け）
   publishedAt DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   category SeminarCategory @relation(fields: [categoryId], references: [id])
   views    ArchiveView[]
+  businessSceneTags ArchiveBusinessSceneTag[]
 
   @@index([categoryId])
   @@index([publishedAt])
@@ -438,6 +441,10 @@ model Databook {
   pdfUrl       String   // URL to the PDF file
   youtubeUrl   String?  // Optional: explanation video URL
   quarter      String   // e.g., "2025-Q1", "2025-Q2"
+  // 一般社員向け追加フィールド
+  pageCount    Int?     // ページ数
+  summary      String?  // どんな内容が載っているか（簡易説明）
+  usageScenes  String?  // 活用シーン（JSON配列）例：["価格交渉", "提案資料作成", "市場動向把握"]
   publishedAt  DateTime @default(now())
   isPublished  Boolean  @default(false)
   createdAt    DateTime @default(now())
@@ -536,11 +543,17 @@ model Qualification {
   name        String   // e.g., "リフォーム業界標準化資格"
   code        String   @unique // e.g., "REFORM_STANDARD"
   description String?
+  level       String?  // 2級, 1級 など
+  levelDescription String? // 「実務担当者向け（初〜中級）」など
+  weeklyStudyMinutes Int? // 週あたり学習目安（分）
+  durationMonths Int?  // 受講期間（月）
+  benefits    String?  // 取得後にできること（JSON配列）
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  courses UserQualification[]
+  courses  UserQualification[]
+  requests QualificationRequest[]
 
   @@index([code])
   @@index([isActive])
@@ -597,6 +610,14 @@ model Tool {
   isPublished  Boolean  @default(true)
   fileFormat   String?  // ファイル形式
   purposeId    String?
+  // 一般社員向け追加フィールド
+  targetAudience String?   // 誰向けか（例：新人〜中堅向け）
+  problemSolved  String?   // 何が解決できるか
+  timeSavedText  String?   // どれくらい時短になるか（例：確認時間を約30%短縮）
+  usageGuide     String?   // 使い方ガイド（簡易説明）
+  allowInternalUse Boolean @default(true) // 社内利用可
+  allowModification Boolean @default(false) // 改変OK
+  contentUpdatedAt DateTime? // コンテンツ最終更新日
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -844,6 +865,10 @@ model NotificationPreference {
   siteVisitEmail    Boolean  @default(true)
   siteVisitInApp    Boolean  @default(true)
 
+  // 今週のおすすめコンテンツ（一般社員向け）
+  recommendedEmail  Boolean  @default(true)
+  recommendedInApp  Boolean  @default(true)
+
   // システム通知（必須）
   systemEmail       Boolean  @default(true)
   systemInApp       Boolean  @default(true)
@@ -887,4 +912,79 @@ model ReminderLog {
   @@index([userId])
   @@index([sentAt])
   @@index([status])
+}
+
+// ============================================
+// Expert一般社員向け追加機能
+// ============================================
+
+// 視察会無料枠利用追跡（エキスパートプラン：年2名無料）
+model SiteVisitFreeUsage {
+  id               String   @id @default(cuid())
+  organizationId   String
+  siteVisitId      String
+  userId           String   // 利用したユーザー
+  usedAt           DateTime @default(now())
+  fiscalYear       Int      // 対象年度（例：2025）
+
+  @@unique([organizationId, siteVisitId, userId])
+  @@index([organizationId])
+  @@index([organizationId, fiscalYear])
+  @@index([siteVisitId])
+  @@index([userId])
+}
+
+// 資格受講依頼（一般社員→管理者への承認フロー）
+model QualificationRequest {
+  id               String   @id @default(cuid())
+  qualificationId  String
+  requesterId      String   // 依頼者（一般社員）
+  organizationId   String
+  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  approvedById     String?  // 承認者（管理者）
+  rejectedReason   String?  // 却下理由
+  requestedAt      DateTime @default(now())
+  respondedAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  qualification Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+
+  @@unique([qualificationId, requesterId, organizationId])
+  @@index([qualificationId])
+  @@index([requesterId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([approvedById])
+}
+
+// 業務シーンタグ（アーカイブ用、管理者が編集可能）
+model BusinessSceneTag {
+  id          String   @id @default(cuid())
+  name        String   @unique // 初回商談, 失注防止, 値上げ対応, 若手育成, 現場クレーム, 社内DX
+  description String?
+  color       String?  // タグの表示色
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  archives ArchiveBusinessSceneTag[]
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+// アーカイブと業務シーンタグの中間テーブル
+model ArchiveBusinessSceneTag {
+  archiveId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  archive Archive          @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  tag     BusinessSceneTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([archiveId, tagId])
+  @@index([archiveId])
+  @@index([tagId])
 }

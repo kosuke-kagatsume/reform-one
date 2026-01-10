@@ -26,6 +26,7 @@ import {
 export default function SettingsPage() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, planType, isAdmin, logout } = useAuth()
+  const isMember = !isAdmin
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -93,10 +94,14 @@ export default function SettingsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* タイトル（14-1） */}
+        {/* タイトル（14-1）- 一般社員向け */}
         <div>
-          <h1 className="text-2xl font-bold">アカウント・組織設定</h1>
-          <p className="text-slate-600">アカウント情報と組織の設定を管理</p>
+          <h1 className="text-2xl font-bold">
+            {isMember ? 'マイアカウント' : 'アカウント・組織設定'}
+          </h1>
+          <p className="text-slate-600">
+            {isMember ? 'プロフィールや通知設定を変更できます' : 'アカウント情報と組織の設定を管理'}
+          </p>
         </div>
 
         {/* セクション1: あなた個人（14-2） */}

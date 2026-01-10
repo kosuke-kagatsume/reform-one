@@ -63,6 +63,7 @@ const MAIN_QUALIFICATION = {
 export default function QualificationsPage() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, planType, isAdmin } = useAuth()
+  const isMember = !isAdmin
   const [qualifications, setQualifications] = useState<Qualification[]>([])
   const [stats, setStats] = useState<QualificationStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -202,11 +203,15 @@ export default function QualificationsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* タイトル（9-1, 9-7: 研修ワード削除） */}
+        {/* タイトル（9-1, 9-7: 研修ワード削除）- 一般社員向け */}
         <div>
-          <h1 className="text-2xl font-bold">資格｜{MAIN_QUALIFICATION.name}</h1>
+          <h1 className="text-2xl font-bold">
+            {isMember ? '資格を取ってスキルアップ' : `資格｜${MAIN_QUALIFICATION.name}`}
+          </h1>
           <p className="text-slate-600">
-            リフォーム業界の専門資格を取得して、キャリアアップを目指しましょう
+            {isMember
+              ? 'リフォーム業界の専門資格。オンラインで学べて、履歴書にも書ける正式な認定資格です。'
+              : 'リフォーム業界の専門資格を取得して、キャリアアップを目指しましょう'}
           </p>
         </div>
 

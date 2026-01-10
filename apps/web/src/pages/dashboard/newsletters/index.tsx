@@ -38,7 +38,8 @@ interface NewsletterStats {
 
 export default function NewslettersPage() {
   const router = useRouter()
-  const { isLoading, isAuthenticated, hasFeature, isAdmin } = useAuth()
+  const { isLoading, isAuthenticated, hasFeature, isAdmin, planType } = useAuth()
+  const isMember = !isAdmin
   const [newsletters, setNewsletters] = useState<Newsletter[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<NewsletterStats | null>(null)
@@ -197,39 +198,46 @@ export default function NewslettersPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* 見出し・説明文修正 (6-2) */}
+        {/* 見出し・説明文修正 (6-2) - 一般社員向け */}
         <div>
-          <h1 className="text-2xl font-bold">エキスパート会員向け 編集長ニュースレター</h1>
+          <h1 className="text-2xl font-bold">
+            {isMember && planType === 'EXPERT' ? '業界の最新トレンドをキャッチ' : 'エキスパート会員向け 編集長ニュースレター'}
+          </h1>
           <p className="text-slate-600">
-            毎月お届けする業界分析レポート。過去のバックナンバーもいつでも閲覧できます。
+            {isMember && planType === 'EXPERT'
+              ? '編集長が毎月の業界動向をわかりやすく解説。メールでも届くので忙しくても最新情報をキャッチできます。'
+              : '毎月お届けする業界分析レポート。過去のバックナンバーもいつでも閲覧できます。'}
           </p>
         </div>
 
-        {/* KPI表示 */}
+        {/* KPI表示 - 一般社員向けは簡略化 */}
         {stats && (
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid ${isMember ? 'grid-cols-2' : 'grid-cols-3'} gap-4`}>
             <Card className="bg-blue-50/50">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-blue-600" />
                   <div>
                     <p className="text-2xl font-bold text-blue-700">{stats.totalNewsletters}</p>
-                    <p className="text-xs text-slate-600">配信済み</p>
+                    <p className="text-xs text-slate-600">{isMember ? 'バックナンバー' : '配信済み'}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-green-50/50">
-              <CardContent className="pt-4 pb-3">
-                <div className="flex items-center gap-3">
-                  <Eye className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-green-700">{stats.totalReads.toLocaleString()}</p>
-                    <p className="text-xs text-slate-600">累計閲覧数</p>
+            {/* 管理者のみ：累計閲覧数 */}
+            {!isMember && (
+              <Card className="bg-green-50/50">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center gap-3">
+                    <Eye className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-2xl font-bold text-green-700">{stats.totalReads.toLocaleString()}</p>
+                      <p className="text-xs text-slate-600">累計閲覧数</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
             <Card className="bg-purple-50/50">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-3">

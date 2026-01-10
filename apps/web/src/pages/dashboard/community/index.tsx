@@ -16,7 +16,8 @@ import {
   Clock,
   Bell,
   BarChart3,
-  Info
+  Info,
+  HelpCircle
 } from 'lucide-react'
 
 interface CommunityCategory {
@@ -42,7 +43,8 @@ interface CommunityStats {
 
 export default function CommunityPage() {
   const router = useRouter()
-  const { isLoading, isAuthenticated, hasFeature, isAdmin } = useAuth()
+  const { isLoading, isAuthenticated, hasFeature, isAdmin, planType } = useAuth()
+  const isMember = !isAdmin
   const [categories, setCategories] = useState<CommunityCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<CommunityStats | null>(null)
@@ -181,13 +183,40 @@ export default function CommunityPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* 見出し変更 (4-2) */}
+        {/* 見出し変更 (4-2) - 一般社員向け */}
         <div>
-          <h1 className="text-2xl font-bold">エキスパート会員向け オンラインコミュニティ</h1>
+          <h1 className="text-2xl font-bold">
+            {isMember ? '同じ業界の仲間と繋がる' : 'エキスパート会員向け オンラインコミュニティ'}
+          </h1>
           <p className="text-slate-600">
-            職種別コミュニティで情報交換・定例ミーティングに参加できます。同業者との交流を通じて、実務に役立つ知見を得ましょう。
+            {isMember
+              ? '同じ悩みを持つ仲間と情報交換。悩んでいるのはあなただけじゃない！'
+              : '職種別コミュニティで情報交換・定例ミーティングに参加できます。同業者との交流を通じて、実務に役立つ知見を得ましょう。'}
           </p>
         </div>
+
+        {/* 一般社員向け：質問するボタン */}
+        {isMember && planType === 'EXPERT' && (
+          <Card className="bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-emerald-100 p-2 rounded-lg">
+                    <HelpCircle className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-emerald-800">仕事で困っていることはありませんか？</p>
+                    <p className="text-sm text-emerald-600">同じ悩みを持つ{stats?.totalMembers || 245}名の仲間がいます</p>
+                  </div>
+                </div>
+                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  質問してみる
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 管理者向け補足 (4-7) */}
         {isAdmin && stats && (

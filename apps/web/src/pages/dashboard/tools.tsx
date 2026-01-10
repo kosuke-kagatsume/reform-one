@@ -80,7 +80,8 @@ const ICONS = ['FileSpreadsheet', 'FileText', 'Calculator', 'ClipboardCheck', 'C
 
 export default function ToolsPage() {
   const router = useRouter()
-  const { user, isLoading, isAuthenticated, planType, isReformCompany } = useAuth()
+  const { user, isLoading, isAuthenticated, planType, isReformCompany, isAdmin } = useAuth()
+  const isMember = !isAdmin && !isReformCompany
   const [tools, setTools] = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -282,8 +283,14 @@ export default function ToolsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">ツール</h1>
-            <p className="text-slate-600">診断・フォーマット集</p>
+            <h1 className="text-2xl font-bold">
+              {isMember ? '仕事で使えるツール集' : 'ツール'}
+            </h1>
+            <p className="text-slate-600">
+              {isMember
+                ? '見積もり、提案、現場管理に使えるテンプレートやチェックリストを揃えています。'
+                : '診断・フォーマット集'}
+            </p>
           </div>
           {isReformCompany && (
             <Button onClick={openCreateDialog}>

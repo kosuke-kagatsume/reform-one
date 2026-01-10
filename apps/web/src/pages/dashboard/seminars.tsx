@@ -59,6 +59,7 @@ type ViewMode = 'upcoming' | 'past'
 export default function SeminarsPage() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, isAdmin } = useAuth()
+  const isMember = !isAdmin
   const [seminars, setSeminars] = useState<Seminar[]>([])
   const [pastSeminars, setPastSeminars] = useState<Seminar[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -84,6 +85,7 @@ export default function SeminarsPage() {
       fetchData()
       fetchStats()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
 
   const fetchData = async () => {
@@ -493,12 +495,12 @@ export default function SeminarsPage() {
                             {registeredSeminars.has(upcomingSeminar.id) ? (
                               <>
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                参加登録済み
+                                {isMember ? '視聴予約済み' : '参加登録済み'}
                               </>
                             ) : (
                               <>
                                 <UserPlus className="h-4 w-4 mr-2" />
-                                参加登録
+                                {isMember ? '視聴予約する' : '参加登録'}
                               </>
                             )}
                           </Button>
@@ -575,12 +577,12 @@ export default function SeminarsPage() {
                                 {registeredSeminars.has(seminar.id) ? (
                                   <>
                                     <CheckCircle className="h-4 w-4 mr-2" />
-                                    登録済み
+                                    {isMember ? '予約済み' : '登録済み'}
                                   </>
                                 ) : (
                                   <>
                                     <UserPlus className="h-4 w-4 mr-2" />
-                                    参加登録
+                                    {isMember ? '視聴予約する' : '参加登録'}
                                   </>
                                 )}
                               </Button>

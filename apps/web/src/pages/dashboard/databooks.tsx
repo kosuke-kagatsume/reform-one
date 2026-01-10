@@ -15,7 +15,10 @@ import {
   Clock,
   Share2,
   BarChart3,
-  Info
+  Info,
+  Lightbulb,
+  Target,
+  FileCheck
 } from 'lucide-react'
 
 interface Databook {
@@ -27,6 +30,10 @@ interface Databook {
   publishedAt: string
   coverImageUrl?: string | null
   _count: { downloads: number }
+  // 一般社員向け追加フィールド
+  pageCount?: number | null
+  summary?: string | null
+  usageScenes?: string | null // JSON配列
 }
 
 interface DatabookStats {
@@ -37,7 +44,8 @@ interface DatabookStats {
 
 export default function DatabooksPage() {
   const router = useRouter()
-  const { user, isLoading, isAuthenticated, hasFeature, isAdmin } = useAuth()
+  const { user, isLoading, isAuthenticated, hasFeature, isAdmin, planType } = useAuth()
+  const isMember = !isAdmin
   const [databooks, setDatabooks] = useState<Databook[]>([])
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState<string | null>(null)
@@ -218,11 +226,15 @@ export default function DatabooksPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* 見出し変更 (5-2) */}
+        {/* 見出し変更 (5-2) - 一般社員向け */}
         <div>
-          <h1 className="text-2xl font-bold">エキスパート会員向け データブック</h1>
+          <h1 className="text-2xl font-bold">
+            {isMember && planType === 'EXPERT' ? '仕事に使えるデータ集' : 'エキスパート会員向け データブック'}
+          </h1>
           <p className="text-slate-600">
-            年4回発行の業界動向レポート・データ分析資料。契約期間中に発行されたデータブックをダウンロードできます。
+            {isMember && planType === 'EXPERT'
+              ? '提案資料や価格交渉に使えるデータが満載。四半期ごとに最新版を配信しています。'
+              : '年4回発行の業界動向レポート・データ分析資料。契約期間中に発行されたデータブックをダウンロードできます。'}
           </p>
         </div>
 
@@ -320,18 +332,47 @@ export default function DatabooksPage() {
                             {formatQuarter(databook.quarter)}
                           </Badge>
                           <h3 className="font-semibold mb-2 line-clamp-2">{databook.title}</h3>
-                          {databook.description && (
+
+                          {/* 一般社員向け：summary表示 */}
+                          {isMember && planType === 'EXPERT' && databook.summary ? (
+                            <div className="flex items-start gap-2 text-sm text-emerald-700 bg-emerald-50 p-2 rounded mb-3">
+                              <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                              <span>{databook.summary}</span>
+                            </div>
+                          ) : databook.description && (
                             <p className="text-sm text-slate-600 line-clamp-2 mb-3">{databook.description}</p>
                           )}
+
+                          {/* 一般社員向け：活用シーン */}
+                          {isMember && planType === 'EXPERT' && databook.usageScenes && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {JSON.parse(databook.usageScenes).slice(0, 3).map((scene: string, idx: number) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  <Target className="h-3 w-3 mr-1" />
+                                  {scene}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {formatDate(databook.publishedAt)}
                             </span>
-                            <span className="flex items-center gap-1">
-                              <Download className="h-3 w-3" />
-                              {databook._count.downloads}回
-                            </span>
+                            {/* ページ数表示 */}
+                            {databook.pageCount && (
+                              <span className="flex items-center gap-1">
+                                <FileCheck className="h-3 w-3" />
+                                {databook.pageCount}ページ
+                              </span>
+                            )}
+                            {!isMember && (
+                              <span className="flex items-center gap-1">
+                                <Download className="h-3 w-3" />
+                                {databook._count.downloads}回
+                              </span>
+                            )}
                           </div>
                           <div className="flex gap-2">
                             <Button
@@ -340,13 +381,13 @@ export default function DatabooksPage() {
                               disabled={downloading === databook.id}
                             >
                               <Download className="h-4 w-4 mr-1" />
-                              {downloading === databook.id ? '...' : 'PDF'}
+                              {downloading === databook.id ? '...' : 'PDFをダウンロード'}
                             </Button>
                             {databook.youtubeUrl && (
                               <Button variant="outline" size="sm" asChild>
                                 <a href={databook.youtubeUrl} target="_blank" rel="noopener noreferrer">
                                   <Video className="h-4 w-4 mr-1" />
-                                  解説
+                                  解説動画
                                 </a>
                               </Button>
                             )}

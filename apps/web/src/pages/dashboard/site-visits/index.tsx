@@ -74,6 +74,7 @@ interface ApplicationState {
 export default function SiteVisitsPage() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, hasFeature, isAdmin, planType } = useAuth()
+  const isMember = !isAdmin
   const [siteVisits, setSiteVisits] = useState<SiteVisit[]>([])
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState<string | null>(null)
@@ -227,11 +228,15 @@ export default function SiteVisitsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* タイトル変更 (7-1) */}
+        {/* タイトル変更 (7-1) - 一般社員向け */}
         <div>
-          <h1 className="text-2xl font-bold">視察会（現地見学イベント）</h1>
+          <h1 className="text-2xl font-bold">
+            {isMember ? '成功企業を直接見学できる' : '視察会（現地見学イベント）'}
+          </h1>
           <p className="text-slate-600">
-            全国の優良リフォーム企業を訪問。現場のノウハウを直接学べる貴重な機会です。
+            {isMember
+              ? '全国の優良リフォーム企業を訪問。他社の現場や仕組みを直接見て学べる特別な機会です。'
+              : '全国の優良リフォーム企業を訪問。現場のノウハウを直接学べる貴重な機会です。'}
           </p>
         </div>
 

@@ -28,8 +28,13 @@ import {
   AlertCircle,
   TrendingUp,
   Play,
-  ArrowRight,
-  Star
+  Star,
+  MessageSquare,
+  Phone,
+  Tag,
+  Target,
+  Briefcase,
+  BookOpen
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -68,6 +73,26 @@ interface AdminStats {
   totalArchivesViewed: number
 }
 
+interface BusinessSceneTag {
+  id: string
+  name: string
+  color: string | null
+}
+
+interface RecommendedContent {
+  id: string
+  type: 'archive' | 'seminar' | 'databook'
+  title: string
+  reason: string
+  viewed: boolean
+}
+
+interface SalesContact {
+  name: string
+  email: string
+  phone: string | null
+}
+
 export default function Dashboard() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, planType, hasFeature, isReformCompany, isAdmin } = useAuth()
@@ -79,6 +104,15 @@ export default function Dashboard() {
   const [onboardingCompleted, setOnboardingCompleted] = useState<string[]>([])
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null)
   const [totalArchiveCount, setTotalArchiveCount] = useState(0)
+
+  // 一般社員向け状態
+  const [businessSceneTags, setBusinessSceneTags] = useState<BusinessSceneTag[]>([])
+  const [selectedSceneTag, setSelectedSceneTag] = useState<string | null>(null)
+  const [recommendedContent, setRecommendedContent] = useState<RecommendedContent[]>([])
+  const [salesContact, setSalesContact] = useState<SalesContact | null>(null)
+
+  // 一般社員かどうか（ADMIN以外）
+  const isMember = !isAdmin
 
   // Helper to check if a widget is enabled
   const isWidgetEnabled = (widgetId: string) => {
@@ -165,6 +199,7 @@ export default function Dashboard() {
 
   const onboardingProgress = useMemo(() => {
     return Math.round((onboardingCompleted.length / onboardingSteps.length) * 100)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onboardingCompleted])
 
   useEffect(() => {
@@ -173,8 +208,13 @@ export default function Dashboard() {
       if (isAdmin) {
         fetchAdminStats()
       }
+      // 一般社員かつエキスパートプランの場合、追加データを取得
+      if (isMember && planType === 'EXPERT') {
+        fetchMemberData()
+      }
     }
-  }, [isAuthenticated, isAdmin])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isAdmin, isMember, planType])
 
   const fetchData = async () => {
     try {
@@ -226,6 +266,53 @@ export default function Dashboard() {
     }
   }
 
+  // 一般社員向けデータ取得
+  const fetchMemberData = async () => {
+    try {
+      // 業務シーンタグを取得
+      const tagsRes = await fetch('/api/business-scene-tags')
+      if (tagsRes.ok) {
+        const data = await tagsRes.json()
+        setBusinessSceneTags(data.tags || [])
+      }
+
+      // 今月やってほしいこと（自動生成おすすめ）を取得
+      const recommendedRes = await fetch('/api/member/recommended-content')
+      if (recommendedRes.ok) {
+        const data = await recommendedRes.json()
+        setRecommendedContent(data.content || [])
+      }
+
+      // 担当営業の連絡先を取得
+      const contactRes = await fetch('/api/member/sales-contact')
+      if (contactRes.ok) {
+        const data = await contactRes.json()
+        setSalesContact(data.contact || null)
+      }
+    } catch (error) {
+      console.error('Failed to fetch member data:', error)
+      // デモ用のダミーデータ
+      setBusinessSceneTags([
+        { id: '1', name: '初回商談', color: '#3B82F6' },
+        { id: '2', name: '失注防止', color: '#EF4444' },
+        { id: '3', name: '値上げ対応', color: '#F59E0B' },
+        { id: '4', name: '若手育成', color: '#10B981' },
+        { id: '5', name: '現場クレーム', color: '#8B5CF6' },
+        { id: '6', name: '社内DX', color: '#06B6D4' }
+      ])
+      setRecommendedContent([
+        { id: '1', type: 'archive', title: '初回商談で必ず聞くべき5つの質問', reason: '初回商談に役立つ', viewed: false },
+        { id: '2', type: 'archive', title: '値上げ交渉の成功事例', reason: '今月の注目コンテンツ', viewed: true },
+        { id: '3', type: 'databook', title: '2025年リフォーム市場動向', reason: '提案資料作成に活用', viewed: false }
+      ])
+      setSalesContact({
+        name: '山田 太郎',
+        email: 'yamada@reform.co.jp',
+        phone: '03-1234-5678'
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -271,8 +358,8 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* エキスパートプラン：今月のおすすめ3点 */}
-        {planType === 'EXPERT' && isWidgetEnabled('expert-recommendations') && (
+        {/* エキスパートプラン管理者：今月のおすすめ3点 */}
+        {planType === 'EXPERT' && isAdmin && isWidgetEnabled('expert-recommendations') && (
           <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
@@ -295,6 +382,68 @@ export default function Dashboard() {
                     <p className="text-xs text-slate-500 mt-1">
                       {item.date || item.duration || ''}
                     </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* エキスパートプラン一般社員：今月やってほしいこと */}
+        {planType === 'EXPERT' && isMember && (
+          <Card className="bg-gradient-to-r from-blue-50 to-emerald-50 border-emerald-200">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-emerald-600" />
+                  <CardTitle className="text-lg text-emerald-900">今月やってほしいこと</CardTitle>
+                </div>
+                <span className="text-sm text-slate-500">
+                  {recommendedContent.filter(c => c.viewed).length}/{recommendedContent.length}完了
+                </span>
+              </div>
+              <CardDescription className="text-emerald-700">
+                あなたの業務に役立つコンテンツをピックアップしました
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recommendedContent.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
+                      item.viewed
+                        ? 'bg-emerald-50/50 border-emerald-200'
+                        : 'bg-white border-slate-200 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      item.viewed ? 'bg-emerald-100' : 'bg-slate-100'
+                    }`}>
+                      {item.viewed ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      ) : item.type === 'archive' ? (
+                        <Video className="h-5 w-5 text-slate-600" />
+                      ) : item.type === 'databook' ? (
+                        <FileText className="h-5 w-5 text-slate-600" />
+                      ) : (
+                        <Calendar className="h-5 w-5 text-slate-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium ${item.viewed ? 'text-emerald-700' : ''}`}>
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">{item.reason}</p>
+                    </div>
+                    {!item.viewed && (
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={item.type === 'archive' ? `/dashboard/archives/${item.id}` : item.type === 'databook' ? '/dashboard/databooks' : '/dashboard/seminars'}>
+                          <Play className="h-3 w-3 mr-1" />
+                          見る
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -358,8 +507,8 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* 初回オンボーディング（改善版） */}
-        {showOnboarding && onboardingCompleted.length < 3 && (
+        {/* 初回オンボーディング（管理者のみ） */}
+        {isAdmin && showOnboarding && onboardingCompleted.length < 3 && (
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -588,7 +737,8 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {isWidgetEnabled('upcoming-seminars') && (
+          {/* 管理者向け：今後のセミナー */}
+          {isAdmin && isWidgetEnabled('upcoming-seminars') && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -664,12 +814,76 @@ export default function Dashboard() {
             </Card>
           )}
 
+          {/* 一般社員向け：今週見ておきたい動画 */}
+          {isMember && planType === 'EXPERT' && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-blue-600" />
+                    今週見ておきたい動画
+                  </CardTitle>
+                  <CardDescription>業務の合間に視聴できるおすすめ動画</CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/dashboard/archives">
+                    すべて見る
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {recentArchives.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentArchives.slice(0, 3).map((archive, index) => (
+                      <div
+                        key={archive.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg transition-colors border ${
+                          index === 0 ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`p-2 rounded-lg ${index === 0 ? 'bg-blue-100' : 'bg-slate-100'}`}>
+                          <Video className={`h-4 w-4 ${index === 0 ? 'text-blue-600' : 'text-slate-600'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{archive.title}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {archive.description || archive.category.name}
+                          </p>
+                        </div>
+                        <Button size="sm" variant={index === 0 ? 'default' : 'outline'} asChild>
+                          <Link href={`/dashboard/archives/${archive.id}`}>
+                            <Play className="h-3 w-3 mr-1" />
+                            視聴
+                          </Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Video className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-600 font-medium mb-2">
+                      おすすめ動画を準備中です
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {isWidgetEnabled('recent-archives') && (
             <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg">おすすめアーカイブ</CardTitle>
-                <CardDescription>実務に直結する厳選コンテンツ</CardDescription>
+                <CardTitle className="text-lg">
+                  {isMember && planType === 'EXPERT' ? '業務シーン別アーカイブ' : 'おすすめアーカイブ'}
+                </CardTitle>
+                <CardDescription>
+                  {isMember && planType === 'EXPERT'
+                    ? 'シーンで探す：今の業務に役立つ動画を選ぼう'
+                    : '実務に直結する厳選コンテンツ'}
+                </CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/dashboard/archives">
@@ -679,6 +893,34 @@ export default function Dashboard() {
               </Button>
             </CardHeader>
             <CardContent>
+              {/* 一般社員向け：業務シーンタグフィルター */}
+              {isMember && planType === 'EXPERT' && businessSceneTags.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={selectedSceneTag === null ? 'default' : 'outline'}
+                      onClick={() => setSelectedSceneTag(null)}
+                      className="text-xs"
+                    >
+                      すべて
+                    </Button>
+                    {businessSceneTags.map((tag) => (
+                      <Button
+                        key={tag.id}
+                        size="sm"
+                        variant={selectedSceneTag === tag.id ? 'default' : 'outline'}
+                        onClick={() => setSelectedSceneTag(tag.id)}
+                        className="text-xs"
+                        style={selectedSceneTag === tag.id && tag.color ? { backgroundColor: tag.color } : {}}
+                      >
+                        <Tag className="h-3 w-3 mr-1" />
+                        {tag.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {recentArchives.length > 0 ? (
                 <div className="space-y-3">
                   {recentArchives.map((archive, index) => (
@@ -762,8 +1004,82 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* オンボーディング常設リンク（完了後） */}
-        {!showOnboarding && onboardingCompleted.length < 3 && (
+        {/* 一般社員向け：サポートセクション */}
+        {isMember && planType === 'EXPERT' && (
+          <Card className="bg-gradient-to-r from-slate-50 to-blue-50 border-slate-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-slate-600" />
+                仕事で困ったら
+              </CardTitle>
+              <CardDescription>
+                チームに相談したり、担当営業に連絡できます
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* チームに質問ボタン */}
+                <div className="p-4 bg-white rounded-lg border hover:border-blue-300 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <MessageSquare className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">チームに質問する</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        同僚や先輩に相談できます
+                      </p>
+                      <Button size="sm" variant="outline" className="mt-3" asChild>
+                        <Link href="/dashboard/community">
+                          コミュニティへ
+                          <ChevronRight className="h-3 w-3 ml-1" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 担当営業連絡先 */}
+                <div className="p-4 bg-white rounded-lg border">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <Phone className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">担当営業に連絡</p>
+                      {salesContact ? (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm font-medium text-slate-700">{salesContact.name}</p>
+                          <a
+                            href={`mailto:${salesContact.email}`}
+                            className="text-xs text-blue-600 hover:underline block"
+                          >
+                            {salesContact.email}
+                          </a>
+                          {salesContact.phone && (
+                            <a
+                              href={`tel:${salesContact.phone}`}
+                              className="text-xs text-blue-600 hover:underline block"
+                            >
+                              {salesContact.phone}
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500 mt-1">
+                          担当者情報は管理者にお問い合わせください
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* オンボーディング常設リンク（管理者のみ） */}
+        {isAdmin && !showOnboarding && onboardingCompleted.length < 3 && (
           <div className="flex justify-center">
             <Button
               variant="ghost"

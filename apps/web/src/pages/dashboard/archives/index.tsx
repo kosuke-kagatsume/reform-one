@@ -20,7 +20,10 @@ import {
   Share2,
   BarChart3,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Tag,
+  Lightbulb,
+  FastForward
 } from 'lucide-react'
 
 interface Category {
@@ -43,6 +46,16 @@ interface Archive {
   // 追加フィールド
   targetAudience?: string
   learningOutcome?: string
+  benefitText?: string | null
+  shortVersionUrl?: string | null
+  shortVersionDuration?: number | null
+  businessSceneTags?: { tag: { id: string; name: string; color: string | null } }[]
+}
+
+interface BusinessSceneTag {
+  id: string
+  name: string
+  color: string | null
 }
 
 interface ArchiveStats {
@@ -66,13 +79,17 @@ const popularKeywords = ['営業', '断熱', '集客', '採用', 'リフォー�
 
 export default function ArchivesPage() {
   const router = useRouter()
-  const { isLoading, isAuthenticated, isAdmin } = useAuth()
+  const { isLoading, isAuthenticated, isAdmin, planType } = useAuth()
+  const isMember = !isAdmin
   const [archives, setArchives] = useState<Archive[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<ArchiveStats | null>(null)
+  // 一般社員向け：業務シーンタグ
+  const [businessSceneTags, setBusinessSceneTags] = useState<BusinessSceneTag[]>([])
+  const [selectedSceneTag, setSelectedSceneTag] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -84,13 +101,19 @@ export default function ArchivesPage() {
     if (isAuthenticated) {
       fetchCategories()
       fetchStats()
+      // 一般社員向け：業務シーンタグを取得
+      if (isMember && planType === 'EXPERT') {
+        fetchBusinessSceneTags()
+      }
     }
-  }, [isAuthenticated])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isMember, planType])
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchArchives()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, selectedCategory, searchQuery])
 
   const fetchCategories = async () => {
@@ -149,6 +172,26 @@ export default function ArchivesPage() {
     }
   }
 
+  const fetchBusinessSceneTags = async () => {
+    try {
+      const res = await fetch('/api/business-scene-tags')
+      if (res.ok) {
+        const data = await res.json()
+        setBusinessSceneTags(data.tags || [])
+      }
+    } catch {
+      // デモ用ダミーデータ
+      setBusinessSceneTags([
+        { id: '1', name: '初回商談', color: '#3B82F6' },
+        { id: '2', name: '失注防止', color: '#EF4444' },
+        { id: '3', name: '値上げ対応', color: '#F59E0B' },
+        { id: '4', name: '若手育成', color: '#10B981' },
+        { id: '5', name: '現場クレーム', color: '#8B5CF6' },
+        { id: '6', name: '社内DX', color: '#06B6D4' }
+      ])
+    }
+  }
+
   // 人気アーカイブ（視聴回数順）(3-6)
   const popularArchives = useMemo(() => {
     return [...archives]
@@ -200,11 +243,49 @@ export default function ArchivesPage() {
       <div className="space-y-6">
         {/* 価値訴求追加 (3-1) */}
         <div>
-          <h1 className="text-2xl font-bold">アーカイブ動画</h1>
+          <h1 className="text-2xl font-bold">
+            {isMember && planType === 'EXPERT' ? '仕事に役立つ動画' : 'アーカイブ動画'}
+          </h1>
           <p className="text-slate-600">
-            実務に直結するノウハウを凝縮。いつでも、何度でも視聴できるセミナーアーカイブです。
+            {isMember && planType === 'EXPERT'
+              ? '業務の悩みを解決するヒントが見つかります。シーンで探して、すぐに活用できます。'
+              : '実務に直結するノウハウを凝縮。いつでも、何度でも視聴できるセミナーアーカイブです。'}
           </p>
         </div>
+
+        {/* 一般社員向け：業務シーンタグフィルター */}
+        {isMember && planType === 'EXPERT' && businessSceneTags.length > 0 && (
+          <Card className="bg-gradient-to-r from-blue-50 to-emerald-50 border-emerald-200">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag className="h-4 w-4 text-emerald-600" />
+                <span className="font-medium text-emerald-800">業務シーンで探す</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedSceneTag === null ? 'default' : 'outline'}
+                  onClick={() => setSelectedSceneTag(null)}
+                  className="text-xs"
+                >
+                  すべて
+                </Button>
+                {businessSceneTags.map((tag) => (
+                  <Button
+                    key={tag.id}
+                    size="sm"
+                    variant={selectedSceneTag === tag.id ? 'default' : 'outline'}
+                    onClick={() => setSelectedSceneTag(tag.id)}
+                    className="text-xs"
+                    style={selectedSceneTag === tag.id && tag.color ? { backgroundColor: tag.color, borderColor: tag.color } : {}}
+                  >
+                    {tag.name}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* KPI表示 (3-8) */}
         {stats && (
@@ -433,18 +514,37 @@ export default function ArchivesPage() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          {/* 動画カードに追加: 得られること1行 (3-4) */}
-                          {archive.learningOutcome ? (
-                            <p className="text-sm text-slate-600 line-clamp-2 mb-3">
-                              {archive.learningOutcome}
-                            </p>
-                          ) : archive.description && (
-                            <p className="text-sm text-slate-600 line-clamp-2 mb-3">
-                              {archive.description}
-                            </p>
+                          {/* 一般社員向け：1行ベネフィット */}
+                          {isMember && planType === 'EXPERT' && archive.benefitText ? (
+                            <div className="flex items-start gap-2 text-sm text-emerald-700 bg-emerald-50 p-2 rounded mb-3">
+                              <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                              <span>{archive.benefitText}</span>
+                            </div>
+                          ) : (
+                            /* 管理者向け：従来の表示 */
+                            archive.learningOutcome ? (
+                              <p className="text-sm text-slate-600 line-clamp-2 mb-3">
+                                {archive.learningOutcome}
+                              </p>
+                            ) : archive.description && !isMember && (
+                              <p className="text-sm text-slate-600 line-clamp-2 mb-3">
+                                {archive.description}
+                              </p>
+                            )
                           )}
-                          {/* 対象者タグ (3-4) */}
-                          {archive.targetAudience && (
+
+                          {/* 一般社員向け：ショートバージョンリンク */}
+                          {isMember && planType === 'EXPERT' && archive.shortVersionUrl && (
+                            <div className="mb-3">
+                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                <FastForward className="h-3 w-3 mr-1" />
+                                {archive.shortVersionDuration || 10}分版あり
+                              </Badge>
+                            </div>
+                          )}
+
+                          {/* 対象者タグ - 管理者のみ表示 (3-4) */}
+                          {!isMember && archive.targetAudience && (
                             <div className="mb-3">
                               <Badge variant="outline" className="text-xs bg-slate-50">
                                 <Users className="h-3 w-3 mr-1" />
