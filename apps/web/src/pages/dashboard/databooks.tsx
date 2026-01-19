@@ -429,6 +429,30 @@ export default function DatabooksPage() {
           </Card>
         )}
 
+        {/* データブック解説セミナー */}
+        <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Video className="h-5 w-5 text-purple-600" />
+              データブック解説セミナー
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 mb-4">
+              データブックの内容を解説するセミナー動画をご覧いただけます。
+              データの読み方や活用方法を詳しく説明しています。
+            </p>
+            <Button
+              variant="outline"
+              className="bg-white border-purple-300 text-purple-700 hover:bg-purple-50"
+              onClick={() => router.push('/dashboard/archives?category=databook')}
+            >
+              <Video className="h-4 w-4 mr-2" />
+              解説セミナーを視聴する
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* DL制限説明 (5-7) */}
         <Card className="bg-slate-50">
           <CardContent className="py-4">

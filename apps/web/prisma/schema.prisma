@@ -157,6 +157,7 @@ model Subscription {
   renewalNotifiedAt  DateTime?
   cancelAt           DateTime?
   canceledAt         DateTime?
+  scheduledPlanChange String?  // 次回更新時の予定プラン変更 (STANDARD, EXPERT)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -388,11 +389,44 @@ model CommunityPost {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  category CommunityCategory @relation(fields: [categoryId], references: [id])
+  category  CommunityCategory    @relation(fields: [categoryId], references: [id])
+  comments  CommunityComment[]
+  reactions CommunityReaction[]
 
   @@index([categoryId])
   @@index([authorId])
   @@index([createdAt])
+}
+
+// Community Comments (投稿へのコメント)
+model CommunityComment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// Community Reactions (投稿へのリアクション)
+model CommunityReaction {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  type      String   @default("LIKE") // LIKE, HELPFUL, INSIGHTFUL
+  createdAt DateTime @default(now())
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, type])
+  @@index([postId])
+  @@index([userId])
 }
 
 // Meeting Archives

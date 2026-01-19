@@ -97,11 +97,13 @@ export interface Entitlement {
 export const PLAN_FEATURES: Record<PlanType, string[]> = {
   STANDARD: [
     'seminar',
-    'archive'
+    'archive',
+    'tools'
   ],
   EXPERT: [
     'seminar',
     'archive',
+    'tools',
     'community',
     'databook',
     'newsletter'

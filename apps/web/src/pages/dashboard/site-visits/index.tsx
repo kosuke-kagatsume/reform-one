@@ -335,14 +335,14 @@ export default function SiteVisitsPage() {
                       {isExpert && <Badge variant="outline" className="text-xs">あなたのプラン</Badge>}
                     </div>
                     <p className="text-green-800 font-medium">1社2名まで無料</p>
-                    <p className="text-slate-600 text-xs">3名以降は20,000円/人</p>
+                    <p className="text-slate-600 text-xs">3名以降は22,000円（税込）/人</p>
                   </div>
                   <div className={`p-3 rounded-lg ${!isExpert ? 'bg-blue-100 border-2 border-blue-300' : 'bg-white/50'}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline">スタンダード</Badge>
                       {!isExpert && <Badge variant="outline" className="text-xs">あなたのプラン</Badge>}
                     </div>
-                    <p className="text-slate-800 font-medium">20,000円/人</p>
+                    <p className="text-slate-800 font-medium">22,000円（税込）/人</p>
                     <p className="text-slate-600 text-xs">1社2名まで参加可能</p>
                   </div>
                 </div>

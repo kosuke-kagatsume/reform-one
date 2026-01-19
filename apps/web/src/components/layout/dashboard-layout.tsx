@@ -234,7 +234,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <NotificationCenter userId="temp-user-id" />
+            <NotificationCenter userId={user?.id || ''} />
 
             <FAQDropdown />
 

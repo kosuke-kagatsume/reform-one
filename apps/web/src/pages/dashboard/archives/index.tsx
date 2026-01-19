@@ -23,7 +23,8 @@ import {
   ChevronRight,
   Tag,
   Lightbulb,
-  FastForward
+  FastForward,
+  CheckCircle
 } from 'lucide-react'
 
 interface Category {
@@ -79,7 +80,7 @@ const popularKeywords = ['営業', '断熱', '集客', '採用', 'リフォー�
 
 export default function ArchivesPage() {
   const router = useRouter()
-  const { isLoading, isAuthenticated, isAdmin, planType } = useAuth()
+  const { isLoading, isAuthenticated, isAdmin, planType, user } = useAuth()
   const isMember = !isAdmin
   const [archives, setArchives] = useState<Archive[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -90,6 +91,8 @@ export default function ArchivesPage() {
   // 一般社員向け：業務シーンタグ
   const [businessSceneTags, setBusinessSceneTags] = useState<BusinessSceneTag[]>([])
   const [selectedSceneTag, setSelectedSceneTag] = useState<string | null>(null)
+  // 視聴済みアーカイブID
+  const [watchedArchiveIds, setWatchedArchiveIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -101,13 +104,14 @@ export default function ArchivesPage() {
     if (isAuthenticated) {
       fetchCategories()
       fetchStats()
+      fetchWatchedArchives()
       // 一般社員向け：業務シーンタグを取得
       if (isMember && planType === 'EXPERT') {
         fetchBusinessSceneTags()
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, isMember, planType])
+  }, [isAuthenticated, isMember, planType, user?.id])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -189,6 +193,20 @@ export default function ArchivesPage() {
         { id: '5', name: '現場クレーム', color: '#8B5CF6' },
         { id: '6', name: '社内DX', color: '#06B6D4' }
       ])
+    }
+  }
+
+  // 視聴済みアーカイブを取得
+  const fetchWatchedArchives = async () => {
+    if (!user?.id) return
+    try {
+      const res = await fetch(`/api/archives/watched?userId=${user.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setWatchedArchiveIds(new Set(data.watchedArchiveIds || []))
+      }
+    } catch (error) {
+      console.error('Failed to fetch watched archives:', error)
     }
   }
 
@@ -378,18 +396,24 @@ export default function ArchivesPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {popularArchives.slice(0, 3).map((archive, index) => (
-                  <Link key={archive.id} href={`/dashboard/archives/${archive.id}`}>
-                    <div className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                      <span className="text-lg font-bold text-slate-300 w-6">{index + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{archive.title}</p>
-                        <p className="text-xs text-slate-500">{archive._count.views}回視聴</p>
+                {popularArchives.slice(0, 3).map((archive, index) => {
+                  const isWatched = watchedArchiveIds.has(archive.id)
+                  return (
+                    <Link key={archive.id} href={`/dashboard/archives/${archive.id}`}>
+                      <div className={`flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors ${isWatched ? 'bg-slate-50/50' : ''}`}>
+                        <span className="text-lg font-bold text-slate-300 w-6">{index + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm font-medium truncate ${isWatched ? 'text-slate-500' : ''}`}>{archive.title}</p>
+                            {isWatched && <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />}
+                          </div>
+                          <p className="text-xs text-slate-500">{archive._count.views}回視聴</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  )
+                })}
               </CardContent>
             </Card>
 
@@ -402,20 +426,26 @@ export default function ArchivesPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {recommendedArchives.slice(0, 3).map((archive) => (
-                  <Link key={archive.id} href={`/dashboard/archives/${archive.id}`}>
-                    <div className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {archive.category.name}
-                      </Badge>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{archive.title}</p>
-                        <p className="text-xs text-slate-500">{formatDate(archive.publishedAt)}</p>
+                {recommendedArchives.slice(0, 3).map((archive) => {
+                  const isWatched = watchedArchiveIds.has(archive.id)
+                  return (
+                    <Link key={archive.id} href={`/dashboard/archives/${archive.id}`}>
+                      <div className={`flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors ${isWatched ? 'bg-slate-50/50' : ''}`}>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {archive.category.name}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm font-medium truncate ${isWatched ? 'text-slate-500' : ''}`}>{archive.title}</p>
+                            {isWatched && <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />}
+                          </div>
+                          <p className="text-xs text-slate-500">{formatDate(archive.publishedAt)}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  )
+                })}
               </CardContent>
             </Card>
           </div>
@@ -477,19 +507,20 @@ export default function ArchivesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {archives.map((archive) => {
                   const colors = getCategoryColor(archive.category.name)
+                  const isWatched = watchedArchiveIds.has(archive.id)
                   return (
                     <Link key={archive.id} href={`/dashboard/archives/${archive.id}`}>
-                      <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                      <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full ${isWatched ? 'bg-slate-50/50 border-slate-300' : ''}`}>
                         <div className="relative">
                           {archive.thumbnailUrl ? (
                             <img
                               src={archive.thumbnailUrl}
                               alt={archive.title}
-                              className="w-full h-40 object-cover rounded-t-lg"
+                              className={`w-full h-40 object-cover rounded-t-lg ${isWatched ? 'opacity-80' : ''}`}
                             />
                           ) : (
                             /* サムネイルカテゴリ色分け (3-5) */
-                            <div className={`w-full h-40 bg-gradient-to-br ${colors.gradient} rounded-t-lg flex items-center justify-center`}>
+                            <div className={`w-full h-40 bg-gradient-to-br ${colors.gradient} rounded-t-lg flex items-center justify-center ${isWatched ? 'opacity-80' : ''}`}>
                               <Video className="h-12 w-12 text-white/80" />
                             </div>
                           )}
@@ -498,6 +529,13 @@ export default function ArchivesPage() {
                               <Play className="h-6 w-6 text-purple-600" />
                             </div>
                           </div>
+                          {/* 視聴済みバッジ */}
+                          {isWatched && (
+                            <div className="absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              視聴済み
+                            </div>
+                          )}
                           {archive.duration && (
                             <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
                               {formatDuration(archive.duration)}

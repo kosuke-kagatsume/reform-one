@@ -66,6 +66,8 @@ export default function BillingManagement() {
   const [loading, setLoading] = useState(true)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [canceling, setCanceling] = useState(false)
+  const [planChangeDialogOpen, setPlanChangeDialogOpen] = useState(false)
+  const [changingPlan, setChangingPlan] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -123,6 +125,38 @@ export default function BillingManagement() {
       alert('解約に失敗しました')
     } finally {
       setCanceling(false)
+    }
+  }
+
+  const handlePlanChange = async (newPlan: 'EXPERT' | 'STANDARD') => {
+    if (!subscription || !user) return
+    setChangingPlan(true)
+
+    try {
+      const res = await fetch('/api/billing/change-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId: subscription.id,
+          userId: user.id,
+          newPlan
+        })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        alert(data.message)
+        setPlanChangeDialogOpen(false)
+        fetchSubscription()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'プラン変更に失敗しました')
+      }
+    } catch (error) {
+      console.error('Plan change error:', error)
+      alert('プラン変更に失敗しました')
+    } finally {
+      setChangingPlan(false)
     }
   }
 
@@ -318,9 +352,18 @@ export default function BillingManagement() {
             <p className="text-slate-600">契約内容・支払状況・請求履歴を確認</p>
           </div>
           {subscription.status === 'ACTIVE' && !subscription.cancelAt && isAdmin && (
-            <Button variant="outline" onClick={() => setCancelDialogOpen(true)}>
-              契約を解約
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                onClick={() => setPlanChangeDialogOpen(true)}
+              >
+                コースを変更
+              </Button>
+              <Button variant="outline" onClick={() => setCancelDialogOpen(true)}>
+                契約を解約
+              </Button>
+            </div>
           )}
         </div>
 
@@ -574,6 +617,83 @@ export default function BillingManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plan Change Dialog */}
+      <Dialog open={planChangeDialogOpen} onOpenChange={setPlanChangeDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>コースを変更</DialogTitle>
+            <DialogDescription>
+              現在のコース: {getPlanName(subscription?.planType || '')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {subscription?.planType === 'STANDARD' ? (
+              // スタンダード→エキスパートへのアップグレード
+              <div className="p-4 border-2 border-purple-200 bg-purple-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                  <h4 className="font-semibold text-purple-800">エキスパートコースにアップグレード</h4>
+                </div>
+                <p className="text-sm text-purple-700 mb-3">
+                  全機能 + コミュニティ + データブックが利用可能になります
+                </p>
+                <div className="bg-white p-3 rounded-lg mb-3">
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium">差額のお支払い</span>
+                    <br />
+                    残り契約期間に応じた差額（¥110,000の日割り相当）をお支払いいただきます。
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-green-700 mb-3">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>即時反映されます</span>
+                </div>
+                <Button
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  onClick={() => handlePlanChange('EXPERT')}
+                  disabled={changingPlan}
+                >
+                  {changingPlan ? '処理中...' : 'エキスパートにアップグレード'}
+                </Button>
+              </div>
+            ) : (
+              // エキスパート→スタンダードへのダウングレード
+              <div className="p-4 border rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="h-5 w-5 text-slate-600" />
+                  <h4 className="font-semibold">スタンダードコースに変更</h4>
+                </div>
+                <p className="text-sm text-slate-600 mb-3">
+                  コミュニティ・データブックは利用できなくなります
+                </p>
+                <div className="bg-amber-50 p-3 rounded-lg mb-3 border border-amber-200">
+                  <p className="text-sm text-amber-800">
+                    <AlertCircle className="h-4 w-4 inline mr-1" />
+                    <span className="font-medium">次回更新時に反映</span>
+                    <br />
+                    現在の契約期間終了後（{formatDate(subscription?.currentPeriodEnd || '')}）に変更が反映されます。
+                    それまでは引き続きエキスパートコースをご利用いただけます。
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => handlePlanChange('STANDARD')}
+                  disabled={changingPlan}
+                >
+                  {changingPlan ? '処理中...' : '次回更新時にスタンダードに変更'}
+                </Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlanChangeDialogOpen(false)}>
               キャンセル
             </Button>
           </DialogFooter>

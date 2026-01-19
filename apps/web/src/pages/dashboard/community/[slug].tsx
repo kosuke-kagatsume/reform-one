@@ -19,7 +19,12 @@ import {
   Clock,
   User,
   Send,
-  Play
+  Play,
+  ThumbsUp,
+  Lightbulb,
+  Heart,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 
 interface CommunityCategory {
@@ -30,6 +35,15 @@ interface CommunityCategory {
   meetingUrl: string | null
 }
 
+interface Comment {
+  id: string
+  postId: string
+  authorId: string
+  authorName: string
+  content: string
+  createdAt: string
+}
+
 interface Post {
   id: string
   title: string
@@ -38,6 +52,17 @@ interface Post {
   createdAt: string
   attachments: string[]
 }
+
+interface PostReactions {
+  reactionCounts: Record<string, number>
+  userReactions: string[]
+}
+
+const REACTION_TYPES = [
+  { type: 'LIKE', label: 'いいね', icon: ThumbsUp, color: 'text-blue-600' },
+  { type: 'HELPFUL', label: '参考になった', icon: Lightbulb, color: 'text-yellow-600' },
+  { type: 'INSIGHTFUL', label: '共感', icon: Heart, color: 'text-red-500' }
+]
 
 interface MeetingArchive {
   id: string
@@ -62,6 +87,13 @@ export default function CommunityDetailPage() {
   const [newPostTitle, setNewPostTitle] = useState('')
   const [newPostContent, setNewPostContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  // Comments and reactions
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null)
+  const [postComments, setPostComments] = useState<Record<string, Comment[]>>({})
+  const [postReactions, setPostReactions] = useState<Record<string, PostReactions>>({})
+  const [newComment, setNewComment] = useState<Record<string, string>>({})
+  const [submittingComment, setSubmittingComment] = useState(false)
 
   const canAccessCommunity = hasFeature('community')
 
@@ -145,6 +177,118 @@ export default function CommunityDetailPage() {
       console.error('Failed to create post:', error)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // Fetch comments for a post
+  const fetchComments = async (postId: string) => {
+    try {
+      const res = await fetch(`/api/community/posts/${postId}/comments`)
+      if (res.ok) {
+        const data = await res.json()
+        setPostComments(prev => ({ ...prev, [postId]: data.comments }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch comments:', error)
+    }
+  }
+
+  // Fetch reactions for a post
+  const fetchReactions = async (postId: string) => {
+    try {
+      const res = await fetch(`/api/community/posts/${postId}/reactions?userId=${user?.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setPostReactions(prev => ({ ...prev, [postId]: data }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch reactions:', error)
+    }
+  }
+
+  // Toggle expanded post and fetch comments/reactions
+  const toggleExpandPost = async (postId: string) => {
+    if (expandedPostId === postId) {
+      setExpandedPostId(null)
+    } else {
+      setExpandedPostId(postId)
+      // Fetch comments and reactions if not already loaded
+      if (!postComments[postId]) {
+        await fetchComments(postId)
+      }
+      if (!postReactions[postId]) {
+        await fetchReactions(postId)
+      }
+    }
+  }
+
+  // Submit a comment
+  const handleSubmitComment = async (postId: string) => {
+    if (!newComment[postId]?.trim() || !user) return
+
+    setSubmittingComment(true)
+    try {
+      const res = await fetch(`/api/community/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authorId: user.id,
+          content: newComment[postId]
+        })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setPostComments(prev => ({
+          ...prev,
+          [postId]: [...(prev[postId] || []), data.comment]
+        }))
+        setNewComment(prev => ({ ...prev, [postId]: '' }))
+      }
+    } catch (error) {
+      console.error('Failed to submit comment:', error)
+    } finally {
+      setSubmittingComment(false)
+    }
+  }
+
+  // Toggle reaction
+  const handleToggleReaction = async (postId: string, type: string) => {
+    if (!user) return
+
+    try {
+      const res = await fetch(`/api/community/posts/${postId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          type
+        })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setPostReactions(prev => {
+          const current = prev[postId] || { reactionCounts: {}, userReactions: [] }
+          const newCounts = { ...current.reactionCounts }
+          let newUserReactions = [...current.userReactions]
+
+          if (data.action === 'added') {
+            newCounts[type] = (newCounts[type] || 0) + 1
+            newUserReactions.push(type)
+          } else {
+            newCounts[type] = Math.max((newCounts[type] || 0) - 1, 0)
+            newUserReactions = newUserReactions.filter(r => r !== type)
+          }
+
+          return {
+            ...prev,
+            [postId]: { reactionCounts: newCounts, userReactions: newUserReactions }
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Failed to toggle reaction:', error)
     }
   }
 
@@ -291,28 +435,116 @@ export default function CommunityDetailPage() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {posts.map((post) => (
-                  <Card key={post.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-base">{post.title}</CardTitle>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-slate-500">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>{post.authorName}</span>
+                {posts.map((post) => {
+                  const reactions = postReactions[post.id] || { reactionCounts: {}, userReactions: [] }
+                  const comments = postComments[post.id] || []
+                  const isExpanded = expandedPostId === post.id
+
+                  return (
+                    <Card key={post.id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <CardTitle className="text-base">{post.title}</CardTitle>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatDateTime(post.createdAt)}</span>
+                        <div className="flex items-center gap-3 text-sm text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span>{post.authorName}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatDateTime(post.createdAt)}</span>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-slate-600 whitespace-pre-wrap">{post.content}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-slate-600 whitespace-pre-wrap">{post.content}</p>
+
+                        {/* Reaction buttons */}
+                        <div className="flex items-center gap-2 pt-2 border-t">
+                          {REACTION_TYPES.map(({ type, label, icon: Icon, color }) => {
+                            const count = reactions.reactionCounts[type] || 0
+                            const isActive = reactions.userReactions.includes(type)
+                            return (
+                              <button
+                                key={type}
+                                onClick={() => handleToggleReaction(post.id, type)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                                  isActive
+                                    ? `bg-slate-100 ${color}`
+                                    : 'text-slate-500 hover:bg-slate-50'
+                                }`}
+                              >
+                                <Icon className="h-4 w-4" />
+                                <span>{label}</span>
+                                {count > 0 && (
+                                  <Badge variant="secondary" className="text-xs ml-1">
+                                    {count}
+                                  </Badge>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {/* Comments toggle */}
+                        <button
+                          onClick={() => toggleExpandPost(post.id)}
+                          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                          <MessageSquare className="h-4 w-4" />
+                          <span>コメント {comments.length > 0 && `(${comments.length})`}</span>
+                        </button>
+
+                        {/* Comments section */}
+                        {isExpanded && (
+                          <div className="space-y-3 pt-3 border-t">
+                            {comments.length > 0 ? (
+                              <div className="space-y-3">
+                                {comments.map((comment) => (
+                                  <div key={comment.id} className="bg-slate-50 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                                      <User className="h-3 w-3" />
+                                      <span className="font-medium">{comment.authorName}</span>
+                                      <span>・</span>
+                                      <span>{formatDateTime(comment.createdAt)}</span>
+                                    </div>
+                                    <p className="text-sm text-slate-700">{comment.content}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-400">まだコメントはありません</p>
+                            )}
+
+                            {/* New comment form */}
+                            <div className="flex gap-2">
+                              <Textarea
+                                placeholder="コメントを入力..."
+                                value={newComment[post.id] || ''}
+                                onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                rows={2}
+                                className="flex-1"
+                              />
+                              <Button
+                                onClick={() => handleSubmitComment(post.id)}
+                                disabled={submittingComment || !newComment[post.id]?.trim()}
+                                size="sm"
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )}
           </TabsContent>

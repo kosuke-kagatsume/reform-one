@@ -363,6 +363,65 @@ export default function MembersAdminPage() {
           </select>
         </div>
 
+        {/* 一斉メール送信セクション */}
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              一斉メール送信
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                className="bg-white border-blue-300 text-blue-700 hover:bg-blue-50"
+                onClick={() => router.push('/admin/premier/members/bulk-mail?target=all')}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                全会員に送信
+                <Badge variant="secondary" className="ml-2">{stats?.total || 0}名</Badge>
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                onClick={() => router.push('/admin/premier/members/bulk-mail?target=expert')}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                エキスパートに送信
+                <Badge variant="secondary" className="ml-2">{stats?.byPlan.expert || 0}名</Badge>
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-white border-green-300 text-green-700 hover:bg-green-50"
+                onClick={() => router.push('/admin/premier/members/bulk-mail?target=standard')}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                スタンダードに送信
+                <Badge variant="secondary" className="ml-2">{stats?.byPlan.standard || 0}名</Badge>
+              </Button>
+              {filteredMembers.length > 0 && filteredMembers.length !== stats?.total && (
+                <Button
+                  variant="outline"
+                  className="bg-white border-amber-300 text-amber-700 hover:bg-amber-50"
+                  onClick={() => {
+                    const params = new URLSearchParams()
+                    params.set('target', 'filtered')
+                    if (loginFilter !== 'all') params.set('loginFilter', loginFilter)
+                    if (planFilter !== 'all') params.set('planFilter', planFilter)
+                    if (orgFilter !== 'all') params.set('orgFilter', orgFilter)
+                    router.push(`/admin/premier/members/bulk-mail?${params.toString()}`)
+                  }}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  現在の絞り込み結果に送信
+                  <Badge variant="secondary" className="ml-2">{filteredMembers.length}名</Badge>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Members List */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

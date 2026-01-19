@@ -146,14 +146,14 @@ export default function NewslettersPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold">エキスパート会員向け 編集長ニュースレター</h1>
+            <h1 className="text-2xl font-bold">エキスパート会員向け 編集長・報道部長ニュースレター</h1>
             <p className="text-slate-600">業界の最新動向・分析を毎月お届け</p>
           </div>
 
           {/* LockedFeatureCard使用 (6-8) */}
           <LockedFeatureCard
-            title="編集長ニュースレター"
-            description="リフォーム産業新聞の編集長が、業界の最新動向・トレンド・注目企業の分析を毎月お届けします。登録メールにも配信されるので、いつでも最新情報をキャッチできます。"
+            title="編集長・報道部長ニュースレター"
+            description="リフォーム産業新聞の編集長・報道部長が、業界の最新動向・トレンド・注目企業の分析を毎月お届けします。登録メールにも配信されるので、いつでも最新情報をキャッチできます。"
             featureName="ニュースレター"
           />
 
@@ -201,7 +201,7 @@ export default function NewslettersPage() {
         {/* 見出し・説明文修正 (6-2) - 一般社員向け */}
         <div>
           <h1 className="text-2xl font-bold">
-            {isMember && planType === 'EXPERT' ? '業界の最新トレンドをキャッチ' : 'エキスパート会員向け 編集長ニュースレター'}
+            {isMember && planType === 'EXPERT' ? '業界の最新トレンドをキャッチ' : 'エキスパート会員向け 編集長・報道部長ニュースレター'}
           </h1>
           <p className="text-slate-600">
             {isMember && planType === 'EXPERT'
@@ -394,8 +394,8 @@ export default function NewslettersPage() {
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-slate-500 mt-0.5" />
               <div className="text-sm text-slate-600">
-                <p className="font-medium mb-1">編集長ニュースレターについて</p>
-                <p>リフォーム産業新聞の編集長が、業界の最新動向・注目企業・トレンド分析を毎月お届けします。過去のバックナンバーはいつでも閲覧・ダウンロード可能です。</p>
+                <p className="font-medium mb-1">編集長・報道部長ニュースレターについて</p>
+                <p>リフォーム産業新聞の編集長・報道部長が、業界の最新動向・注目企業・トレンド分析を毎月お届けします。過去のバックナンバーはいつでも閲覧・ダウンロード可能です。</p>
               </div>
             </div>
           </CardContent>
