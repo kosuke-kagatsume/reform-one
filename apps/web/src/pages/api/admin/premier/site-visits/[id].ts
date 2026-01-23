@@ -38,6 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'PUT') {
       const {
         title,
+        companyName,
         description,
         location,
         address,
@@ -46,6 +47,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         duration,
         capacity,
         price,
+        hasAfterParty,
+        afterPartyPrice,
         isPublished,
         isCanceled,
       } = req.body
@@ -58,6 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { id },
         data: {
           title,
+          companyName: companyName || null,
           description,
           location,
           address,
@@ -66,6 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           duration: duration ? parseInt(duration, 10) : null,
           capacity: capacity ? parseInt(capacity, 10) : 20,
           price: parseFloat(price),
+          hasAfterParty: hasAfterParty ?? false,
+          afterPartyPrice: afterPartyPrice ? parseFloat(afterPartyPrice) : null,
           isPublished: isPublished ?? false,
           isCanceled: isCanceled ?? false,
         },

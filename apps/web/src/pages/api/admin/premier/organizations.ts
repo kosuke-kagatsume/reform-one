@@ -99,6 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           slug: org.slug,
           type: org.type,
           createdAt: org.createdAt,
+          isExistingSubscriber: (org as any).isExistingSubscriber ?? false,
           subscription: subscription ? {
             ...subscription,
             daysUntilExpiration,

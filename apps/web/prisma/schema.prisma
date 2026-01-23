@@ -10,21 +10,22 @@ datasource db {
 
 // Organizations
 model Organization {
-  id                String   @id @default(cuid())
-  name              String
-  slug              String   @unique
-  type              String   @default("CUSTOMER") // REFORM_COMPANY, CUSTOMER
-  domainRestriction String   @default("[]") // JSON string for SQLite
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  type                 String   @default("CUSTOMER") // REFORM_COMPANY, CUSTOMER
+  domainRestriction    String   @default("[]") // JSON string for SQLite
+  isExistingSubscriber Boolean  @default(false) // 既存購読者フラグ（紙・電子版の既存購読者）
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
   users         UserOrganization[]
   subscriptions Subscription[]
   settings      OrganizationSettings?
   invitations   Invitation[]
   auditLogs     AuditLog[]
   departments   Department[]
-  
+
   @@index([slug])
   @@index([type])
 }
@@ -528,20 +529,23 @@ model Newsletter {
 
 // Site Visits (視察会)
 model SiteVisit {
-  id           String   @id @default(cuid())
-  title        String   // e.g., "大阪リフォーム視察ツアー"
-  description  String?
-  location     String   // 開催地
-  address      String?  // 詳細住所
-  imageUrl     String?
-  scheduledAt  DateTime // 開催日時
-  duration     Int?     // 時間（分）
-  capacity     Int      @default(20) // 定員
-  price        Float    // 参加費（円）
-  isPublished  Boolean  @default(false)
-  isCanceled   Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  title           String   // e.g., "第10回 リフォーム現場視察会"
+  companyName     String?  // 訪問先企業名 e.g., "株式会社〇〇工務店"
+  description     String?  // 概要
+  location        String   // 開催地（都市名）
+  address         String?  // 詳細住所
+  imageUrl        String?
+  scheduledAt     DateTime // 開催日時
+  duration        Int?     // 時間（分）
+  capacity        Int      @default(20) // 定員
+  price           Float    // 参加費（円）
+  hasAfterParty   Boolean  @default(false) // 懇親会有無
+  afterPartyPrice Float?   // 懇親会費（円）
+  isPublished     Boolean  @default(false)
+  isCanceled      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   participants SiteVisitParticipant[]
 
@@ -551,16 +555,21 @@ model SiteVisit {
 
 // Site Visit Participants
 model SiteVisitParticipant {
-  id           String   @id @default(cuid())
-  siteVisitId  String
-  userId       String
-  organizationId String?
-  status       String   @default("PENDING") // PENDING, CONFIRMED, CANCELED, ATTENDED
-  paymentStatus String  @default("UNPAID") // UNPAID, PAID, REFUNDED
+  id                    String   @id @default(cuid())
+  siteVisitId           String
+  userId                String
+  organizationId        String?
+  userName              String?  // 参加者名（User情報のキャッシュ）
+  userEmail             String?  // 参加者メール（User情報のキャッシュ）
+  organizationName      String?  // 組織名（キャッシュ）
+  status                String   @default("PENDING") // PENDING, CONFIRMED, CANCELED, ATTENDED
+  paymentStatus         String   @default("UNPAID") // UNPAID, PAID, REFUNDED
+  joinAfterParty        Boolean  @default(false) // 懇親会参加有無
+  afterPartyPaymentStatus String @default("UNPAID") // UNPAID, PAID, REFUNDED
   stripePaymentIntentId String?
-  registeredAt DateTime @default(now())
-  paidAt       DateTime?
-  attendedAt   DateTime?
+  registeredAt          DateTime @default(now())
+  paidAt                DateTime?
+  attendedAt            DateTime?
 
   siteVisit SiteVisit @relation(fields: [siteVisitId], references: [id], onDelete: Cascade)
 

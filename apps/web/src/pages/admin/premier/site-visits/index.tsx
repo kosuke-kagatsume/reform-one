@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import AdminLayout from '@/components/layout/admin-layout'
+import { PremierAdminLayout } from '@/components/layout/premier-admin-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,12 +26,15 @@ import {
   JapaneseYen,
   Building2,
   Edit,
-  Trash2
+  Trash2,
+  Wine,
+  UserCheck
 } from 'lucide-react'
 
 interface SiteVisit {
   id: string
   title: string
+  companyName: string | null
   description: string | null
   location: string
   address: string | null
@@ -40,9 +43,25 @@ interface SiteVisit {
   duration: number | null
   capacity: number
   price: number
+  hasAfterParty: boolean
+  afterPartyPrice: number | null
   isPublished: boolean
   isCanceled: boolean
   participantCount?: number
+  _count?: { participants: number }
+}
+
+interface Participant {
+  id: string
+  userId: string
+  userName: string | null
+  userEmail: string | null
+  organizationName: string | null
+  status: string
+  paymentStatus: string
+  joinAfterParty: boolean
+  afterPartyPaymentStatus: string
+  registeredAt: string
 }
 
 export default function AdminSiteVisitsPage() {
@@ -59,6 +78,7 @@ export default function AdminSiteVisitsPage() {
 
   const [formData, setFormData] = useState({
     title: '',
+    companyName: '',
     description: '',
     location: '',
     address: '',
@@ -67,11 +87,14 @@ export default function AdminSiteVisitsPage() {
     duration: '',
     capacity: '20',
     price: '',
+    hasAfterParty: false,
+    afterPartyPrice: '',
     isPublished: false,
   })
 
   const [editFormData, setEditFormData] = useState({
     title: '',
+    companyName: '',
     description: '',
     location: '',
     address: '',
@@ -80,6 +103,8 @@ export default function AdminSiteVisitsPage() {
     duration: '',
     capacity: '20',
     price: '',
+    hasAfterParty: false,
+    afterPartyPrice: '',
     isPublished: false,
     isCanceled: false,
   })
@@ -120,9 +145,11 @@ export default function AdminSiteVisitsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          companyName: formData.companyName || null,
           duration: formData.duration ? parseInt(formData.duration) : null,
           capacity: parseInt(formData.capacity),
           price: parseFloat(formData.price),
+          afterPartyPrice: formData.afterPartyPrice ? parseFloat(formData.afterPartyPrice) : null,
         }),
       })
 
@@ -130,6 +157,7 @@ export default function AdminSiteVisitsPage() {
         setIsDialogOpen(false)
         setFormData({
           title: '',
+          companyName: '',
           description: '',
           location: '',
           address: '',
@@ -138,6 +166,8 @@ export default function AdminSiteVisitsPage() {
           duration: '',
           capacity: '20',
           price: '',
+          hasAfterParty: false,
+          afterPartyPrice: '',
           isPublished: false,
         })
         fetchSiteVisits()
@@ -160,6 +190,7 @@ export default function AdminSiteVisitsPage() {
       .toISOString().slice(0, 16)
     setEditFormData({
       title: visit.title,
+      companyName: visit.companyName || '',
       description: visit.description || '',
       location: visit.location,
       address: visit.address || '',
@@ -168,6 +199,8 @@ export default function AdminSiteVisitsPage() {
       duration: visit.duration ? String(visit.duration) : '',
       capacity: String(visit.capacity),
       price: String(visit.price),
+      hasAfterParty: visit.hasAfterParty,
+      afterPartyPrice: visit.afterPartyPrice ? String(visit.afterPartyPrice) : '',
       isPublished: visit.isPublished,
       isCanceled: visit.isCanceled,
     })
@@ -185,9 +218,11 @@ export default function AdminSiteVisitsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...editFormData,
+          companyName: editFormData.companyName || null,
           duration: editFormData.duration ? parseInt(editFormData.duration) : null,
           capacity: parseInt(editFormData.capacity),
           price: parseFloat(editFormData.price),
+          afterPartyPrice: editFormData.afterPartyPrice ? parseFloat(editFormData.afterPartyPrice) : null,
         }),
       })
 
@@ -253,16 +288,16 @@ export default function AdminSiteVisitsPage() {
 
   if (isLoading || loading) {
     return (
-      <AdminLayout>
+      <PremierAdminLayout>
         <div className="flex items-center justify-center h-64">
           <p className="text-slate-600">読み込み中...</p>
         </div>
-      </AdminLayout>
+      </PremierAdminLayout>
     )
   }
 
   return (
-    <AdminLayout>
+    <PremierAdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -293,6 +328,15 @@ export default function AdminSiteVisitsPage() {
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       required
                       placeholder="第10回 リフォーム現場視察会"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="companyName">視察先企業名</Label>
+                    <Input
+                      id="companyName"
+                      value={formData.companyName}
+                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                      placeholder="株式会社〇〇リフォーム"
                     />
                   </div>
                   <div>
@@ -381,6 +425,29 @@ export default function AdminSiteVisitsPage() {
                         placeholder="5000"
                       />
                     </div>
+                  </div>
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="hasAfterParty"
+                        checked={formData.hasAfterParty}
+                        onCheckedChange={(checked) => setFormData({ ...formData, hasAfterParty: checked })}
+                      />
+                      <Label htmlFor="hasAfterParty">懇親会あり</Label>
+                    </div>
+                    {formData.hasAfterParty && (
+                      <div>
+                        <Label htmlFor="afterPartyPrice">懇親会費（円）</Label>
+                        <Input
+                          id="afterPartyPrice"
+                          type="number"
+                          value={formData.afterPartyPrice}
+                          onChange={(e) => setFormData({ ...formData, afterPartyPrice: e.target.value })}
+                          min="0"
+                          placeholder="3000"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -483,7 +550,20 @@ export default function AdminSiteVisitsPage() {
                         {visit.isCanceled && (
                           <Badge className="bg-red-100 text-red-700">中止</Badge>
                         )}
+                        {visit.hasAfterParty && (
+                          <Badge className="bg-purple-100 text-purple-700">
+                            <Wine className="h-3 w-3 mr-1" />
+                            懇親会あり
+                          </Badge>
+                        )}
                       </div>
+
+                      {visit.companyName && (
+                        <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
+                          <Building2 className="h-4 w-4" />
+                          <span className="font-medium">{visit.companyName}</span>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-600">
                         <div className="flex items-center gap-2">
@@ -501,11 +581,22 @@ export default function AdminSiteVisitsPage() {
                         <div className="flex items-center gap-2">
                           <JapaneseYen className="h-4 w-4" />
                           <span>¥{formatPrice(visit.price)}</span>
+                          {visit.hasAfterParty && visit.afterPartyPrice && (
+                            <span className="text-purple-600">（懇親会: ¥{formatPrice(visit.afterPartyPrice)}）</span>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/admin/premier/site-visits/${visit.id}/participants`)}
+                      >
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        参加者
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleEdit(visit)}>
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -538,6 +629,15 @@ export default function AdminSiteVisitsPage() {
                     value={editFormData.title}
                     onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-companyName">視察先企業名</Label>
+                  <Input
+                    id="edit-companyName"
+                    value={editFormData.companyName}
+                    onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
+                    placeholder="株式会社〇〇リフォーム"
                   />
                 </div>
                 <div>
@@ -621,6 +721,29 @@ export default function AdminSiteVisitsPage() {
                     />
                   </div>
                 </div>
+                <div className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="edit-hasAfterParty"
+                      checked={editFormData.hasAfterParty}
+                      onCheckedChange={(checked) => setEditFormData({ ...editFormData, hasAfterParty: checked })}
+                    />
+                    <Label htmlFor="edit-hasAfterParty">懇親会あり</Label>
+                  </div>
+                  {editFormData.hasAfterParty && (
+                    <div>
+                      <Label htmlFor="edit-afterPartyPrice">懇親会費（円）</Label>
+                      <Input
+                        id="edit-afterPartyPrice"
+                        type="number"
+                        value={editFormData.afterPartyPrice}
+                        onChange={(e) => setEditFormData({ ...editFormData, afterPartyPrice: e.target.value })}
+                        min="0"
+                        placeholder="3000"
+                      />
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -672,6 +795,6 @@ export default function AdminSiteVisitsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </AdminLayout>
+    </PremierAdminLayout>
   )
 }

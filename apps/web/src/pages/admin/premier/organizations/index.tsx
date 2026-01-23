@@ -32,7 +32,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Send
+  Send,
+  Percent
 } from 'lucide-react'
 
 interface Organization {
@@ -41,6 +42,7 @@ interface Organization {
   slug: string
   type: string
   createdAt: string
+  isExistingSubscriber: boolean
   subscription: {
     id: string
     planType: string
@@ -457,6 +459,12 @@ export default function OrganizationsPage() {
                               <PlanBadge plan={org.subscription.planType} />
                             )}
                             {getStatusBadge(org)}
+                            {org.isExistingSubscriber && (
+                              <Badge className="bg-purple-100 text-purple-700 border-purple-300">
+                                <Percent className="h-3 w-3 mr-1" />
+                                既存購読者
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-4 text-sm text-slate-500 mt-1 flex-wrap">
                             {org.subscription && (

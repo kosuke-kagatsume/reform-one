@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { name, slug, planType, status, startDate, endDate } = req.body
+    const { name, slug, planType, status, startDate, endDate, isExistingSubscriber } = req.body
 
     try {
       // Update organization
@@ -47,7 +47,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { id },
         data: {
           name,
-          slug
+          slug,
+          isExistingSubscriber: isExistingSubscriber ?? undefined
         }
       })
 

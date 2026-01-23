@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/lib/auth-context'
 import { EmailSendDialog } from '@/components/admin/email-send-dialog'
@@ -26,7 +27,8 @@ import {
   History,
   CheckCircle,
   XCircle,
-  Send
+  Send,
+  Percent
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -77,6 +79,7 @@ interface Organization {
   slug: string
   type: string
   createdAt: string
+  isExistingSubscriber: boolean
   subscriptions: Subscription[]
   users: Member[]
   invitations: Invitation[]
@@ -131,7 +134,8 @@ export default function OrganizationDetailPage() {
     planType: '',
     status: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    isExistingSubscriber: false
   })
 
   useEffect(() => {
@@ -170,7 +174,8 @@ export default function OrganizationDetailPage() {
           planType: activeSubscription?.planType || '',
           status: activeSubscription?.status || '',
           startDate: activeSubscription?.currentPeriodStart?.split('T')[0] || '',
-          endDate: activeSubscription?.currentPeriodEnd?.split('T')[0] || ''
+          endDate: activeSubscription?.currentPeriodEnd?.split('T')[0] || '',
+          isExistingSubscriber: data.organization.isExistingSubscriber || false
         })
       } else {
         setError('組織が見つかりません')
@@ -521,6 +526,27 @@ export default function OrganizationDetailPage() {
                         type="date"
                         value={formData.endDate}
                         onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Percent className="h-5 w-5 text-purple-600" />
+                        <div>
+                          <Label htmlFor="isExistingSubscriber" className="text-base font-medium">
+                            既存購読者（紙面購読者）
+                          </Label>
+                          <p className="text-sm text-slate-600">
+                            ONにすると割引価格が適用されます
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="isExistingSubscriber"
+                        checked={formData.isExistingSubscriber}
+                        onCheckedChange={(checked) => setFormData({ ...formData, isExistingSubscriber: checked })}
                       />
                     </div>
                   </div>

@@ -228,9 +228,15 @@ export default function MembersAdminPage() {
   return (
     <PremierAdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">会員一覧</h1>
-          <p className="text-slate-600">プレミア購読の全会員を管理</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">会員一覧</h1>
+            <p className="text-slate-600">プレミア購読の全会員を管理</p>
+          </div>
+          <Button onClick={() => router.push('/admin/premier/members/send-mail')}>
+            <Mail className="h-4 w-4 mr-2" />
+            会員選択メール送信
+          </Button>
         </div>
 
         {/* Summary Cards - クリックでフィルター適用 */}
