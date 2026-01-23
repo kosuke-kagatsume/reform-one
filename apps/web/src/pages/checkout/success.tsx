@@ -102,8 +102,8 @@ export default function CheckoutSuccessPage() {
               <div className="mt-8 pt-8 border-t border-gray-200">
                 <p className="text-sm text-gray-500">
                   ご不明な点がございましたら、
-                  <a href="mailto:support@reform-one.jp" className="text-blue-600 hover:underline">
-                    support@reform-one.jp
+                  <a href="mailto:premium@the-reform.co.jp" className="text-blue-600 hover:underline">
+                    premium@the-reform.co.jp
                   </a>
                   までお問い合わせください。
                 </p>

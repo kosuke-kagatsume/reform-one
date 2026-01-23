@@ -336,17 +336,27 @@ export default function ArchivesAdminPage() {
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50/50 transition-colors"
                     >
                       <div className="flex items-center gap-4 flex-1">
-                        {archive.thumbnailUrl ? (
-                          <img
-                            src={archive.thumbnailUrl}
-                            alt={archive.title}
-                            className="w-24 h-14 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-24 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded flex items-center justify-center">
+                        <div className="relative w-24 h-14 flex-shrink-0">
+                          {archive.thumbnailUrl ? (
+                            <img
+                              src={archive.thumbnailUrl}
+                              alt={archive.title}
+                              className="w-24 h-14 object-cover rounded"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const fallback = target.nextElementSibling as HTMLElement
+                                if (fallback) fallback.style.display = 'flex'
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="w-24 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded items-center justify-center"
+                            style={{ display: archive.thumbnailUrl ? 'none' : 'flex' }}
+                          >
                             <Video className="h-6 w-6 text-white/80" />
                           </div>
-                        )}
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline">{archive.category.name}</Badge>

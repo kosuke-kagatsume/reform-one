@@ -761,7 +761,7 @@ export default function SecurityPage() {
                 <span>不審なログインやセキュリティに関する問題がある場合</span>
               </div>
               <Button variant="link" asChild className="p-0 h-auto">
-                <a href="mailto:support@the-reform.co.jp">
+                <a href="mailto:premium@the-reform.co.jp">
                   <Mail className="h-4 w-4 mr-1" />
                   サポートに連絡
                 </a>

@@ -13,6 +13,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           description: true,
           sortOrder: true,
           isVisible: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+              color: true
+            }
+          },
           _count: {
             select: {
               seminars: true,
@@ -32,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { name, slug, description, sortOrder } = req.body
+    const { name, slug, description, sortOrder, isVisible, roleId } = req.body
 
     if (!name || !slug) {
       return res.status(400).json({ error: 'Name and slug are required' })
@@ -44,7 +51,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name,
           slug,
           description,
-          sortOrder: sortOrder || 0
+          sortOrder: sortOrder || 0,
+          isVisible: isVisible !== false, // デフォルトtrue
+          ...(roleId ? { roleId } : {})
         }
       })
 

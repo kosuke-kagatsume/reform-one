@@ -96,7 +96,7 @@ export function FAQDropdown() {
                     ご利用ガイド
                   </Link>
                   <a
-                    href="mailto:support@the-reform.co.jp"
+                    href="mailto:premium@the-reform.co.jp"
                     className="flex items-center gap-2 p-2 bg-white rounded-lg hover:bg-blue-50 text-sm text-slate-600 hover:text-blue-600 transition-colors"
                   >
                     <Mail className="h-4 w-4" />
@@ -156,7 +156,7 @@ export function FAQDropdown() {
                     電話
                   </a>
                   <a
-                    href="mailto:support@the-reform.co.jp"
+                    href="mailto:premium@the-reform.co.jp"
                     className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 rounded-lg text-sm text-white hover:bg-blue-700 transition-colors"
                   >
                     <MessageCircle className="h-4 w-4" />

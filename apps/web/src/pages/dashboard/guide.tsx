@@ -310,7 +310,7 @@ export default function GuidePage() {
                   <span>03-6826-5735</span>
                 </a>
                 <a
-                  href="mailto:support@the-reform.co.jp"
+                  href="mailto:premium@the-reform.co.jp"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700"
                 >
                   <Mail className="h-4 w-4" />

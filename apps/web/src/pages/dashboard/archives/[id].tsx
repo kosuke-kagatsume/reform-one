@@ -154,6 +154,10 @@ export default function ArchiveDetailPage() {
                 onLoad={recordView}
               />
             </div>
+            {/* YouTube埋め込みが表示できない場合の案内 */}
+            <p className="text-xs text-slate-500">
+              ※ 動画が表示されない場合は、右側の「YouTubeで視聴」ボタンをお使いください。
+            </p>
 
             <div>
               <Badge variant="outline" className="mb-2">

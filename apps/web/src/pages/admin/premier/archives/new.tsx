@@ -69,12 +69,13 @@ export default function NewArchivePage() {
     setFormData(prev => ({ ...prev, youtubeUrl: url }))
 
     // Auto-generate thumbnail from YouTube URL
+    // hqdefault.jpg is more reliable than maxresdefault.jpg (which may not exist for all videos)
     const videoId = extractYouTubeId(url)
     if (videoId && !formData.thumbnailUrl) {
       setFormData(prev => ({
         ...prev,
         youtubeUrl: url,
-        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
       }))
     }
   }

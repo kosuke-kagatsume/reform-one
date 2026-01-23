@@ -1,0 +1,4120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model ab_tests {
+  id           String    @id
+  tenantId     String    @default("demo-tenant")
+  name         String
+  description  String?
+  variantA     Json
+  variantB     Json
+  winnerMetric String    @default("open_rate")
+  status       String    @default("draft")
+  startDate    DateTime?
+  endDate      DateTime?
+  winnerId     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+  createdBy    String    @default("system")
+
+  @@index([status])
+  @@index([tenantId])
+}
+
+model account_mappings {
+  id              String   @id
+  tenantId        String   @default("demo-tenant")
+  drmAccountCode  String
+  drmAccountName  String
+  provider        String
+  externalId      String?
+  externalCode    String
+  externalName    String
+  externalSubCode String?
+  externalSubName String?
+  defaultTaxCode  String?
+  defaultTaxName  String?
+  isActive        Boolean  @default(true)
+  isAutoMapped    Boolean  @default(false)
+  mappedAt        DateTime @default(now())
+  mappedBy        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+
+  @@unique([tenantId, drmAccountCode, provider])
+  @@index([tenantId, isActive])
+  @@index([tenantId, provider])
+}
+
+model account_subject_master {
+  id                  String                @id
+  tenantId            String
+  code                String
+  name                String
+  level               Int
+  parentCode          String?
+  accountingCode      String?
+  category            String
+  description         String?
+  isActive            Boolean               @default(true)
+  displayOrder        Int
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  createdBy           String                @default("system")
+  updatedBy           String?
+  cost_subject_master cost_subject_master[]
+  ledger_expenses     ledger_expenses[]
+  orders              orders[]
+
+  @@unique([tenantId, code])
+  @@index([category])
+  @@index([displayOrder])
+  @@index([isActive])
+  @@index([level])
+  @@index([parentCode])
+  @@index([tenantId, category])
+  @@index([tenantId])
+  @@index([tenantId, level])
+}
+
+model accounting_integrations {
+  id              String    @id
+  tenantId        String    @unique
+  provider        String    @default("none")
+  accessToken     String?
+  refreshToken    String?
+  tokenExpiresAt  DateTime?
+  companyId       String?
+  companyName     String?
+  fiscalYears     Json?
+  autoSyncEnabled Boolean   @default(false)
+  syncFrequency   String    @default("manual")
+  lastSyncAt      DateTime?
+  syncStatus      String    @default("idle")
+  lastSyncError   String?
+  syncJournals    Boolean   @default(true)
+  syncAccounts    Boolean   @default(true)
+  syncPartners    Boolean   @default(true)
+  syncDepartments Boolean   @default(true)
+  yayoiVersion    String?
+  yayoiExportPath String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  createdBy       String?
+  updatedBy       String?
+}
+
+model accounts {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  users             users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model activity_attachments {
+  id               String           @id
+  tenantId         String
+  activityId       String
+  fileName         String
+  fileType         String
+  fileSize         Int
+  fileUrl          String
+  thumbnailUrl     String?
+  description      String?
+  category         String?
+  duration         Int?
+  transcription    String?
+  deletedAt        DateTime?
+  deletedBy        String?
+  createdAt        DateTime         @default(now())
+  createdBy        String
+  updatedAt        DateTime
+  sales_activities sales_activities @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+  @@index([category])
+  @@index([deletedAt])
+  @@index([fileType])
+  @@index([tenantId])
+}
+
+model activity_type_masters {
+  id           String   @id
+  tenantId     String
+  code         String
+  name         String
+  icon         String
+  color        String
+  category     String
+  description  String?
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  createdBy    String
+  updatedAt    DateTime
+  updatedBy    String?
+
+  @@unique([tenantId, code])
+  @@index([category])
+  @@index([displayOrder])
+  @@index([isActive])
+  @@index([tenantId])
+}
+
+model admin_notification_settings {
+  id                   String   @id
+  tenantId             String   @unique
+  emailEnabled         Boolean
+  emailRecipients      String[]
+  slackEnabled         Boolean
+  slackWebhookUrl      String?
+  slackChannel         String?
+  chatworkEnabled      Boolean
+  chatworkApiToken     String?
+  chatworkRoomId       String?
+  lineworksEnabled     Boolean
+  lineworksBotId       String?
+  lineworksBotSecret   String?
+  lineworksAccessToken String?
+  lineworksChannelId   String?
+  notifications        Json
+  timing               Json
+  recipients           Json
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+  createdBy            String   @default("system")
+  updatedBy            String?
+
+  @@index([tenantId])
+}
+
+model api_keys {
+  id          String    @id
+  tenantId    String    @default("demo-tenant")
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  description String?
+  permissions String[]
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  usageCount  Int       @default(0)
+  ipWhitelist String[]
+  createdAt   DateTime  @default(now())
+  createdBy   String?
+  updatedAt   DateTime
+
+  @@index([isActive])
+  @@index([keyHash])
+  @@index([tenantId])
+}
+
+model api_metrics {
+  id           String   @id
+  tenantId     String
+  endpoint     String
+  method       String
+  responseTime Int
+  statusCode   Int
+  userId       String?
+  errorMessage String?
+  timestamp    DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([endpoint])
+  @@index([tenantId, endpoint])
+  @@index([tenantId])
+  @@index([tenantId, timestamp])
+  @@index([timestamp])
+}
+
+model approval_actions {
+  id                 String             @id
+  instanceId         String
+  stepOrder          Int?
+  actionType         ApprovalActionType
+  actorId            String
+  actorName          String
+  comment            String?
+  createdAt          DateTime           @default(now())
+  approval_instances approval_instances @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([actionType])
+  @@index([instanceId])
+}
+
+model approval_condition {
+  id                   String               @id
+  flowId               String
+  conditionGroup       String               @default("default")
+  logicalOperator      String               @default("AND")
+  field                String
+  operator             String
+  value                String
+  description          String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime
+  approval_flow_master approval_flow_master @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@index([flowId])
+}
+
+model approval_flow_master {
+  id                       String               @id
+  tenantId                 String
+  name                     String
+  description              String?
+  type                     String
+  documentType             String
+  triggers                 Json?
+  useOrganizationHierarchy Boolean              @default(false)
+  organizationLevels       Int?
+  conditionalFlows         Json?
+  isActive                 Boolean              @default(true)
+  isDefault                Boolean              @default(false)
+  priority                 Int                  @default(0)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime
+  createdBy                String               @default("system")
+  updatedBy                String?
+  approval_condition       approval_condition[]
+  approval_instances       approval_instances[]
+  approval_step            approval_step[]
+
+  @@unique([tenantId, name])
+  @@index([documentType])
+  @@index([isActive])
+  @@index([isDefault])
+  @@index([tenantId, documentType])
+  @@index([tenantId])
+}
+
+model approval_instance_steps {
+  id                 String             @id
+  instanceId         String
+  stepOrder          Int
+  approverType       String
+  approverId         String?
+  approverName       String?
+  status             ApprovalStepStatus @default(waiting)
+  approvedAt         DateTime?
+  approvedBy         String?
+  comment            String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  approval_instances approval_instances @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, stepOrder])
+  @@index([instanceId])
+  @@index([status])
+}
+
+model approval_instances {
+  id                      String                    @id
+  tenantId                String                    @default("demo-tenant")
+  flowId                  String
+  documentType            String
+  documentId              String
+  documentNo              String?
+  status                  ApprovalInstanceStatus    @default(pending)
+  requesterId             String
+  requesterName           String
+  requestComment          String?
+  amount                  BigInt                    @default(0)
+  customerId              String?
+  customerName            String?
+  currentStep             Int                       @default(1)
+  completedAt             DateTime?
+  completedBy             String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  approval_actions        approval_actions[]
+  approval_instance_steps approval_instance_steps[]
+  approval_flow_master    approval_flow_master      @relation(fields: [flowId], references: [id])
+
+  @@index([documentType, documentId])
+  @@index([flowId])
+  @@index([requesterId])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model approval_step {
+  id                    String               @id
+  flowId                String
+  stepNumber            Int
+  name                  String
+  description           String?
+  mode                  String
+  approvers             Json
+  approverSelectionMode String               @default("organizational")
+  requiredApprovals     Int?
+  timeoutHours          Int?
+  allowDelegate         Boolean              @default(false)
+  allowSkip             Boolean              @default(false)
+  dependsOnPreviousStep Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime
+  approval_flow_master  approval_flow_master @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@index([flowId])
+  @@index([stepNumber])
+}
+
+model assignment_history {
+  id            String   @id
+  tenantId      String   @default("demo-tenant")
+  opportunityId String
+  customerId    String
+  fromUserId    String?
+  fromUserName  String?
+  toUserId      String
+  toUserName    String
+  reason        String?
+  notes         String?
+  assignedAt    DateTime @default(now())
+  assignedBy    String
+  createdAt     DateTime @default(now())
+
+  @@index([assignedAt])
+  @@index([customerId])
+  @@index([opportunityId])
+  @@index([tenantId])
+  @@index([toUserId])
+}
+
+model audit_events {
+  id         String   @id
+  tenantId   String
+  eventType  String
+  entityType String
+  entityId   String
+  action     String
+  changes    String?
+  userId     String
+  userName   String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([eventType])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model audit_logs {
+  id         String   @id
+  tenantId   String
+  userId     String
+  action     String
+  resource   String
+  resourceId String?
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  tenants    tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([resource])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model backup_history {
+  id               String          @id
+  tenantId         String
+  backupSettingsId String
+  backupType       String
+  backupStatus     String
+  backupSize       Int?
+  backupDuration   Int?
+  backupFileName   String?
+  backupFilePath   String?
+  backupFileHash   String?
+  startedAt        DateTime
+  completedAt      DateTime?
+  errorMessage     String?
+  errorDetails     String?
+  restoredAt       DateTime?
+  restoredBy       String?
+  createdAt        DateTime        @default(now())
+  backup_settings  backup_settings @relation(fields: [backupSettingsId], references: [id], onDelete: Cascade)
+
+  @@index([backupSettingsId])
+  @@index([backupStatus])
+  @@index([startedAt])
+  @@index([tenantId])
+}
+
+model backup_settings {
+  id                 String           @id
+  tenantId           String           @unique
+  autoBackupEnabled  Boolean          @default(true)
+  backupFrequency    String           @default("daily")
+  backupTime         String           @default("02:00")
+  backupDayOfWeek    Int?             @default(0)
+  backupDayOfMonth   Int?             @default(1)
+  retentionDays      Int              @default(30)
+  maxBackupCount     Int              @default(10)
+  compressionEnabled Boolean          @default(true)
+  encryptionEnabled  Boolean          @default(true)
+  storageProvider    String           @default("local")
+  storagePath        String?
+  storageAccessKey   String?
+  storageSecretKey   String?
+  storageBucket      String?
+  storageRegion      String?
+  notifyOnSuccess    Boolean          @default(false)
+  notifyOnFailure    Boolean          @default(true)
+  notificationEmail  String?
+  notificationSlack  String?
+  lastBackupAt       DateTime?
+  lastBackupStatus   String?
+  lastBackupSize     Int?
+  lastBackupError    String?
+  createdAt          DateTime         @default(now())
+  createdBy          String
+  updatedAt          DateTime
+  updatedBy          String?
+  backup_history     backup_history[]
+
+  @@index([lastBackupAt])
+  @@index([tenantId])
+}
+
+model billing_settings {
+  id                       String   @id
+  tenantId                 String   @unique
+  billingTiming            String   @default("milestone")
+  splitPatterns            Json     @default("[{\"id\": \"pattern1\", \"name\": \"3分割（30-40-30）\", \"percentages\": [30, 40, 30]}, {\"id\": \"pattern2\", \"name\": \"4分割（10-30-30-30）\", \"percentages\": [10, 30, 30, 30]}, {\"id\": \"pattern3\", \"name\": \"2分割（50-50）\", \"percentages\": [50, 50]}]")
+  activePatternId          String   @default("pattern1")
+  autoSendInvoice          Boolean  @default(true)
+  autoSendReminder         Boolean  @default(true)
+  reminderDaysBefore       Int      @default(3)
+  includeProgressInInvoice Boolean  @default(true)
+  updatedBy                String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime
+
+  @@index([tenantId])
+}
+
+model cache_metrics {
+  id          String   @id
+  tenantId    String
+  namespace   String
+  hits        Int      @default(0)
+  misses      Int      @default(0)
+  hitRate     Float    @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([namespace])
+  @@index([tenantId])
+  @@index([tenantId, namespace])
+  @@index([tenantId, timestamp])
+  @@index([timestamp])
+}
+
+model campaigns {
+  id            String         @id
+  tenantId      String         @default("demo-tenant")
+  name          String
+  description   String?
+  type          CampaignType
+  status        CampaignStatus @default(draft)
+  targetSegment String         @default("all")
+  startDate     DateTime
+  endDate       DateTime
+  budget        BigInt         @default(0)
+  actualCost    BigInt         @default(0)
+  targetCount   Int            @default(0)
+  targeting     Json?
+  content       Json?
+  metrics       Json?
+  workTypeTags  Json?
+  createdAt     DateTime       @default(now())
+  createdBy     String         @default("system")
+  updatedAt     DateTime
+  updatedBy     String?
+
+  @@index([startDate, endDate])
+  @@index([status])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([type])
+}
+
+model case_attachments {
+  id              String   @id
+  caseId          String
+  filename        String
+  filesize        Int
+  mimetype        String
+  url             String
+  uploadedById    String
+  uploadedByName  String
+  uploadedByEmail String?
+  uploadedAt      DateTime @default(now())
+  cases           cases    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+model case_events {
+  id              String        @id
+  caseId          String
+  type            CaseEventType
+  actorId         String
+  actorName       String
+  actorEmail      String?
+  actorDepartment String?
+  content         String?
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  cases           cases         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model case_relations {
+  id           String   @id
+  caseId       String
+  relationType String
+  objectId     String
+  objectTitle  String
+  createdAt    DateTime @default(now())
+  cases        cases    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([objectId])
+  @@index([relationType])
+}
+
+model case_watchers {
+  id         String   @id
+  caseId     String
+  userId     String
+  userName   String
+  userEmail  String?
+  department String?
+  addedAt    DateTime @default(now())
+  cases      cases    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, userId])
+  @@index([caseId])
+  @@index([userId])
+}
+
+model cases {
+  id                     String             @id
+  tenantId               String             @default("demo-tenant")
+  caseType               CaseType
+  source                 CaseSource
+  title                  String
+  description            String
+  status                 CaseStatus         @default(new)
+  severity               CaseSeverity
+  urgency                CaseUrgency
+  priority               CasePriority
+  assigneeId             String?
+  assigneeName           String?
+  assigneeEmail          String?
+  assigneeDepartment     String?
+  createdById            String
+  createdByName          String
+  createdByEmail         String?
+  createdByDepartment    String?
+  relatedCustomerId      String?
+  relatedCustomerName    String?
+  relatedCustomerCompany String?
+  relatedCustomerPhone   String?
+  relatedCustomerEmail   String?
+  relatedProjectId       String?
+  relatedProjectName     String?
+  channel                CaseChannel
+  tags                   String[]           @default([])
+  sentiment              CaseSentiment?
+  customerAgreedAt       DateTime?
+  compensationAmount     BigInt?
+  refundAmount           BigInt?
+  rootCause              String?
+  permanentFix           String?
+  releaseId              String?
+  slaStatus              SLAStatus          @default(safe)
+  slaPriority            CasePriority?
+  slaFirstResponseMin    Int                @default(60)
+  slaMtaMin              Int                @default(60)
+  slaTempFixHours        Int                @default(4)
+  slaPermFixHours        Int                @default(72)
+  slaFirstResponseDue    DateTime?
+  slaFirstResponseAt     DateTime?
+  slaResolutionDue       DateTime?
+  slaResolvedAt          DateTime?
+  slaRemainingMin        Int                @default(0)
+  slaViolationCount      Int                @default(0)
+  acknowledgedAt         DateTime?
+  closedAt               DateTime?
+  reopenCount            Int                @default(0)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime
+  case_attachments       case_attachments[]
+  case_events            case_events[]
+  case_relations         case_relations[]
+  case_watchers          case_watchers[]
+
+  @@index([assigneeId])
+  @@index([caseType])
+  @@index([priority])
+  @@index([relatedCustomerId])
+  @@index([relatedProjectId])
+  @@index([slaStatus])
+  @@index([status])
+  @@index([tenantId, assigneeId])
+  @@index([tenantId, caseType])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model company_branding {
+  id                 String   @id
+  tenantId           String   @unique @default("demo-tenant")
+  companyName        String
+  companyNameEn      String?
+  postalCode         String?
+  address            String?
+  phone              String?
+  fax                String?
+  email              String?
+  website            String?
+  registrationNumber String?
+  licensePlate       String?
+  taxNumber          String?
+  logoUrl            String?
+  logoWidth          Int      @default(150)
+  logoHeight         Int      @default(50)
+  logoPosition       String   @default("left")
+  colorTheme         Json     @default("{\"text\": \"#1F2937\", \"accent\": \"#818CF8\", \"border\": \"#E5E7EB\", \"primary\": \"#4F46E5\", \"secondary\": \"#6366F1\", \"background\": \"#FFFFFF\"}")
+  primaryFont        String   @default("Noto Sans JP, sans-serif")
+  secondaryFont      String   @default("Noto Sans JP, sans-serif")
+  fontSize           Json     @default("{\"body\": 12, \"small\": 10, \"title\": 24, \"header\": 18}")
+  sealImageUrl       String?
+  signatureImageUrl  String?
+  bankInfo           Json?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+  createdBy          String   @default("system")
+  updatedBy          String?
+
+  @@index([tenantId])
+}
+
+model construction_categories {
+  id                          String                        @id
+  tenantId                    String
+  code                        String
+  name                        String
+  displayOrder                Int                           @default(0)
+  description                 String?
+  isActive                    Boolean                       @default(true)
+  createdAt                   DateTime                      @default(now())
+  createdBy                   String
+  updatedAt                   DateTime
+  updatedBy                   String?
+  construction_sub_categories construction_sub_categories[]
+  product_masters             product_masters[]
+  work_item_masters           work_item_masters[]
+
+  @@unique([tenantId, code])
+  @@index([displayOrder])
+  @@index([isActive])
+  @@index([tenantId])
+}
+
+model construction_ledgers {
+  id                      String                @id
+  tenantId                String
+  customerId              String
+  propertyId              String?
+  ledgerNo                String
+  constructionName        String
+  constructionType        String
+  constructionAddress     String?
+  constructionCity        String?
+  constructionPrefecture  String?
+  scheduledStartDate      String?
+  scheduledEndDate        String?
+  actualStartDate         String?
+  actualEndDate           String?
+  contractDate            String?
+  deliveryDate            String?
+  totalContractAmount     BigInt                @default(0)
+  totalTaxAmount          BigInt                @default(0)
+  totalContractWithTax    BigInt                @default(0)
+  budgetMaterialCost      BigInt                @default(0)
+  budgetLaborCost         BigInt                @default(0)
+  budgetSubcontractCost   BigInt                @default(0)
+  budgetExpenseCost       BigInt                @default(0)
+  budgetTotal             BigInt                @default(0)
+  expectedProfit          BigInt                @default(0)
+  expectedProfitRate      Float                 @default(0)
+  actualMaterialCost      BigInt                @default(0)
+  actualLaborCost         BigInt                @default(0)
+  actualSubcontractCost   BigInt                @default(0)
+  actualExpenseCost       BigInt                @default(0)
+  actualTotal             BigInt                @default(0)
+  actualProfit            BigInt                @default(0)
+  actualProfitRate        Float                 @default(0)
+  progressRate            Int                   @default(0)
+  completedWorkValue      BigInt                @default(0)
+  status                  String                @default("planning")
+  salesPersonId           String?
+  salesPersonName         String?
+  constructionManagerId   String?
+  constructionManagerName String?
+  fiscalYear              Int?
+  fiscalHalf              String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime
+  createdBy               String
+  construction_phases     construction_phases[]
+  contract_changes        contract_changes[]
+  contracts               contracts[]
+  ledger_expenses         ledger_expenses[]
+  orders                  orders[]
+  progress_history        progress_history[]
+
+  @@unique([tenantId, ledgerNo])
+  @@index([customerId])
+  @@index([fiscalYear])
+  @@index([status])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, customerId])
+  @@index([tenantId])
+  @@index([tenantId, status, fiscalYear])
+}
+
+model construction_phases {
+  id                   String               @id
+  tenantId             String
+  ledgerId             String
+  phaseName            String
+  displayOrder         Int                  @default(0)
+  scheduledStart       String?
+  scheduledEnd         String?
+  actualStart          String?
+  actualEnd            String?
+  progressRate         Int                  @default(0)
+  status               String               @default("not_started")
+  dwPhaseId            String?
+  notes                String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime
+  createdBy            String
+  construction_ledgers construction_ledgers @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  @@index([ledgerId])
+  @@index([tenantId])
+  @@index([tenantId, ledgerId, displayOrder])
+}
+
+model construction_sub_categories {
+  id                      String                  @id
+  tenantId                String
+  categoryId              String
+  code                    String
+  name                    String
+  displayOrder            Int                     @default(0)
+  description             String?
+  isActive                Boolean                 @default(true)
+  createdAt               DateTime                @default(now())
+  createdBy               String
+  updatedAt               DateTime
+  updatedBy               String?
+  construction_categories construction_categories @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  product_masters         product_masters[]
+  work_item_masters       work_item_masters[]
+
+  @@unique([tenantId, code])
+  @@index([categoryId])
+  @@index([displayOrder])
+  @@index([isActive])
+  @@index([tenantId])
+}
+
+model contacts {
+  id         String    @id
+  tenantId   String
+  customerId String
+  name       String
+  nameKana   String?
+  email      String?
+  phone      String?
+  mobile     String?
+  role       String?
+  isPrimary  Boolean   @default(false)
+  postalCode String?
+  prefecture String?
+  city       String?
+  address1   String?
+  address2   String?
+  deletedAt  DateTime?
+  deletedBy  String?
+  createdAt  DateTime  @default(now())
+  createdBy  String
+  updatedAt  DateTime
+  updatedBy  String?
+  customers  customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([deletedAt])
+  @@index([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, phone])
+}
+
+model contract_changes {
+  id                   String               @id
+  tenantId             String
+  ledgerId             String
+  originalContractId   String
+  changeNo             String
+  changeType           String
+  changeName           String
+  description          String?
+  changeAmount         BigInt
+  taxAmount            BigInt               @default(0)
+  totalChangeAmount    BigInt
+  estimatedCost        BigInt               @default(0)
+  actualCost           BigInt               @default(0)
+  requestedDate        String?
+  requestedBy          String?
+  requestedByName      String?
+  approvalStatus       String               @default("pending")
+  approvedDate         String?
+  approvedBy           String?
+  approvedByName       String?
+  contractStatus       String               @default("draft")
+  signedDate           String?
+  signedDocumentUrl    String?
+  status               String               @default("draft")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime
+  createdBy            String
+  construction_ledgers construction_ledgers @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, changeNo])
+  @@index([ledgerId])
+  @@index([originalContractId])
+  @@index([status])
+  @@index([tenantId])
+  @@index([tenantId, ledgerId, status])
+}
+
+model contract_inspections {
+  id                    String                @id
+  tenantId              String                @default("demo-tenant")
+  contractId            String
+  planId                String
+  stepId                String
+  planName              String
+  stepName              String
+  customerId            String?
+  customerName          String
+  propertyId            String?
+  propertyName          String?
+  scheduledDate         String
+  reminderDate          String?
+  actualDate            String?
+  status                String                @default("pending")
+  assigneeId            String?
+  assigneeName          String?
+  result                String?
+  notes                 String?
+  checkResults          Json?
+  attachments           Json?
+  nextAction            String?
+  nextActionDate        String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime
+  completedAt           DateTime?
+  completedBy           String?
+  inspection_plans      inspection_plans      @relation(fields: [planId], references: [id])
+  inspection_plan_steps inspection_plan_steps @relation(fields: [stepId], references: [id])
+
+  @@index([contractId])
+  @@index([customerId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model contracts {
+  id                    String                @id
+  tenantId              String
+  estimateId            String
+  estimateNo            String
+  contractNo            String
+  contractDate          String
+  projectName           String
+  projectType           String
+  customerId            String?
+  customerName          String
+  customerCompany       String?
+  customerAddress       String?
+  customerPhone         String?
+  customerEmail         String?
+  contractType          String
+  contractAmount        Float
+  taxAmount             Float
+  totalAmount           Float
+  startDate             String
+  endDate               String
+  duration              Int
+  paymentTerms          String
+  paymentSchedule       String?
+  billingType           String?
+  billedAmount          Float?
+  remainingAmount       Float?
+  clauses               String
+  estimateItems         String?
+  status                String
+  approvalStatus        String?
+  approvalFlowId        String?
+  manager               String
+  managerId             String?
+  createdAt             DateTime              @default(now())
+  createdBy             String
+  updatedAt             DateTime
+  updatedBy             String?
+  signedAt              DateTime?
+  completedAt           DateTime?
+  attachments           String?
+  notes                 String?
+  payments              String?
+  completionDate        String?
+  handoverDate          String?
+  inspectionPlanId      String?
+  aftercareAssigneeId   String?
+  aftercareAssigneeName String?
+  ledgerId              String?
+  inspection_plans      inspection_plans?     @relation(fields: [inspectionPlanId], references: [id])
+  construction_ledgers  construction_ledgers? @relation(fields: [ledgerId], references: [id])
+  milestones            milestones[]
+  orders                orders[]
+
+  @@index([contractNo])
+  @@index([customerId])
+  @@index([inspectionPlanId])
+  @@index([ledgerId])
+  @@index([tenantId])
+  @@index([tenantId, status, createdAt])
+}
+
+model cost_settings {
+  id                           String   @id
+  tenantId                     String   @unique
+  costOverrunThreshold         Int      @default(10)
+  profitMarginWarningThreshold Int      @default(5)
+  scheduleDelayThreshold       Int      @default(7)
+  autoApprovalEnabled          Boolean  @default(true)
+  autoApprovalProfitMargin     Int      @default(15)
+  differenceUnit               String   @default("yen")
+  positiveColor                String   @default("#10b981")
+  negativeColor                String   @default("#ef4444")
+  neutralRange                 Int      @default(3)
+  neutralColor                 String   @default("#6b7280")
+  showPredictedProfit          Boolean  @default(true)
+  showCostBreakdown            Boolean  @default(true)
+  highlightRiskyProjects       Boolean  @default(true)
+  updatedBy                    String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime
+
+  @@index([tenantId])
+}
+
+model cost_subject_master {
+  id                     String                  @id
+  tenantId               String
+  code                   String
+  name                   String
+  category               String
+  unitType               String
+  unitPrice              Float
+  accountSubjectId       String?
+  accountSubjectCode     String?
+  accountSubjectName     String?
+  description            String?
+  isActive               Boolean                 @default(true)
+  displayOrder           Int
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime
+  createdBy              String                  @default("system")
+  updatedBy              String?
+  account_subject_master account_subject_master? @relation(fields: [accountSubjectId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([category])
+  @@index([displayOrder])
+  @@index([isActive])
+  @@index([tenantId, category])
+  @@index([tenantId])
+}
+
+model customer_activities {
+  id             String   @id
+  tenantId       String   @default("demo-tenant")
+  customerId     String
+  propertyId     String?
+  type           String
+  title          String
+  content        String?
+  nextAction     String?
+  nextActionDate String?
+  createdBy      String
+  createdByName  String
+  isAutomatic    Boolean  @default(false)
+  isPinned       Boolean  @default(false)
+  duration       Int?
+  outcome        String?
+  attachments    Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model customer_building_info {
+  id             String    @id
+  tenantId       String    @default("demo-tenant")
+  customerId     String    @unique
+  structureType  String?
+  floorCount     Int?
+  totalFloorArea Float?
+  builtYear      Int?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
+  customers      customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([tenantId])
+}
+
+model customer_equipment {
+  id           String    @id
+  tenantId     String    @default("demo-tenant")
+  customerId   String
+  category     String
+  location     String?
+  manufacturer String?
+  modelNumber  String?
+  installYear  Int?
+  usageYears   Int?
+  condition    String    @default("good")
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+  customers    customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([customerId])
+  @@index([tenantId])
+}
+
+model customer_family_members {
+  id                                                            String     @id
+  tenantId                                                      String     @default("demo-tenant")
+  customerId                                                    String
+  name                                                          String
+  relationship                                                  String
+  birthDate                                                     DateTime?
+  livingStatus                                                  String     @default("cohabiting")
+  linkedCustomerId                                              String?
+  notes                                                         String?
+  createdAt                                                     DateTime   @default(now())
+  updatedAt                                                     DateTime
+  customers_customer_family_members_customerIdTocustomers       customers  @relation("customer_family_members_customerIdTocustomers", fields: [customerId], references: [id], onDelete: Cascade)
+  customers_customer_family_members_linkedCustomerIdTocustomers customers? @relation("customer_family_members_linkedCustomerIdTocustomers", fields: [linkedCustomerId], references: [id])
+
+  @@index([customerId])
+  @@index([linkedCustomerId])
+  @@index([tenantId])
+}
+
+model customer_merge_events {
+  id               String   @id
+  tenantId         String
+  sourceCustomerId String
+  targetCustomerId String
+  reason           String
+  confidence       Float?
+  mergedFields     String?
+  conflictFields   String?
+  sourceSnapshot   String?
+  targetSnapshot   String?
+  createdAt        DateTime @default(now())
+  createdBy        String
+
+  @@index([sourceCustomerId])
+  @@index([targetCustomerId])
+  @@index([tenantId])
+}
+
+model customer_referrals {
+  id                                                 String    @id
+  tenantId                                           String    @default("demo-tenant")
+  referrerId                                         String
+  referredId                                         String
+  relationshipType                                   String
+  referralDate                                       DateTime?
+  contractStatus                                     String    @default("pending")
+  thanksSent                                         Boolean   @default(false)
+  notes                                              String?
+  createdAt                                          DateTime  @default(now())
+  updatedAt                                          DateTime
+  customers_customer_referrals_referredIdTocustomers customers @relation("customer_referrals_referredIdTocustomers", fields: [referredId], references: [id], onDelete: Cascade)
+  customers_customer_referrals_referrerIdTocustomers customers @relation("customer_referrals_referrerIdTocustomers", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, referredId])
+  @@index([referredId])
+  @@index([referrerId])
+  @@index([tenantId])
+}
+
+model customer_settings {
+  id                String   @id
+  tenantId          String   @unique
+  numberingFormat   String   @default("{TENANT}-{FY}{MM}-{seq}")
+  numberingStart    Int      @default(1)
+  numberingDigits   Int      @default(5)
+  resetFrequency    String   @default("monthly")
+  autoConvert       Boolean  @default(true)
+  convertTrigger    String   @default("assignment")
+  scoreThreshold    Int      @default(0)
+  requireMinData    Boolean  @default(true)
+  emailMatchConf    Int      @default(100)
+  phoneMatchConf    Int      @default(100)
+  fuzzyMatchConf    Int      @default(80)
+  autoMerge         Boolean  @default(false)
+  vipLtvThreshold   Float    @default(10000000)
+  vipOrderThreshold Int      @default(5)
+  segmentUpdateFreq String   @default("daily")
+  auditRetention    Int      @default(365)
+  auditLogLevel     String   @default("all")
+  createdAt         DateTime @default(now())
+  createdBy         String
+  updatedAt         DateTime
+  updatedBy         String?
+
+  @@index([tenantId])
+}
+
+model customer_tags {
+  id         String     @id
+  customerId String
+  tagId      String
+  assignedAt DateTime   @default(now())
+  assignedBy String?
+  customers  customers  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tag_master tag_master @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, tagId])
+  @@index([customerId])
+  @@index([tagId])
+}
+
+model customers {
+  id                                                                          String                    @id
+  tenantId                                                                    String
+  customerNo                                                                  String                    @unique
+  name                                                                        String
+  nameKana                                                                    String?
+  customerType                                                                String                    @default("individual")
+  companyName                                                                 String?
+  department                                                                  String?
+  position                                                                    String?
+  postalCode                                                                  String?
+  prefecture                                                                  String?
+  city                                                                        String?
+  address1                                                                    String?
+  address2                                                                    String?
+  primaryContactId                                                            String?
+  assignedToId                                                                String?
+  assignedToName                                                              String?
+  assignedAt                                                                  DateTime?
+  segment                                                                     String?
+  status                                                                      String                    @default("active")
+  rank                                                                        String?
+  projectType                                                                 String?
+  projectName                                                                 String?
+  expectedRevenue                                                             Float?
+  originalLeadId                                                              String?
+  totalLeads                                                                  Int                       @default(1)
+  totalRevenue                                                                Float                     @default(0)
+  lifetimeValue                                                               Float                     @default(0)
+  lastOrderDate                                                               DateTime?
+  contractPreference                                                          String                    @default("electronic")
+  deletedAt                                                                   DateTime?
+  deletedBy                                                                   String?
+  createdAt                                                                   DateTime                  @default(now())
+  createdBy                                                                   String
+  updatedAt                                                                   DateTime
+  updatedBy                                                                   String?
+  additionalAddresses                                                         Json?
+  birthDate                                                                   DateTime?
+  employerName                                                                String?
+  employerPosition                                                            String?
+  employerYearsOfService                                                      Int?
+  leadSource                                                                  String?
+  notes                                                                       String?
+  contacts                                                                    contacts[]
+  customer_building_info                                                      customer_building_info?
+  customer_equipment                                                          customer_equipment[]
+  customer_family_members_customer_family_members_customerIdTocustomers       customer_family_members[] @relation("customer_family_members_customerIdTocustomers")
+  customer_family_members_customer_family_members_linkedCustomerIdTocustomers customer_family_members[] @relation("customer_family_members_linkedCustomerIdTocustomers")
+  customer_referrals_customer_referrals_referredIdTocustomers                 customer_referrals[]      @relation("customer_referrals_referredIdTocustomers")
+  customer_referrals_customer_referrals_referrerIdTocustomers                 customer_referrals[]      @relation("customer_referrals_referrerIdTocustomers")
+  customer_tags                                                               customer_tags[]
+  users                                                                       users?                    @relation(fields: [assignedToId], references: [id])
+  invoices                                                                    invoices[]
+  ma_leads                                                                    ma_leads[]
+  opportunities                                                               opportunities[]
+  properties                                                                  properties[]
+
+  @@index([assignedToId])
+  @@index([customerNo])
+  @@index([deletedAt])
+  @@index([tenantId, assignedToId])
+  @@index([tenantId, companyName])
+  @@index([tenantId, deletedAt, updatedAt])
+  @@index([tenantId])
+  @@index([tenantId, nameKana])
+  @@index([tenantId, name])
+  @@index([tenantId, status])
+  @@index([tenantId, status, rank])
+  @@index([tenantId, updatedAt])
+}
+
+model dashboard_access_settings {
+  id                 String   @id
+  tenantId           String   @unique
+  dashboardMinLevels Json     @default("{\"sales\": 3, \"office\": 2, \"manager\": 6, \"executive\": 8, \"marketing\": 5, \"accounting\": 5, \"construction\": 3}")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+  createdBy          String?
+  updatedBy          String?
+
+  @@index([tenantId])
+}
+
+model dashboard_settings {
+  id                    String   @id
+  tenantId              String   @unique
+  salesTargets          Json     @default("{\"yearlyTarget\": 1500, \"monthlyTarget\": 125, \"growthRateTarget\": 10}")
+  grossProfitTargets    Json     @default("{\"marginTarget\": 20, \"monthlyAmountTarget\": 25}")
+  orderTargets          Json     @default("{\"growthRateTarget\": 15, \"monthlyOrdersTarget\": 20, \"conversionRateTarget\": 70}")
+  ordinaryProfitTargets Json     @default("{\"yearlyTarget\": 30, \"monthlyTarget\": 2.5, \"growthRateTarget\": 10}")
+  trendThresholds       Json     @default("{\"warningThreshold\": -3, \"strongGrowthThreshold\": 5, \"consecutiveGrowthMonths\": 3, \"significantGrowthThreshold\": 15}")
+  updatedBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@index([tenantId])
+}
+
+model department_master {
+  id           String   @id
+  tenantId     String
+  code         String
+  name         String
+  shortName    String?
+  parentCode   String?
+  level        Int      @default(1)
+  description  String?
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  createdBy    String   @default("system")
+  updatedBy    String?
+
+  @@unique([tenantId, code])
+  @@index([isActive])
+  @@index([parentCode])
+  @@index([tenantId])
+}
+
+model departments {
+  id                String        @id
+  tenantId          String
+  name              String
+  code              String?
+  type              String
+  level             Int
+  parentId          String?
+  path              String?
+  sortOrder         Int           @default(0)
+  managerId         String?
+  managerName       String?
+  email             String?
+  phone             String?
+  extension         String?
+  postalCode        String?
+  prefecture        String?
+  city              String?
+  address1          String?
+  address2          String?
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  createdBy         String
+  updatedAt         DateTime
+  updatedBy         String?
+  departments       departments?  @relation("departmentsTodepartments", fields: [parentId], references: [id])
+  other_departments departments[] @relation("departmentsTodepartments")
+  users             users[]
+
+  @@unique([tenantId, code])
+  @@index([isActive])
+  @@index([level])
+  @@index([parentId])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model documents {
+  id           String    @id
+  tenantId     String    @default("demo-tenant")
+  fileName     String
+  fileType     String
+  fileSize     Int
+  mimeType     String?
+  storageUrl   String
+  thumbnailUrl String?
+  category     String
+  subCategory  String?
+  description  String?
+  tags         String[]
+  version      Int       @default(1)
+  contractId   String?
+  ledgerId     String?
+  estimateId   String?
+  orderId      String?
+  customerId   String?
+  dwDocumentId String?   @unique
+  dwSyncStatus String    @default("local")
+  dwSyncedAt   DateTime?
+  source       String    @default("drm")
+  createdAt    DateTime  @default(now())
+  createdBy    String?
+  updatedAt    DateTime
+  updatedBy    String?
+
+  @@index([category])
+  @@index([contractId])
+  @@index([dwDocumentId])
+  @@index([dwSyncStatus])
+  @@index([estimateId])
+  @@index([ledgerId])
+  @@index([orderId])
+  @@index([tenantId])
+}
+
+model equipments {
+  id           String     @id
+  tenantId     String
+  propertyId   String
+  category     String
+  manufacturer String
+  productName  String
+  modelNumber  String?
+  installedAt  DateTime
+  warrantyEnd  DateTime?
+  isReplaced   Boolean    @default(false)
+  replacedAt   DateTime?
+  notes        String?
+  deletedAt    DateTime?
+  deletedBy    String?
+  createdAt    DateTime   @default(now())
+  createdBy    String
+  updatedAt    DateTime
+  updatedBy    String?
+  properties   properties @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([deletedAt])
+  @@index([installedAt])
+  @@index([isReplaced])
+  @@index([manufacturer])
+  @@index([propertyId])
+  @@index([tenantId])
+}
+
+model estimate_templates {
+  id            String                   @id
+  tenantId      String                   @default("demo-tenant")
+  name          String
+  description   String?
+  category      EstimateTemplateCategory
+  scope         EstimateTemplateScope    @default(PERSONAL)
+  branch        String?
+  sections      Json                     @default("[]")
+  isDefault     Boolean                  @default(false)
+  usageCount    Int                      @default(0)
+  createdBy     String
+  createdByName String
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime
+
+  @@index([tenantId, category])
+  @@index([tenantId, createdBy])
+  @@index([tenantId, scope])
+}
+
+model estimates {
+  id               String    @id
+  tenantId         String    @default("demo-tenant")
+  type             String    @default("detailed")
+  customerId       String?
+  opportunityId    String?
+  customerName     String?
+  customerCompany  String?
+  customerPhone    String?
+  customerEmail    String?
+  customerAddress  String?
+  projectName      String?
+  projectType      String?
+  status           String    @default("draft")
+  lostReason       String?
+  lostReasonDetail String?
+  totalAmount      BigInt    @default(0)
+  taxAmount        BigInt    @default(0)
+  totalWithTax     BigInt    @default(0)
+  estimatedCost    BigInt    @default(0)
+  estimatedProfit  BigInt    @default(0)
+  items            Json      @default("[]")
+  financialData    Json?
+  loanInfo         Json?
+  buildingArea     Float?
+  unitPrice        Float?
+  version          Int       @default(1)
+  versionLabel     String?
+  parentId         String?
+  proposalType     String    @default("A")
+  validUntil       DateTime?
+  approvedAt       DateTime?
+  approvedBy       String?
+  changeNote       String?
+  createdAt        DateTime  @default(now())
+  createdBy        String    @default("system")
+  updatedAt        DateTime
+  updatedBy        String?
+  estimateNo       String?
+  title            String?
+
+  @@index([customerId])
+  @@index([opportunityId])
+  @@index([status])
+  @@index([tenantId, customerId])
+  @@index([tenantId])
+  @@index([tenantId, opportunityId])
+  @@index([tenantId, type])
+  @@index([type])
+}
+
+model expense_budgets {
+  id                 String             @id
+  tenantId           String
+  fiscalYear         Int
+  month              Int
+  categoryId         String
+  amount             Int
+  memo               String?
+  createdBy          String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  expense_categories expense_categories @relation(fields: [categoryId], references: [id])
+
+  @@unique([tenantId, fiscalYear, month, categoryId])
+  @@index([fiscalYear, month])
+  @@index([tenantId])
+}
+
+model expense_categories {
+  id                        String                      @id
+  tenantId                  String
+  name                      String
+  code                      String
+  type                      String
+  isIncome                  Boolean                     @default(false)
+  defaultPaymentDay         Int
+  isDepartmentLevel         Boolean
+  description               String?
+  displayOrder              Int
+  isActive                  Boolean                     @default(true)
+  createdAt                 DateTime                    @default(now())
+  createdBy                 String
+  updatedAt                 DateTime
+  updatedBy                 String?
+  expense_budgets           expense_budgets[]
+  monthly_expense_forecasts monthly_expense_forecasts[]
+  monthly_expenses          monthly_expenses[]
+
+  @@index([code])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model feedback_attachments {
+  id           String    @id
+  feedbackId   String
+  fileName     String
+  fileType     String
+  fileSize     Int
+  fileUrl      String
+  isScreenshot Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  createdBy    String
+  feedbacks    feedbacks @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+}
+
+model feedback_comments {
+  id         String    @id
+  feedbackId String
+  content    String
+  authorId   String
+  authorName String
+  authorRole String
+  isInternal Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime
+  feedbacks  feedbacks @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([feedbackId])
+}
+
+model feedback_upvotes {
+  id         String    @id
+  feedbackId String
+  userId     String
+  createdAt  DateTime  @default(now())
+  feedbacks  feedbacks @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@unique([feedbackId, userId])
+}
+
+model feedbacks {
+  id                   String                 @id
+  tenantId             String                 @default("demo-tenant")
+  type                 String
+  title                String
+  description          String
+  status               String                 @default("new")
+  priority             String                 @default("medium")
+  upvoteCount          Int                    @default(0)
+  reporterId           String
+  reporterName         String
+  reporterEmail        String?
+  pageUrl              String?
+  browserInfo          String?
+  assigneeId           String?
+  assigneeName         String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  resolvedAt           DateTime?
+  feedback_attachments feedback_attachments[]
+  feedback_comments    feedback_comments[]
+  feedback_upvotes     feedback_upvotes[]
+
+  @@index([createdAt])
+  @@index([reporterId])
+  @@index([status])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model financial_plan_categories {
+  id                            String                          @id
+  tenantId                      String                          @default("demo-tenant")
+  displayOrder                  Int
+  category                      String
+  subtotalLabel                 String?
+  color                         String
+  visible                       Boolean                         @default(true)
+  createdAt                     DateTime                        @default(now())
+  updatedAt                     DateTime
+  financial_plan_category_items financial_plan_category_items[]
+
+  @@index([tenantId, displayOrder])
+  @@index([tenantId])
+}
+
+model financial_plan_category_items {
+  id                        String                    @id
+  categoryId                String
+  displayOrder              Int
+  name                      String
+  visible                   Boolean                   @default(true)
+  includeInContract         Boolean                   @default(false)
+  salesEditable             Boolean                   @default(true)
+  defaultAmount             Int                       @default(0)
+  defaultNote               String?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime
+  financial_plan_categories financial_plan_categories @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId, displayOrder])
+  @@index([categoryId])
+}
+
+model financial_plan_cost_details {
+  id              String    @id
+  financialPlanId String
+  itemCategory    String
+  itemName        String
+  sellingPrice    Int
+  costPrice       Int
+  grossProfit     Int
+  grossProfitRate Float
+  vendorId        String?
+  vendorName      String?
+  orderId         String?
+  orderDate       DateTime?
+  orderStatus     String?
+  note            String?
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+
+  @@index([financialPlanId])
+  @@index([itemCategory])
+}
+
+model financial_plans {
+  id                String   @id
+  tenantId          String   @default("demo-tenant")
+  customerId        String
+  customerName      String
+  versionNumber     Int
+  versionLabel      String
+  previousVersionId String?
+  status            String   @default("draft")
+  buildingArea      Float
+  unitPrice         Float
+  totalAmount       Float
+  financialData     Json
+  loanInfo          Json
+  changeNote        String?
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+
+  @@index([customerId])
+  @@index([status])
+  @@index([tenantId, customerId])
+  @@index([tenantId])
+}
+
+model full_reno_estimate {
+  id                   String                @id
+  tenantId             String                @default("demo-tenant")
+  customerId           String?
+  projectName          String
+  propertyType         String                @default("mansion")
+  version              Int                   @default(1)
+  versionNote          String?
+  parentId             String?
+  propertyAddress      String?
+  defaultCeilingHeight Float                 @default(2400)
+  totalFloorArea       Float                 @default(0)
+  totalWallArea        Float                 @default(0)
+  subtotal             BigInt                @default(0)
+  taxRate              Float                 @default(0.1)
+  taxAmount            BigInt                @default(0)
+  totalAmount          BigInt                @default(0)
+  totalCost            BigInt                @default(0)
+  grossProfit          BigInt                @default(0)
+  grossProfitRate      Float                 @default(0)
+  categorySettings     Json                  @default("{}")
+  status               String                @default("draft")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @default(now())
+  createdBy            String                @default("system")
+  updatedBy            String?
+  full_reno_room       full_reno_room[]
+  full_reno_work_item  full_reno_work_item[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model full_reno_room {
+  id                     String                   @id
+  estimateId             String
+  roomName               String
+  width                  Float
+  depth                  Float
+  ceilingHeight          Float                    @default(2400)
+  floorArea              Float                    @default(0)
+  wallPerimeter          Float                    @default(0)
+  wallArea               Float                    @default(0)
+  ceilingArea            Float                    @default(0)
+  openingArea            Float                    @default(0)
+  netWallArea            Float                    @default(0)
+  displayOrder           Int                      @default(0)
+  notes                  String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @default(now())
+  full_reno_estimate     full_reno_estimate       @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  full_reno_room_opening full_reno_room_opening[]
+
+  @@index([estimateId])
+}
+
+model full_reno_room_opening {
+  id              String          @id
+  roomId          String
+  openingMasterId String?
+  customName      String?
+  width           Int
+  height          Int
+  area            Float
+  quantity        Int             @default(1)
+  displayOrder    Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now())
+  opening_master  opening_master? @relation(fields: [openingMasterId], references: [id])
+  full_reno_room  full_reno_room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([openingMasterId])
+  @@index([roomId])
+}
+
+model full_reno_work_item {
+  id                         String                      @id
+  estimateId                 String
+  workItemMasterId           String?
+  roomId                     String?
+  categoryId                 String?
+  subCategoryId              String?
+  itemName                   String
+  description                String?
+  unit                       String
+  calculationBasis           CalculationBasis
+  baseQuantity               Float                       @default(0)
+  materialCoef               Float                       @default(1.0)
+  laborCoef                  Float                       @default(1.0)
+  quantity                   Float                       @default(0)
+  unitPrice                  Float                       @default(0)
+  amount                     BigInt                      @default(0)
+  costPrice                  Float                       @default(0)
+  totalCost                  BigInt                      @default(0)
+  grossProfit                BigInt                      @default(0)
+  grossProfitRate            Float                       @default(0)
+  isEnabled                  Boolean                     @default(true)
+  displayOrder               Int                         @default(0)
+  notes                      String?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @default(now())
+  full_reno_estimate         full_reno_estimate          @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  full_reno_work_item_master full_reno_work_item_master? @relation(fields: [workItemMasterId], references: [id])
+
+  @@index([estimateId])
+  @@index([roomId])
+  @@index([workItemMasterId])
+}
+
+model full_reno_work_item_master {
+  id                  String                @id
+  tenantId            String                @default("demo-tenant")
+  categoryId          String
+  subCategoryId       String?
+  code                String
+  name                String
+  description         String?
+  productMasterId     String?
+  unit                String
+  unitPrice           Float
+  costPrice           Float                 @default(0)
+  marginRate          Float                 @default(0.35)
+  calculationBasis    CalculationBasis
+  materialCoef        Float                 @default(1.0)
+  laborCoef           Float                 @default(1.0)
+  roofExtensionCoef   Float                 @default(1.0)
+  applicableToMansion Boolean               @default(true)
+  applicableToHouse   Boolean               @default(true)
+  displayOrder        Int                   @default(0)
+  isActive            Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @default(now())
+  createdBy           String                @default("system")
+  updatedBy           String?
+  full_reno_work_item full_reno_work_item[]
+
+  @@unique([tenantId, code])
+  @@index([calculationBasis])
+  @@index([categoryId])
+  @@index([tenantId])
+}
+
+model google_calendar_integrations {
+  id           String   @id
+  userId       String   @unique
+  accessToken  String
+  refreshToken String
+  tokenExpiry  DateTime
+  calendarId   String   @default("primary")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@index([userId])
+}
+
+model hierarchical_targets {
+  id                      String   @id
+  tenantId                String
+  fiscalYear              Int
+  level                   String
+  annualSalesTarget       BigInt
+  annualGrossProfitTarget BigInt
+  annualOrderCountTarget  Int
+  monthlyTargets          Json
+  seasonalPatternId       String?
+  distributionRule        Json
+  status                  String   @default("draft")
+  companyName             String?
+  departmentId            String?
+  departmentName          String?
+  categoryId              String?
+  categoryName            String?
+  categoryCode            String?
+  standardGrossMargin     Float?
+  productId               String?
+  productName             String?
+  productCode             String?
+  personId                String?
+  personName              String?
+  parentId                String?
+  allocationRate          Float?
+  createdBy               String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime
+
+  @@index([fiscalYear])
+  @@index([level])
+  @@index([parentId])
+  @@index([tenantId, fiscalYear, level])
+  @@index([tenantId])
+}
+
+model inspection_plan_steps {
+  id                   String                 @id
+  planId               String
+  name                 String
+  description          String?
+  monthsAfter          Int
+  daysAfter            Int?
+  sortOrder            Int                    @default(0)
+  checkItems           Json?
+  estimatedTime        Int?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  contract_inspections contract_inspections[]
+  inspection_plans     inspection_plans       @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+model inspection_plans {
+  id                    String                  @id
+  tenantId              String                  @default("demo-tenant")
+  name                  String
+  description           String?
+  category              String
+  isActive              Boolean                 @default(true)
+  sortOrder             Int                     @default(0)
+  baseDateType          String                  @default("completion")
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  createdBy             String?
+  updatedBy             String?
+  contract_inspections  contract_inspections[]
+  contracts             contracts[]
+  inspection_plan_steps inspection_plan_steps[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([tenantId])
+}
+
+model invoices {
+  id              String     @id
+  tenantId        String     @default("demo-tenant")
+  invoiceNo       String
+  invoiceDate     String
+  dueDate         String
+  contractId      String?
+  contractNo      String?
+  milestoneId     String?
+  customerId      String?
+  customerName    String
+  customerCompany String?
+  customerAddress String?
+  customerPhone   String?
+  customerEmail   String?
+  projectName     String?
+  projectType     String?
+  items           Json       @default("[]")
+  subtotal        Decimal    @db.Decimal(18, 2)
+  taxRate         Int        @default(10)
+  taxAmount       Decimal    @db.Decimal(18, 2)
+  totalAmount     Decimal    @db.Decimal(18, 2)
+  paymentTerms    String?
+  paymentMethod   String?
+  bankInfo        Json?
+  status          String     @default("draft")
+  paymentStatus   String     @default("unpaid")
+  paidAmount      Decimal    @default(0) @db.Decimal(18, 2)
+  paidDate        String?
+  approvalStatus  String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  sentDate        String?
+  sentMethod      String?
+  sentTo          String?
+  notes           String?
+  internalNotes   String?
+  createdBy       String?
+  managerId       String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime
+  idempotencyKey  String?
+  customers       customers? @relation(fields: [customerId], references: [id])
+  payments        payments[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@unique([tenantId, invoiceNo])
+  @@index([contractId])
+  @@index([customerId])
+  @@index([dueDate])
+  @@index([paymentStatus])
+  @@index([status])
+  @@index([tenantId, customerId])
+  @@index([tenantId])
+  @@index([tenantId, status, dueDate])
+}
+
+model journal_sync_logs {
+  id                String    @id
+  tenantId          String    @default("demo-tenant")
+  provider          String
+  syncDirection     String
+  syncType          String
+  fiscalYear        Int?
+  fiscalMonth       Int?
+  targetPeriodStart String?
+  targetPeriodEnd   String?
+  sourceTable       String?
+  sourceIds         Json?
+  status            String    @default("pending")
+  totalCount        Int       @default(0)
+  successCount      Int       @default(0)
+  failedCount       Int       @default(0)
+  skippedCount      Int       @default(0)
+  errorDetails      Json?
+  exportFileUrl     String?
+  exportFileName    String?
+  exportFileSize    Int?
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  durationMs        Int?
+  executedBy        String
+
+  @@index([tenantId, provider])
+  @@index([tenantId, startedAt])
+  @@index([tenantId, syncType, status])
+}
+
+model journal_sync_queue {
+  id           String    @id
+  tenantId     String    @default("demo-tenant")
+  provider     String
+  syncType     String
+  priority     Int       @default(0)
+  sourceTable  String
+  sourceId     String
+  journalData  Json
+  status       String    @default("pending")
+  retryCount   Int       @default(0)
+  maxRetries   Int       @default(3)
+  errorMessage String?
+  externalId   String?
+  scheduledAt  DateTime  @default(now())
+  processedAt  DateTime?
+  nextRetryAt  DateTime?
+  createdAt    DateTime  @default(now())
+  createdBy    String?
+
+  @@index([sourceTable, sourceId])
+  @@index([status, priority, scheduledAt])
+  @@index([tenantId, provider, status])
+}
+
+model journeys {
+  id          String   @id
+  tenantId    String   @default("demo-tenant")
+  name        String
+  description String?
+  status      String   @default("draft")
+  steps       Json     @default("[]")
+  entryRules  Json?
+  exitRules   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  createdBy   String   @default("system")
+  updatedBy   String?
+
+  @@index([status])
+  @@index([tenantId])
+}
+
+model leads {
+  id           String    @id
+  tenantId     String    @default("demo-tenant")
+  email        String
+  name         String?
+  company      String?
+  source       String?
+  status       String    @default("new")
+  score        Int       @default(0)
+  lastScored   DateTime?
+  activities   Json      @default("[]")
+  customFields Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+
+  @@unique([tenantId, email])
+  @@index([score])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model ledger_expenses {
+  id                     String                  @id
+  tenantId               String
+  ledgerId               String
+  changeId               String?
+  expenseNo              String
+  expenseDate            String
+  category               String
+  subcategory            String
+  description            String
+  amount                 BigInt
+  taxAmount              BigInt                  @default(0)
+  totalAmount            BigInt
+  quantity               Float?
+  unit                   String?
+  unitPrice              BigInt?
+  payeeName              String?
+  payeeType              String?
+  approvalStatus         String                  @default("pending")
+  approvedBy             String?
+  approvedByName         String?
+  approvedAt             DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime
+  createdBy              String
+  createdByName          String?
+  accountSubjectCode     String?
+  accountSubjectId       String?
+  accountSubjectName     String?
+  account_subject_master account_subject_master? @relation(fields: [accountSubjectId], references: [id])
+  construction_ledgers   construction_ledgers    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, expenseNo])
+  @@index([accountSubjectId])
+  @@index([category])
+  @@index([expenseDate])
+  @@index([ledgerId])
+  @@index([tenantId])
+}
+
+model ma_ab_tests {
+  id               String    @id
+  tenantId         String
+  name             String
+  description      String?
+  type             String
+  status           String
+  variants         String
+  trafficSplit     String
+  goalType         String
+  goalValue        String?
+  totalVisitors    Int       @default(0)
+  totalConversions Int       @default(0)
+  conversionRate   Float     @default(0)
+  confidenceLevel  Float?
+  pValue           Float?
+  winner           String?
+  startedAt        DateTime?
+  endedAt          DateTime?
+  createdAt        DateTime  @default(now())
+  createdBy        String
+  updatedAt        DateTime
+  updatedBy        String?
+
+  @@index([status])
+  @@index([tenantId])
+}
+
+model ma_auto_assignment_rules {
+  id                 String   @id
+  tenantId           String
+  name               String
+  description        String?
+  isActive           Boolean  @default(true)
+  priority           Int      @default(0)
+  sourceFilter       String?
+  inquiryTypeFilter  String?
+  prefectureFilter   String?
+  urgencyFilter      String?
+  assignmentType     String
+  targetUserIds      String?
+  activeHoursStart   String?  @default("09:00")
+  activeHoursEnd     String?  @default("18:00")
+  activeDaysOfWeek   String?
+  afterHoursAssignee String?
+  createdAt          DateTime @default(now())
+  createdBy          String
+  updatedAt          DateTime
+  updatedBy          String?
+
+  @@index([isActive])
+  @@index([priority])
+  @@index([tenantId])
+}
+
+model ma_calendar_events {
+  id                 String    @id
+  tenantId           String    @default("demo-tenant")
+  title              String
+  description        String?
+  type               String
+  date               DateTime
+  time               String?
+  duration           Int?
+  location           String?
+  participants       Int?
+  reminder           String?
+  reminderSent       Boolean   @default(false)
+  status             String    @default("scheduled")
+  executedAt         DateTime?
+  actualParticipants Int?
+  result             String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime
+  createdBy          String    @default("system")
+  updatedBy          String?
+
+  @@index([date])
+  @@index([status])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model ma_conversions {
+  id          String   @id
+  tenantId    String
+  leadId      String
+  type        String
+  value       Float?
+  contractId  String?
+  source      String
+  campaign    String?
+  medium      String?
+  convertedAt DateTime
+  createdAt   DateTime @default(now())
+  createdBy   String
+  ma_leads    ma_leads @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([convertedAt])
+  @@index([leadId])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model ma_email_templates {
+  id         String   @id
+  tenantId   String   @default("demo-tenant")
+  name       String
+  subject    String
+  body       String
+  category   String   @default("custom")
+  status     String   @default("draft")
+  variables  Json     @default("[]")
+  usageCount Int      @default(0)
+  openRate   Float    @default(0)
+  clickRate  Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  createdBy  String   @default("system")
+  updatedBy  String?
+
+  @@index([category])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model ma_email_tracking {
+  id             String    @id
+  emailId        String
+  leadId         String?
+  recipientEmail String
+  sent           Boolean   @default(false)
+  opened         Boolean   @default(false)
+  clicked        Boolean   @default(false)
+  bounced        Boolean   @default(false)
+  unsubscribed   Boolean   @default(false)
+  sentAt         DateTime?
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  bouncedAt      DateTime?
+  unsubscribedAt DateTime?
+  clickedLinks   String?
+  createdAt      DateTime  @default(now())
+  ma_emails      ma_emails @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+  @@index([leadId])
+  @@index([recipientEmail])
+}
+
+model ma_emails {
+  id                String              @id
+  tenantId          String
+  subject           String
+  fromName          String
+  fromEmail         String
+  replyTo           String?
+  htmlBody          String
+  textBody          String?
+  templateId        String?
+  status            String
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  segment           String?
+  recipientCount    Int                 @default(0)
+  sentCount         Int                 @default(0)
+  openedCount       Int                 @default(0)
+  clickedCount      Int                 @default(0)
+  bouncedCount      Int                 @default(0)
+  unsubscribedCount Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  createdBy         String
+  updatedAt         DateTime
+  updatedBy         String?
+  ma_email_tracking ma_email_tracking[]
+
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model ma_journey_executions {
+  id           String      @id
+  tenantId     String
+  journeyId    String
+  leadId       String
+  status       String
+  currentStep  Int
+  totalSteps   Int
+  startedAt    DateTime
+  completedAt  DateTime?
+  lastActionAt DateTime?
+  executionLog String?
+  createdAt    DateTime    @default(now())
+  ma_journeys  ma_journeys @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  ma_leads     ma_leads    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId])
+  @@index([journeyId, startedAt])
+  @@index([leadId])
+  @@index([status])
+  @@index([tenantId])
+  @@index([tenantId, journeyId, leadId])
+}
+
+model ma_journeys {
+  id                    String                  @id
+  tenantId              String
+  name                  String
+  description           String?
+  status                String
+  triggerType           String
+  triggerConfig         String
+  steps                 String
+  totalContacts         Int                     @default(0)
+  activeContacts        Int                     @default(0)
+  completedContacts     Int                     @default(0)
+  conversionRate        Float                   @default(0)
+  createdAt             DateTime                @default(now())
+  createdBy             String
+  updatedAt             DateTime
+  updatedBy             String?
+  activatedAt           DateTime?
+  pausedAt              DateTime?
+  ma_journey_executions ma_journey_executions[]
+
+  @@index([status])
+  @@index([tenantId])
+}
+
+model ma_lead_duplicates {
+  id                                                 String    @id
+  tenantId                                           String
+  sourceLeadId                                       String
+  targetLeadId                                       String
+  reason                                             String
+  similarity                                         Float?
+  status                                             String
+  mergedBy                                           String?
+  mergedAt                                           DateTime?
+  createdAt                                          DateTime  @default(now())
+  createdBy                                          String
+  notes                                              String?
+  ma_leads_ma_lead_duplicates_sourceLeadIdToma_leads ma_leads  @relation("ma_lead_duplicates_sourceLeadIdToma_leads", fields: [sourceLeadId], references: [id], onDelete: Cascade)
+  ma_leads_ma_lead_duplicates_targetLeadIdToma_leads ma_leads  @relation("ma_lead_duplicates_targetLeadIdToma_leads", fields: [targetLeadId], references: [id], onDelete: Cascade)
+
+  @@index([sourceLeadId])
+  @@index([status])
+  @@index([targetLeadId])
+  @@index([tenantId])
+}
+
+model ma_leads {
+  id                                                           String                  @id
+  tenantId                                                     String
+  customerId                                                   String?
+  customerName                                                 String
+  customerEmail                                                String?
+  customerPhone                                                String?
+  postalCode                                                   String?
+  prefecture                                                   String?
+  city                                                         String?
+  address1                                                     String?
+  address2                                                     String?
+  source                                                       String
+  status                                                       String
+  score                                                        Int?
+  priority                                                     String?
+  inquiryType                                                  String?
+  budget                                                       Float?
+  inquiryContent                                               String?
+  urgency                                                      String                  @default("normal")
+  urgencyReason                                                String?
+  responseDeadline                                             DateTime?
+  duplicateCheckHash                                           String?
+  relatedLeadIds                                               String?
+  dataCompletenessScore                                        Int                     @default(0)
+  missingFields                                                String?
+  assignedTo                                                   String?
+  assignedAt                                                   DateTime?
+  lostReason                                                   String?
+  lostReasonDetail                                             String?
+  reactivationDate                                             DateTime?
+  tags                                                         String?
+  segment                                                      String?
+  firstTouchDate                                               DateTime?
+  lastActivityDate                                             DateTime?
+  conversionDate                                               DateTime?
+  propertyId                                                   String?
+  convertedAt                                                  DateTime?
+  convertedFromLeadId                                          String?
+  revertedAt                                                   DateTime?
+  createdAt                                                    DateTime                @default(now())
+  createdBy                                                    String
+  updatedAt                                                    DateTime
+  updatedBy                                                    String?
+  tagReviewed                                                  Boolean                 @default(false)
+  ma_conversions                                               ma_conversions[]
+  ma_journey_executions                                        ma_journey_executions[]
+  ma_lead_duplicates_ma_lead_duplicates_sourceLeadIdToma_leads ma_lead_duplicates[]    @relation("ma_lead_duplicates_sourceLeadIdToma_leads")
+  ma_lead_duplicates_ma_lead_duplicates_targetLeadIdToma_leads ma_lead_duplicates[]    @relation("ma_lead_duplicates_targetLeadIdToma_leads")
+  customers                                                    customers?              @relation(fields: [customerId], references: [id])
+  properties                                                   properties?             @relation(fields: [propertyId], references: [id])
+
+  @@index([assignedTo])
+  @@index([convertedAt])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([priority])
+  @@index([propertyId])
+  @@index([responseDeadline])
+  @@index([source])
+  @@index([status])
+  @@index([tenantId, customerEmail])
+  @@index([tenantId, customerPhone])
+  @@index([tenantId, duplicateCheckHash])
+  @@index([tenantId])
+  @@index([tenantId, postalCode, prefecture, city])
+  @@index([tenantId, status, convertedAt])
+  @@index([urgency])
+}
+
+model ma_segments {
+  id             String   @id
+  tenantId       String   @default("demo-tenant")
+  name           String
+  description    String?
+  conditions     Json
+  conditionLogic String   @default("and")
+  leadCount      Int      @default(0)
+  status         String   @default("active")
+  color          String   @default("#3b82f6")
+  icon           String   @default("📊")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  createdBy      String   @default("system")
+  updatedBy      String?
+
+  @@index([status])
+  @@index([tenantId])
+}
+
+model ma_settings {
+  id            String   @id
+  tenantId      String   @unique @default("demo-tenant")
+  scoringRules  Json     @default("[]")
+  emailDelivery Json     @default("{}")
+  webhooks      Json     @default("[]")
+  abTest        Json     @default("{}")
+  journey       Json     @default("{}")
+  roi           Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  createdBy     String   @default("system")
+  updatedBy     String?
+
+  @@index([tenantId])
+}
+
+model ma_webforms {
+  id             String   @id
+  tenantId       String   @default("demo-tenant")
+  name           String
+  description    String?
+  fields         Json
+  status         String   @default("draft")
+  submissions    Int      @default(0)
+  conversions    Int      @default(0)
+  conversionRate Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  createdBy      String   @default("system")
+  updatedBy      String?
+
+  @@index([status])
+  @@index([tenantId])
+}
+
+model marketing_settings {
+  id                  String   @id
+  tenantId            String   @unique @default("demo-tenant")
+  websiteUrl          String?
+  landingPages        Json?
+  socialLinks         Json?
+  portalSites         Json?
+  googleAdsId         String?
+  metaAdsId           String?
+  lineAdsId           String?
+  monthlyAdBudget     Json?
+  scoringRules        Json?
+  autoAssignRules     Json?
+  hotLeadThreshold    Int      @default(80)
+  newLeadNotifyTo     String[]
+  hotLeadNotifyTo     String[]
+  unhandledAlertHours Int      @default(24)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime
+  createdBy           String   @default("system")
+  updatedBy           String?
+
+  @@index([tenantId])
+}
+
+model milestones {
+  id            String    @id
+  contractId    String
+  name          String
+  description   String?
+  percentage    Float
+  amount        Float
+  scheduledDate String
+  actualDate    String?
+  status        String
+  invoiceId     String?
+  order         Int
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  contracts     contracts @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([status])
+}
+
+model monthly_cash_balances {
+  id            String    @id
+  tenantId      String
+  yearMonth     String
+  actualBalance BigInt
+  bankName      String?
+  accountType   String?
+  memo          String?
+  confirmedAt   DateTime?
+  confirmedBy   String?
+  createdAt     DateTime  @default(now())
+  createdBy     String?
+  updatedAt     DateTime
+  updatedBy     String?
+  tenants       tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, yearMonth])
+  @@index([tenantId])
+  @@index([yearMonth])
+}
+
+model monthly_expense_forecasts {
+  id                 String             @id
+  tenantId           String
+  yearMonth          String
+  categoryId         String
+  department         String?
+  amount             Float
+  paymentDay         Int
+  status             String
+  note               String?
+  approvedBy         String?
+  approvedAt         DateTime?
+  createdAt          DateTime           @default(now())
+  createdBy          String
+  updatedAt          DateTime
+  updatedBy          String?
+  expense_categories expense_categories @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([tenantId])
+  @@index([yearMonth])
+}
+
+model monthly_expenses {
+  id                 String             @id
+  tenantId           String
+  fiscalYear         Int
+  month              Int
+  categoryId         String
+  amount             Int
+  dataSource         String             @default("manual")
+  externalId         String?
+  memo               String?
+  createdBy          String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  expense_categories expense_categories @relation(fields: [categoryId], references: [id])
+
+  @@unique([tenantId, fiscalYear, month, categoryId])
+  @@index([fiscalYear, month])
+  @@index([tenantId, categoryId])
+  @@index([tenantId])
+}
+
+model notifications {
+  id           String    @id
+  tenantId     String    @default("demo-tenant")
+  userId       String
+  type         String
+  title        String
+  message      String
+  status       String    @default("unread")
+  priority     String    @default("normal")
+  actionUrl    String?
+  documentType String?
+  documentId   String?
+  senderId     String?
+  senderName   String?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  readAt       DateTime?
+  archivedAt   DateTime?
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([tenantId])
+  @@index([tenantId, userId, status])
+  @@index([type])
+  @@index([userId])
+}
+
+model opening_master {
+  id                     String                   @id
+  tenantId               String                   @default("demo-tenant")
+  code                   String
+  name                   String
+  openingType            String
+  defaultWidth           Int
+  defaultHeight          Int
+  area                   Float
+  displayOrder           Int                      @default(0)
+  isActive               Boolean                  @default(true)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @default(now())
+  createdBy              String                   @default("system")
+  updatedBy              String?
+  full_reno_room_opening full_reno_room_opening[]
+
+  @@unique([tenantId, code])
+  @@index([openingType])
+  @@index([tenantId])
+}
+
+model opportunities {
+  id                     String             @id
+  tenantId               String
+  customerId             String
+  name                   String
+  description            String?
+  estimatedRevenue       Float
+  estimatedCost          Float              @default(0)
+  estimatedProfit        Float
+  isOb                   Boolean            @default(false)
+  stage                  String
+  status                 String             @default("active")
+  probability            Int
+  rank                   String
+  assignedToId           String
+  assignedToName         String?
+  departmentId           String?
+  expectedCloseDate      DateTime?
+  actualCloseDate        DateTime?
+  lostReason             String?
+  lostReasonDetail       String?
+  deletedAt              DateTime?
+  deletedBy              String?
+  createdAt              DateTime           @default(now())
+  createdBy              String
+  updatedAt              DateTime
+  updatedBy              String?
+  budgetCustomAmount     Int?
+  budgetRange            String?
+  decisionMakerInfluence String?
+  decisionMakerName      String?
+  fundingStatus          String?
+  influencerInfluence    String?
+  influencerName         String?
+  users                  users              @relation(fields: [assignedToId], references: [id])
+  customers              customers          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sales_activities       sales_activities[]
+
+  @@index([assignedToId])
+  @@index([customerId])
+  @@index([deletedAt])
+  @@index([departmentId])
+  @@index([expectedCloseDate])
+  @@index([rank])
+  @@index([stage])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model option_work_masters {
+  id           String   @id
+  tenantId     String   @default("demo-tenant")
+  name         String
+  category     String
+  defaultCost  Int
+  defaultPrice Int
+  note         String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model orders {
+  id                     String                  @id
+  tenantId               String
+  ledgerId               String?
+  contractId             String
+  orderNo                String
+  orderDate              String
+  category               String
+  partnerId              String?
+  partnerName            String
+  partnerCompany         String?
+  workItems              Json
+  subtotal               BigInt
+  taxAmount              BigInt
+  totalAmount            BigInt
+  startDate              String?
+  endDate                String?
+  duration               Int?
+  paymentTerms           String?
+  orderDeadline          String?
+  status                 String                  @default("draft")
+  approvalStatus         String                  @default("pending")
+  dwSyncStatus           String                  @default("not_synced")
+  dwOrderId              String?
+  dwSyncedAt             DateTime?
+  dwConstructionId       String?
+  actualSubtotal         BigInt?
+  actualTaxAmount        BigInt?
+  actualTotalAmount      BigInt?
+  varianceAmount         BigInt?
+  varianceRate           Float?
+  completedAt            DateTime?
+  managerId              String?
+  managerName            String?
+  notes                  String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime
+  createdBy              String
+  accountSubjectCode     String?
+  accountSubjectId       String?
+  accountSubjectName     String?
+  account_subject_master account_subject_master? @relation(fields: [accountSubjectId], references: [id])
+  contracts              contracts               @relation(fields: [contractId], references: [id])
+  construction_ledgers   construction_ledgers?   @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  partner_master         partner_master?         @relation(fields: [partnerId], references: [id])
+
+  @@unique([tenantId, orderNo])
+  @@index([accountSubjectId])
+  @@index([contractId])
+  @@index([ledgerId])
+  @@index([ledgerId, status])
+  @@index([partnerId])
+  @@index([status])
+  @@index([tenantId, dwSyncStatus])
+  @@index([tenantId])
+  @@index([tenantId, partnerId])
+  @@index([tenantId, status, dwSyncStatus])
+}
+
+model ordinary_profit_targets {
+  id             String   @id
+  tenantId       String
+  fiscalYear     Int
+  targetAmount   BigInt
+  monthlyTargets Json?
+  memo           String?
+  createdAt      DateTime @default(now())
+  createdBy      String?
+  updatedAt      DateTime
+  updatedBy      String?
+  tenants        tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fiscalYear])
+  @@index([tenantId])
+}
+
+model partner_mappings {
+  id             String   @id
+  tenantId       String   @default("demo-tenant")
+  drmPartnerId   String
+  drmPartnerCode String?
+  drmPartnerName String
+  provider       String
+  externalId     String?
+  externalCode   String?
+  externalName   String
+  isActive       Boolean  @default(true)
+  isAutoMapped   Boolean  @default(false)
+  mappedAt       DateTime @default(now())
+  mappedBy       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  @@unique([tenantId, drmPartnerId, provider])
+  @@index([tenantId, provider])
+}
+
+model partner_master {
+  id                  String    @id
+  tenantId            String
+  code                String
+  name                String
+  nameKana            String?
+  category            String
+  specialties         String[]
+  representativeName  String?
+  contactPerson       String?
+  email               String?
+  phone               String?
+  fax                 String?
+  postalCode          String?
+  address             String?
+  paymentTerms        String?
+  bankInfo            Json?
+  rating              Int
+  totalTransactions   Int
+  totalAmount         Decimal   @db.Decimal(15, 2)
+  lastTransactionDate DateTime?
+  performance         Json
+  status              String
+  dwPartnerId         String?
+  dwSyncStatus        String    @default("not_synced")
+  createdAt           DateTime  @default(now())
+  createdBy           String    @default("system")
+  updatedAt           DateTime
+  updatedBy           String?
+  notes               String?
+  orders              orders[]
+
+  @@unique([tenantId, code])
+  @@index([category])
+  @@index([dwPartnerId])
+  @@index([dwSyncStatus])
+  @@index([rating])
+  @@index([status])
+  @@index([tenantId, category])
+  @@index([tenantId, dwPartnerId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model payments {
+  id               String    @id
+  tenantId         String    @default("demo-tenant")
+  paymentDate      String
+  amount           Decimal   @db.Decimal(18, 2)
+  paymentMethod    String?
+  reference        String?
+  notes            String?
+  status           String    @default("unmatched")
+  invoiceId        String?
+  invoiceNo        String?
+  appliedToInvoice Boolean   @default(false)
+  matchedInvoices  Json?
+  unmatchedAmount  Decimal   @default(0) @db.Decimal(18, 2)
+  createdBy        String?
+  matchedBy        String?
+  matchedAt        DateTime?
+  confirmedBy      String?
+  confirmedAt      DateTime?
+  appliedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime
+  invoices         invoices? @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@index([status])
+  @@index([tenantId])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, status, paymentDate])
+}
+
+model pdf_assets {
+  id           String   @id
+  tenantId     String   @default("demo-tenant")
+  name         String
+  type         String
+  fileType     String
+  size         Int
+  url          String
+  thumbnailUrl String?
+  width        Int?
+  height       Int?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  createdBy    String   @default("system")
+  updatedBy    String?
+
+  @@index([tenantId])
+  @@index([type])
+}
+
+model pdf_templates {
+  id           String   @id
+  tenantId     String   @default("demo-tenant")
+  name         String
+  description  String?
+  documentType String
+  status       String   @default("active")
+  version      String   @default("1.0.0")
+  layout       Json
+  sections     Json
+  styles       Json
+  permissions  Json
+  isDefault    Boolean  @default(false)
+  usageCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  createdBy    String   @default("system")
+  updatedBy    String?
+
+  @@index([documentType])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model pricing_tiers {
+  id           String   @id
+  minUsers     Int
+  maxUsers     Int?
+  pricePerUser Int
+  description  String
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  createdBy    String
+  updatedAt    DateTime
+  updatedBy    String?
+
+  @@index([isActive])
+}
+
+model product_masters {
+  id                          String                      @id
+  tenantId                    String
+  categoryId                  String
+  subCategoryId               String
+  code                        String
+  name                        String
+  unit                        String
+  standardPrice               Float
+  costPrice                   Float                       @default(0)
+  description                 String?
+  specifications              String?
+  productType                 String?
+  maker                       String?
+  isActive                    Boolean                     @default(true)
+  createdAt                   DateTime                    @default(now())
+  createdBy                   String
+  updatedAt                   DateTime
+  updatedBy                   String?
+  construction_categories     construction_categories     @relation(fields: [categoryId], references: [id])
+  construction_sub_categories construction_sub_categories @relation(fields: [subCategoryId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([subCategoryId])
+  @@index([tenantId])
+  @@index([tenantId, name])
+}
+
+model progress_history {
+  id                   String               @id
+  tenantId             String
+  ledgerId             String
+  phaseId              String?
+  progressRate         Int
+  note                 String?
+  recordedAt           DateTime             @default(now())
+  recordedBy           String?
+  recordedByName       String?
+  createdAt            DateTime             @default(now())
+  construction_ledgers construction_ledgers @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  @@index([ledgerId])
+  @@index([phaseId])
+  @@index([recordedAt])
+  @@index([tenantId])
+}
+
+model properties {
+  id           String       @id
+  tenantId     String
+  customerId   String
+  propertyNo   String       @unique
+  name         String
+  propertyType String
+  postalCode   String?
+  prefecture   String?
+  city         String?
+  address1     String?
+  address2     String?
+  buildingType String?
+  buildingArea Float?
+  landArea     Float?
+  builtYear    Int?
+  status       String       @default("active")
+  deletedAt    DateTime?
+  deletedBy    String?
+  createdAt    DateTime     @default(now())
+  createdBy    String
+  updatedAt    DateTime
+  updatedBy    String?
+  equipments   equipments[]
+  ma_leads     ma_leads[]
+  customers    customers    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([deletedAt])
+  @@index([propertyNo])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model rag_conversations {
+  id        String   @id
+  tenantId  String
+  userId    String
+  messages  Json
+  context   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  expiresAt DateTime
+  tenants   tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model rag_settings {
+  id                String   @id
+  tenantId          String   @unique
+  enabled           Boolean  @default(true)
+  monthlyQueryLimit Int      @default(1000)
+  monthlyTokenLimit Int      @default(500000)
+  model             String   @default("gpt-4o")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  tenants           tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model rag_usage {
+  id           String   @id
+  tenantId     String
+  userId       String
+  yearMonth    String
+  queryCount   Int      @default(0)
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  tenants      tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, yearMonth])
+  @@index([tenantId, yearMonth])
+}
+
+model resource_reservations {
+  id               String    @id
+  tenantId         String    @default("demo-tenant")
+  resourceId       String
+  userId           String
+  userName         String
+  startTime        DateTime
+  endTime          DateTime
+  title            String
+  description      String?
+  purpose          String?
+  customerId       String?
+  customerName     String?
+  taskId           String?
+  status           String    @default("confirmed")
+  requiresApproval Boolean   @default(false)
+  approvedBy       String?
+  approvedAt       DateTime?
+  approvalNote     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime
+  cancelledAt      DateTime?
+  cancelledBy      String?
+  cancelReason     String?
+  resources        resources @relation(fields: [resourceId], references: [id])
+
+  @@index([customerId])
+  @@index([endTime])
+  @@index([resourceId])
+  @@index([startTime])
+  @@index([status])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model resources {
+  id                    String                  @id
+  tenantId              String                  @default("demo-tenant")
+  name                  String
+  type                  String
+  description           String?
+  capacity              Int?
+  location              String?
+  features              Json?
+  vehicleType           String?
+  licensePlate          String?
+  fuelType              String?
+  status                String                  @default("available")
+  sortOrder             Int                     @default(0)
+  requiresApproval      Boolean                 @default(false)
+  maxDuration           Int?
+  advanceBooking        Int?
+  createdAt             DateTime                @default(now())
+  createdBy             String?
+  updatedAt             DateTime
+  resource_reservations resource_reservations[]
+
+  @@index([status])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model roles {
+  id          String   @id
+  name        String
+  description String?
+  permissions Json
+  tenantId    String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  createdBy   String
+  updatedAt   DateTime
+  updatedBy   String?
+  tenants     tenants? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users       users[]
+
+  @@unique([name, tenantId])
+  @@index([isSystem])
+  @@index([tenantId])
+}
+
+model rounding_settings {
+  id                   String   @id
+  tenantId             String   @unique
+  name                 String   @default("デフォルト設定")
+  isDefault            Boolean  @default(true)
+  itemAmountMethod     String   @default("round")
+  itemAmountPrecision  Int      @default(0)
+  subtotalMethod       String   @default("round")
+  subtotalPrecision    Int      @default(0)
+  taxMethod            String   @default("floor")
+  taxCalculationTiming String   @default("subtotal")
+  taxPrecision         Int      @default(0)
+  discountMethod       String   @default("round")
+  discountAllocation   String   @default("last_item")
+  costMethod           String   @default("round")
+  costPrecision        Int      @default(0)
+  progressMethod       String   @default("floor")
+  progressPrecision    Int      @default(0)
+  note                 String?
+  createdBy            String?
+  updatedBy            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+
+  @@index([tenantId])
+}
+
+model sales_activities {
+  id                   String                 @id
+  tenantId             String
+  opportunityId        String
+  activityType         String
+  title                String
+  description          String?
+  activityDate         DateTime
+  duration             Int?
+  nextAction           String?
+  nextActionDate       DateTime?
+  userId               String
+  isPinned             Boolean                @default(false)
+  deletedAt            DateTime?
+  deletedBy            String?
+  createdAt            DateTime               @default(now())
+  createdBy            String
+  updatedAt            DateTime
+  updatedBy            String?
+  activity_attachments activity_attachments[]
+  opportunities        opportunities          @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  users                users                  @relation(fields: [userId], references: [id])
+
+  @@index([activityDate])
+  @@index([activityType])
+  @@index([deletedAt])
+  @@index([opportunityId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model sales_category_master {
+  id                          String                  @id
+  tenantId                    String
+  code                        String
+  name                        String
+  parentId                    String?
+  level                       Int
+  standardGrossMargin         Float
+  profitDistribution          String
+  status                      String                  @default("active")
+  displayOrder                Int
+  description                 String?
+  createdAt                   DateTime                @default(now())
+  createdBy                   String
+  updatedAt                   DateTime
+  updatedBy                   String?
+  sales_category_master       sales_category_master?  @relation("sales_category_masterTosales_category_master", fields: [parentId], references: [id])
+  other_sales_category_master sales_category_master[] @relation("sales_category_masterTosales_category_master")
+
+  @@unique([tenantId, code])
+  @@index([displayOrder])
+  @@index([level])
+  @@index([parentId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model security_settings {
+  id                        String   @id
+  tenantId                  String   @unique
+  passwordMinLength         Int      @default(8)
+  passwordRequireUpper      Boolean  @default(true)
+  passwordRequireLower      Boolean  @default(true)
+  passwordRequireNumber     Boolean  @default(true)
+  passwordRequireSymbol     Boolean  @default(false)
+  passwordExpirationDays    Int?     @default(90)
+  passwordHistoryCount      Int      @default(5)
+  ipWhitelistEnabled        Boolean  @default(false)
+  ipWhitelist               String?
+  ipBlacklistEnabled        Boolean  @default(false)
+  ipBlacklist               String?
+  twoFactorEnabled          Boolean  @default(false)
+  twoFactorMethod           String   @default("email")
+  twoFactorRequired         Boolean  @default(false)
+  sessionTimeoutMinutes     Int      @default(60)
+  maxConcurrentSessions     Int      @default(3)
+  sessionIdleTimeoutMinutes Int      @default(30)
+  forceLogoutEnabled        Boolean  @default(false)
+  maxLoginAttempts          Int      @default(5)
+  lockoutDurationMinutes    Int      @default(30)
+  loginAttemptsEnabled      Boolean  @default(true)
+  auditLogEnabled           Boolean  @default(true)
+  auditLogRetentionDays     Int      @default(365)
+  sensitiveDataMaskEnabled  Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  createdBy                 String
+  updatedAt                 DateTime
+  updatedBy                 String?
+
+  @@index([tenantId])
+}
+
+model sessions {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([userId])
+}
+
+model system_admins {
+  id                  String    @id
+  email               String    @unique
+  password            String
+  name                String
+  role                String    @default("admin")
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  @@index([email])
+  @@index([isActive])
+}
+
+model system_settings {
+  id               String   @id @default("global")
+  planDefaults     Json     @default("{\"SMB\": {\"maxUsers\": 5, \"maxStorageBytes\": 5368709120, \"apiCallLimitDaily\": 10000}, \"Enterprise\": {\"maxUsers\": 50, \"maxStorageBytes\": 53687091200, \"apiCallLimitDaily\": 100000}}")
+  featureFlags     Json     @default("[{\"code\": \"MA\", \"name\": \"MA機能\", \"description\": \"マーケティングオートメーション機能\"}, {\"code\": \"RAG\", \"name\": \"RAG/AI機能\", \"description\": \"AIアシスタント・RAG検索機能\"}, {\"code\": \"ExternalAPI\", \"name\": \"外部連携API\", \"description\": \"外部システム連携API\"}]")
+  trialWarningDays Int      @default(7)
+  trialAutoDisable Boolean  @default(true)
+  updatedAt        DateTime
+  updatedBy        String?
+}
+
+model tag_master {
+  id            String          @id
+  tenantId      String          @default("demo-tenant")
+  name          String
+  category      TagCategory
+  color         String          @default("bg-gray-500")
+  icon          String?
+  description   String?
+  usageCount    Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  createdBy     String          @default("system")
+  customer_tags customer_tags[]
+
+  @@unique([tenantId, name])
+  @@index([category])
+  @@index([tenantId, category])
+  @@index([tenantId])
+}
+
+model task_automation_settings {
+  id              String   @id
+  tenantId        String   @unique @default("demo-tenant")
+  categoryEnabled Json     @default("{\"lead\": true, \"order\": true, \"invoice\": true, \"payment\": true, \"approval\": true, \"contract\": true, \"customer\": true, \"estimate\": true, \"construction\": true}")
+  taskSettings    Json     @default("{}")
+  defaultDays     Json     @default("{\"followUp\": 7, \"reminder\": 3, \"escalation\": 14}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  createdBy       String   @default("system")
+  updatedBy       String?
+
+  @@index([tenantId])
+}
+
+model task_reminder_logs {
+  id        String   @id
+  taskId    String
+  userId    String
+  channel   String
+  sentAt    DateTime @default(now())
+  success   Boolean  @default(true)
+  errorMsg  String?
+  createdAt DateTime @default(now())
+
+  @@index([sentAt])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model tasks {
+  id                String       @id
+  tenantId          String
+  userId            String
+  title             String
+  description       String?
+  dueDate           DateTime
+  dueTime           String?
+  priority          TaskPriority @default(MEDIUM)
+  status            TaskStatus   @default(PENDING)
+  type              TaskType
+  customerId        String?
+  estimateId        String?
+  contractId        String?
+  invoiceId         String?
+  opportunityId     String?
+  googleEventId     String?
+  googleCalendarId  String?
+  lastSyncedAt      DateTime?
+  reminderMinutes   Int?
+  reminderSent      Boolean      @default(false)
+  isRecurring       Boolean      @default(false)
+  recurrenceRule    String?
+  parentTaskId      String?
+  isTemplate        Boolean      @default(false)
+  templateName      String?
+  completedAt       DateTime?
+  completedBy       String?
+  automationType    String?
+  relatedEntityType String?
+  relatedEntityId   String?
+  relatedEntityName String?
+  customerName      String?
+  assigneeEmail     String?
+  assigneeName      String?
+  metadata          Json?
+  createdAt         DateTime     @default(now())
+  createdBy         String
+  updatedAt         DateTime
+  updatedBy         String?
+  users             users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([automationType])
+  @@index([customerId])
+  @@index([googleEventId])
+  @@index([isRecurring])
+  @@index([isTemplate])
+  @@index([opportunityId])
+  @@index([parentTaskId])
+  @@index([priority])
+  @@index([relatedEntityId])
+  @@index([relatedEntityType])
+  @@index([reminderSent])
+  @@index([status])
+  @@index([tenantId, dueDate])
+  @@index([tenantId])
+  @@index([tenantId, parentTaskId, status])
+  @@index([tenantId, userId])
+  @@index([type])
+  @@index([userId])
+}
+
+model tax_category_master {
+  id             String   @id
+  tenantId       String
+  code           String
+  name           String
+  taxRate        Int
+  taxType        String
+  description    String?
+  accountingCode String?
+  isActive       Boolean  @default(true)
+  isDefault      Boolean  @default(false)
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  createdBy      String   @default("system")
+  updatedBy      String?
+
+  @@unique([tenantId, code])
+  @@index([isActive])
+  @@index([taxType])
+  @@index([tenantId])
+}
+
+model tenant_fiscal_settings {
+  id                      String    @id
+  tenantId                String    @unique
+  companyName             String?
+  fiscalYearStartMonth    Int       @default(4)
+  firstFiscalYear         Int
+  foundedDate             DateTime?
+  constructionCategories  Json?
+  revenueRecognitionBasis String    @default("completion")
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime
+  tenants                 tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model tenant_invoices {
+  id              String    @id
+  tenantId        String
+  invoiceNumber   String    @unique
+  billingPeriod   String
+  billingDate     DateTime
+  dueDate         DateTime
+  basePrice       Int
+  additionalPrice Int
+  prorationPrice  Int
+  totalPrice      Int
+  tax             Int
+  totalWithTax    Int
+  startUserCount  Int
+  endUserCount    Int
+  userChanges     Json?
+  status          String    @default("draft")
+  paidAt          DateTime?
+  paymentMethod   String?
+  notes           String?
+  pdfUrl          String?
+  pdfGeneratedAt  DateTime?
+  downloadedBy    String?
+  downloadedAt    DateTime?
+  createdAt       DateTime  @default(now())
+  createdBy       String
+  updatedAt       DateTime
+  updatedBy       String?
+  tenants         tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([billingPeriod])
+  @@index([dueDate])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model tenant_settings {
+  id                          String   @id
+  tenantId                    String   @unique
+  dwApiEndpoint               String?
+  dwApiKey                    String?
+  dwPlaceCode                 String?
+  dwSyncEnabled               Boolean  @default(false)
+  dwSyncFrequency             String   @default("daily_1am")
+  orderDeadlineDays           Int      @default(7)
+  alertBeforeDays             Int      @default(5)
+  notifySupervisor            Boolean  @default(true)
+  notifyDepartmentHead        Boolean  @default(true)
+  notifyCEO                   Boolean  @default(false)
+  approvalThresholds          Json?
+  leadAutoAssignEnabled       Boolean  @default(false)
+  leadScoringEnabled          Boolean  @default(false)
+  leadDuplicateCheckEnabled   Boolean  @default(true)
+  pipelineStages              Json?
+  opportunityStatuses         Json?
+  defaultProbability          Int      @default(10)
+  alertDaysNoContact          Int      @default(30)
+  alertDaysNoProgress         Int      @default(14)
+  forecastMinProbability      Int      @default(50)
+  longTermNoContactDays       Int      @default(90)
+  customerRanks               Json?
+  customerSegmentationEnabled Boolean  @default(false)
+  integrationSettings         Json?
+  pdfSettings                 Json?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime
+  estimateNumberDigits        Int      @default(5)
+  estimateNumberFormat        String   @default("{PREFIX}-{YYYY}-{SEQ}")
+  estimateNumberLastSeq       Int      @default(0)
+  estimateNumberLastYear      Int?
+  estimateNumberPrefix        String   @default("EST")
+  estimateNumberResetPeriod   String   @default("yearly")
+  contractNumberDigits        Int      @default(5)
+  contractNumberFormat        String   @default("{PREFIX}-{YYYY}-{SEQ}")
+  contractNumberLastSeq       Int      @default(0)
+  contractNumberLastYear      Int?
+  contractNumberPrefix        String   @default("CNT")
+  contractNumberResetPeriod   String   @default("yearly")
+  invoiceNumberDigits         Int      @default(4)
+  invoiceNumberFormat         String   @default("{PREFIX}-{YYYY}{MM}-{SEQ}")
+  invoiceNumberLastMonth      Int?
+  invoiceNumberLastSeq        Int      @default(0)
+  invoiceNumberLastYear       Int?
+  invoiceNumberPrefix         String   @default("INV")
+  invoiceNumberResetPeriod    String   @default("monthly")
+  orderNumberDigits           Int      @default(4)
+  orderNumberFormat           String   @default("{PREFIX}-{YYYY}-{SEQ}")
+  orderNumberLastSeq          Int      @default(0)
+  orderNumberLastYear         Int?
+  orderNumberPrefix           String   @default("ORD")
+  orderNumberResetPeriod      String   @default("yearly")
+  propertyNumberDigits        Int      @default(5)
+  propertyNumberFormat        String   @default("{PREFIX}-{SEQ}")
+  propertyNumberLastSeq       Int      @default(0)
+  propertyNumberPrefix        String   @default("PROP")
+  propertyNumberResetPeriod   String   @default("never")
+
+  @@index([tenantId])
+}
+
+model tenant_usage_history {
+  id          String   @id
+  tenantId    String
+  date        DateTime
+  userCount   Int
+  storageUsed Int?
+  apiCalls    Int?
+  createdAt   DateTime @default(now())
+  tenants     tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@index([date])
+  @@index([tenantId])
+}
+
+model tenants {
+  id                      String                    @id
+  name                    String
+  subdomain               String?                   @unique
+  plan                    String                    @default("SMB")
+  maxUsers                Int                       @default(5)
+  currentUserCount        Int                       @default(0)
+  monthlyPrice            Int                       @default(5000)
+  billingEmail            String
+  isActive                Boolean                   @default(true)
+  isSuperAdmin            Boolean                   @default(false)
+  trialEndsAt             DateTime?
+  createdAt               DateTime                  @default(now())
+  createdBy               String
+  updatedAt               DateTime
+  updatedBy               String?
+  accountHolderName       String?
+  accountNumber           String?
+  accountType             String?
+  apiCallCountToday       Int                       @default(0)
+  apiCallLimitDaily       Int                       @default(10000)
+  apiCallResetAt          DateTime?
+  bankCode                String?
+  bankName                String?
+  billingCompanyName      String?
+  branchCode              String?
+  branchName              String?
+  contractExpirationMonth String?
+  customerCode            String?                   @unique
+  featureExternalAPI      Boolean                   @default(false)
+  featureMA               Boolean                   @default(false)
+  featureRAG              Boolean                   @default(false)
+  maxStorageBytes         BigInt                    @default(5368709120)
+  paymentMethod           String                    @default("bank_transfer")
+  audit_logs              audit_logs[]
+  monthly_cash_balances   monthly_cash_balances[]
+  ordinary_profit_targets ordinary_profit_targets[]
+  rag_conversations       rag_conversations[]
+  rag_settings            rag_settings?
+  rag_usage               rag_usage[]
+  roles                   roles[]
+  tenant_fiscal_settings  tenant_fiscal_settings?
+  tenant_invoices         tenant_invoices[]
+  tenant_usage_history    tenant_usage_history[]
+  users                   users[]
+
+  @@index([isActive])
+  @@index([isSuperAdmin])
+  @@index([plan])
+}
+
+model trade_cost_agreements {
+  id                      String                    @id
+  tenantId                String                    @default("demo-tenant")
+  tradeCode               String
+  tradeName               String
+  calculationType         String
+  unitPrice               Float
+  unitLabel               String
+  minArea                 Float?
+  maxArea                 Float?
+  targetProfitRate        Float                     @default(30)
+  minProfitRate           Float                     @default(20)
+  defaultPartnerId        String?
+  validFrom               DateTime                  @default(now())
+  validUntil              DateTime?
+  status                  String                    @default("active")
+  notes                   String?
+  createdAt               DateTime                  @default(now())
+  createdBy               String                    @default("system")
+  updatedAt               DateTime
+  updatedBy               String?
+  trade_cost_price_ranges trade_cost_price_ranges[]
+
+  @@unique([tenantId, tradeCode])
+  @@index([status])
+  @@index([tenantId])
+  @@index([tradeCode])
+}
+
+model trade_cost_price_ranges {
+  id                    String                @id
+  agreementId           String
+  minArea               Float
+  maxArea               Float?
+  unitPrice             Float
+  displayOrder          Int                   @default(0)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime
+  trade_cost_agreements trade_cost_agreements @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+
+  @@index([agreementId])
+}
+
+model user_notification_settings {
+  id        String   @id
+  tenantId  String
+  userId    String
+  settings  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model users {
+  id                           String                        @id
+  tenantId                     String
+  email                        String
+  name                         String
+  role                         String
+  departmentId                 String?
+  position                     String?
+  employeeNo                   String?
+  hireDate                     String?
+  currentLeadCount             Int                           @default(0)
+  maxLeadCapacity              Int                           @default(20)
+  isAvailable                  Boolean                       @default(true)
+  autoAssignmentWeight         Int                           @default(100)
+  specialties                  String?
+  experienceYears              Int                           @default(0)
+  certifications               String?
+  workingHoursStart            String?                       @default("09:00")
+  workingHoursEnd              String?                       @default("18:00")
+  workingDaysOfWeek            String?
+  totalLeadsAssigned           Int                           @default(0)
+  totalConversions             Int                           @default(0)
+  conversionRate               Float                         @default(0)
+  averageResponseTime          Int                           @default(0)
+  password                     String?
+  emailVerified                DateTime?
+  image                        String?
+  roleId                       String?
+  isActive                     Boolean                       @default(true)
+  isSuperAdmin                 Boolean                       @default(false)
+  lastLoginAt                  DateTime?
+  invitationToken              String?                       @unique
+  invitationExpires            DateTime?
+  invitationStatus             String?                       @default("pending")
+  invitedBy                    String?
+  invitedAt                    DateTime?
+  resetPasswordToken           String?                       @unique
+  resetPasswordExpires         DateTime?
+  permissionLevel              Int                           @default(3)
+  accessibleDashboards         String[]                      @default(["sales"])
+  primaryDashboard             String                        @default("sales")
+  customPermissions            String[]                      @default([])
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime
+  accounts                     accounts[]
+  customers                    customers[]
+  google_calendar_integrations google_calendar_integrations?
+  opportunities                opportunities[]
+  rag_conversations            rag_conversations[]
+  rag_usage                    rag_usage[]
+  sales_activities             sales_activities[]
+  sessions                     sessions[]
+  tasks                        tasks[]
+  departments                  departments?                  @relation(fields: [departmentId], references: [id])
+  roles                        roles?                        @relation(fields: [roleId], references: [id])
+  tenants                      tenants                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([departmentId])
+  @@index([isActive])
+  @@index([isAvailable])
+  @@index([isSuperAdmin])
+  @@index([roleId])
+  @@index([role])
+  @@index([tenantId])
+}
+
+model verification_tokens {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model work_item_masters {
+  id                          String                       @id
+  tenantId                    String
+  categoryId                  String
+  subCategoryId               String?
+  code                        String
+  name                        String
+  unit                        String
+  standardPrice               Float
+  costPrice                   Float                        @default(0)
+  description                 String?
+  requiredDays                Int?
+  requiredWorkers             Int?
+  productType                 String?
+  maker                       String?
+  isActive                    Boolean                      @default(true)
+  createdAt                   DateTime                     @default(now())
+  createdBy                   String
+  updatedAt                   DateTime
+  updatedBy                   String?
+  construction_categories     construction_categories      @relation(fields: [categoryId], references: [id])
+  construction_sub_categories construction_sub_categories? @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, code])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([subCategoryId])
+  @@index([tenantId])
+  @@index([tenantId, name])
+}
+
+model work_log_categories {
+  id        String   @id
+  tenantId  String   @default("demo-tenant")
+  code      String
+  name      String
+  icon      String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model work_logs {
+  id              String   @id
+  tenantId        String   @default("demo-tenant")
+  ledgerId        String
+  userId          String
+  customerId      String?
+  workDate        DateTime
+  durationMin     Int
+  category        String
+  memo            String?
+  source          String   @default("MANUAL")
+  calendarEventId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+
+  @@index([calendarEventId])
+  @@index([ledgerId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([workDate])
+}
+
+model workflow_settings {
+  id                               String   @id
+  tenantId                         String   @unique
+  autoConvertEnabled               Boolean  @default(true)
+  defaultContractTemplate          String   @default("construction")
+  mapEstimateItemsToContract       Boolean  @default(true)
+  mapAmountToContract              Boolean  @default(true)
+  mapDurationToContract            Boolean  @default(true)
+  mapCustomerInfoToContract        Boolean  @default(true)
+  requireApprovalForConversion     Boolean  @default(true)
+  approvalFlowId                   String   @default("")
+  orderDeadlineDays                Int      @default(7)
+  completionOrderCheckEnabled      Boolean  @default(true)
+  completionOrderCheckLevel        String   @default("warning")
+  completionMilestoneCheckEnabled  Boolean  @default(true)
+  completionMilestoneCheckLevel    String   @default("warning")
+  completionInvoiceCheckEnabled    Boolean  @default(false)
+  completionInvoiceCheckLevel      String   @default("warning")
+  completionInspectionCheckEnabled Boolean  @default(false)
+  completionInspectionCheckLevel   String   @default("warning")
+  updatedBy                        String?
+  createdAt                        DateTime @default(now())
+  updatedAt                        DateTime
+
+  @@index([tenantId])
+}
+
+enum ApprovalActionType {
+  submit
+  approve
+  reject
+  comment
+  remand
+  cancel
+}
+
+enum ApprovalInstanceStatus {
+  pending
+  in_progress
+  approved
+  rejected
+  cancelled
+}
+
+enum ApprovalStepStatus {
+  waiting
+  pending
+  approved
+  rejected
+  skipped
+}
+
+enum CalculationBasis {
+  floor_area
+  wall_area
+  perimeter
+  ceiling_area
+  fixed
+  quantity
+}
+
+enum CampaignStatus {
+  draft
+  scheduled
+  active
+  paused
+  completed
+  cancelled
+}
+
+enum CampaignType {
+  email
+  sms
+  line
+  dm
+  web
+  event
+  other
+}
+
+enum CaseChannel {
+  phone
+  email
+  chat
+  form
+  onsite
+  app
+  internal
+}
+
+enum CaseEventType {
+  created
+  status_changed
+  assigned
+  comment
+  customer_response
+  internal_note
+  escalated
+  approval_requested
+  approval_completed
+  attachment_added
+  related_linked
+  reopened
+}
+
+enum CasePriority {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum CaseSentiment {
+  positive
+  neutral
+  negative
+  critical
+}
+
+enum CaseSeverity {
+  S1
+  S2
+  S3
+  S4
+}
+
+enum CaseSource {
+  customer
+  internal
+  auto
+}
+
+enum CaseStatus {
+  new
+  acknowledged
+  investigating
+  in_progress
+  customer_agreed
+  verifying
+  awaiting_deployment
+  resolved
+  closed
+  wont_fix
+  reopened
+}
+
+enum CaseType {
+  complaint
+  issue
+}
+
+enum CaseUrgency {
+  U1
+  U2
+  U3
+  U4
+}
+
+enum EstimateTemplateCategory {
+  NEW_CONSTRUCTION
+  REFORM
+  RENOVATION
+  EXTERIOR
+  PAINTING
+  OTHER
+}
+
+enum EstimateTemplateScope {
+  PERSONAL
+  BRANCH
+  COMPANY
+}
+
+enum SLAStatus {
+  safe
+  warning
+  danger
+  violated
+}
+
+enum TagCategory {
+  work_type
+  customer_type
+  priority
+  status
+  source
+  custom
+}
+
+enum TaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskType {
+  CUSTOMER_VISIT
+  ESTIMATE_FOLLOWUP
+  CONTRACT_CHECK
+  DEADLINE_ALERT
+  APPROVAL_PENDING
+  SITE_INSPECTION
+  INVOICE_DUE
+  PAYMENT_CHECK
+  MANUAL
+  COMPANY_EVENT
+  OTHER
+}
+
+

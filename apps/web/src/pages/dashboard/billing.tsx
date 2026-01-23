@@ -325,8 +325,8 @@ export default function BillingManagement() {
                   <span>契約・請求に関するお問い合わせ</span>
                 </div>
                 <Button variant="link" asChild className="p-0 h-auto">
-                  <a href="mailto:premier@the-reform.co.jp">
-                    premier@the-reform.co.jp
+                  <a href="mailto:premium@the-reform.co.jp">
+                    premium@the-reform.co.jp
                   </a>
                 </Button>
               </div>
@@ -567,8 +567,8 @@ export default function BillingManagement() {
                 <span>契約・請求に関するお問い合わせ</span>
               </div>
               <Button variant="link" asChild className="p-0 h-auto">
-                <a href="mailto:premier@the-reform.co.jp">
-                  premier@the-reform.co.jp
+                <a href="mailto:premium@the-reform.co.jp">
+                  premium@the-reform.co.jp
                 </a>
               </Button>
             </div>

@@ -155,7 +155,7 @@ export default function SettingsPage() {
                   {/* メールアドレス説明（14-4） */}
                   <p className="text-xs text-slate-500">
                     メールアドレスの変更は
-                    <a href="mailto:support@the-reform.co.jp" className="text-blue-600 hover:underline ml-1">
+                    <a href="mailto:premium@the-reform.co.jp" className="text-blue-600 hover:underline ml-1">
                       サポートへご連絡ください
                     </a>
                   </p>
@@ -377,7 +377,7 @@ export default function SettingsPage() {
               <Info className="h-4 w-4" />
               <span>
                 設定に関するご質問は
-                <a href="mailto:support@the-reform.co.jp" className="text-blue-600 hover:underline ml-1">
+                <a href="mailto:premium@the-reform.co.jp" className="text-blue-600 hover:underline ml-1">
                   サポート
                 </a>
                 までお問い合わせください

@@ -517,13 +517,22 @@ export default function ArchivesPage() {
                               src={archive.thumbnailUrl}
                               alt={archive.title}
                               className={`w-full h-40 object-cover rounded-t-lg ${isWatched ? 'opacity-80' : ''}`}
+                              onError={(e) => {
+                                // サムネイル読み込み失敗時はフォールバック表示
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const fallback = target.nextElementSibling as HTMLElement
+                                if (fallback) fallback.style.display = 'flex'
+                              }}
                             />
-                          ) : (
-                            /* サムネイルカテゴリ色分け (3-5) */
-                            <div className={`w-full h-40 bg-gradient-to-br ${colors.gradient} rounded-t-lg flex items-center justify-center ${isWatched ? 'opacity-80' : ''}`}>
-                              <Video className="h-12 w-12 text-white/80" />
-                            </div>
-                          )}
+                          ) : null}
+                          {/* サムネイルカテゴリ色分け (3-5) - フォールバック表示 */}
+                          <div
+                            className={`w-full h-40 bg-gradient-to-br ${colors.gradient} rounded-t-lg items-center justify-center ${isWatched ? 'opacity-80' : ''}`}
+                            style={{ display: archive.thumbnailUrl ? 'none' : 'flex' }}
+                          >
+                            <Video className="h-12 w-12 text-white/80" />
+                          </div>
                           <div className="absolute inset-0 bg-black/20 rounded-t-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                             <div className="bg-white/90 rounded-full p-3">
                               <Play className="h-6 w-6 text-purple-600" />

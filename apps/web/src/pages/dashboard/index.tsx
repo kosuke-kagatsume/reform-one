@@ -642,7 +642,7 @@ export default function Dashboard() {
               </Link>
             </Button>
             <Button variant="outline" className="justify-start h-auto py-3" asChild>
-              <Link href="mailto:support@reform.co.jp">
+              <Link href="mailto:premium@the-reform.co.jp">
                 <HelpCircle className="h-4 w-4 mr-2 text-slate-600" />
                 <div className="text-left">
                   <p className="font-medium text-sm">サポート</p>
