@@ -1,11 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { sendMail } from '@/lib/mail'
+import { getAdminUser } from '@/lib/admin-auth'
+
+const SIGNATURE_KEY = 'email_signature'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  const adminUser = await getAdminUser(req)
 
   try {
     const { recipientIds, subject, body } = req.body
@@ -18,7 +23,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: '件名と本文を入力してください' })
     }
 
-    // Fetch recipients
+    let signature = ''
+    try {
+      const setting = await prisma.systemSetting.findUnique({
+        where: { key: SIGNATURE_KEY }
+      })
+      signature = setting?.value || ''
+    } catch {}
+
     const recipients = await prisma.user.findMany({
       where: {
         id: { in: recipientIds }
@@ -40,14 +52,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     })
 
-    // Send emails (batch processing)
     const results = await Promise.allSettled(
       recipients.map(async (recipient) => {
         const orgName = recipient.organizations[0]?.organization?.name || ''
-        // Replace placeholders
         const personalizedBody = body
           .replace(/\{\{name\}\}/g, recipient.name || 'お客様')
           .replace(/\{\{organization\}\}/g, orgName)
+
+        const fullBody = signature ? `${personalizedBody}\n\n${signature}` : personalizedBody
 
         await sendMail({
           to: recipient.email,
@@ -59,16 +71,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0;">プレミア購読</p>
               </div>
               <div style="padding: 30px; background: #fff;">
-                ${personalizedBody.split('\n').map((line: string) => `<p style="margin: 0 0 16px; line-height: 1.8;">${line}</p>`).join('')}
+                ${fullBody.split('\n').map((line: string) => `<p style="margin: 0 0 16px; line-height: 1.8;">${line}</p>`).join('')}
               </div>
               <div style="padding: 20px; background: #f8fafc; text-align: center; font-size: 12px; color: #64748b;">
                 <p>このメールはリフォーム産業新聞社から送信されています。</p>
-                <p>〒105-0004 東京都港区新橋1-1-1</p>
               </div>
             </div>
           `,
-          text: personalizedBody
+          text: fullBody
         })
+
+        if (adminUser) {
+          await prisma.emailHistory.create({
+            data: {
+              templateType: 'BULK_MAIL',
+              recipientEmail: recipient.email,
+              recipientName: recipient.name,
+              recipientType: 'USER',
+              recipientId: recipient.id,
+              subject,
+              body: fullBody,
+              status: 'SENT',
+              sentById: adminUser.id
+            }
+          })
+        }
 
         return recipient.id
       })
@@ -77,7 +104,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const successful = results.filter(r => r.status === 'fulfilled').length
     const failed = results.filter(r => r.status === 'rejected').length
 
-    // Log the bulk mail action
     await prisma.activityLog.create({
       data: {
         activityType: 'BULK_EMAIL_SENT',
@@ -88,7 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           successful,
           failed
         }),
-        userId: recipientIds[0] // Use first recipient as reference
+        userId: adminUser?.id || recipientIds[0]
       }
     })
 

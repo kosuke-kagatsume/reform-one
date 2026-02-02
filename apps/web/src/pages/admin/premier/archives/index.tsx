@@ -21,6 +21,7 @@ import {
   Edit,
   Trash2,
   ExternalLink,
+  Eye as EyePreview,
   Film,
   AlertTriangle
 } from 'lucide-react'
@@ -416,6 +417,10 @@ export default function ArchivesAdminPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => window.open(`/dashboard/archives/${archive.id}?preview=true`, '_blank')}>
+                              <EyePreview className="h-4 w-4 mr-2" />
+                              プレビュー
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => router.push(`/admin/premier/archives/${archive.id}/edit`)}>
                               <Edit className="h-4 w-4 mr-2" />
                               編集

@@ -17,7 +17,11 @@ import {
   Settings,
   Home,
   FolderOpen,
-  Wrench
+  Wrench,
+  Mail as MailIcon,
+  FileText,
+  Shield,
+  Eye
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -81,6 +85,26 @@ export function PremierAdminLayout({ children }: PremierAdminLayoutProps) {
       title: 'ツール管理',
       icon: Wrench,
       href: '/admin/premier/tools',
+    },
+    {
+      title: 'メール送信履歴',
+      icon: MailIcon,
+      href: '/admin/premier/email-history',
+    },
+    {
+      title: '管理者アカウント',
+      icon: Shield,
+      href: '/admin/premier/settings/admin-users',
+    },
+    {
+      title: '操作ログ',
+      icon: FileText,
+      href: '/admin/premier/settings/audit-log',
+    },
+    {
+      title: 'メール署名設定',
+      icon: MailIcon,
+      href: '/admin/premier/settings/email-signature',
     },
   ]
 

@@ -15,7 +15,8 @@ model Organization {
   slug                 String   @unique
   type                 String   @default("CUSTOMER") // REFORM_COMPANY, CUSTOMER
   domainRestriction    String   @default("[]") // JSON string for SQLite
-  isExistingSubscriber Boolean  @default(false) // 既存購読者フラグ（紙・電子版の既存購読者）
+  existingSubscriptionTypes String @default("[]") // JSON配列 ["PAPER","ANNUAL_DIGITAL","MONTHLY_DIGITAL"]
+  adminNotes           String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -71,6 +72,7 @@ model User {
   mfaSecret     String?
   emailVerified Boolean   @default(false)
   status        String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  adminPermissionLevel String? // VIEW, EDIT, FULL
   lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -143,6 +145,7 @@ model Subscription {
   id                 String   @id @default(cuid())
   organizationId     String
   planType           String   // STANDARD, EXPERT
+  discountType       String   @default("NONE") // NONE, EXISTING_SUBSCRIBER, EXHIBITION, EXHIBITION_EXISTING
   status             String   @default("PENDING") // ACTIVE, SUSPENDED, CANCELLED, PENDING
   paymentMethod      String   @default("CARD") // CARD, BANK_TRANSFER, CONVENIENCE_STORE
   basePrice          Float    // 基本価格
@@ -1030,4 +1033,15 @@ model ArchiveBusinessSceneTag {
   @@id([archiveId, tagId])
   @@index([archiveId])
   @@index([tagId])
+}
+
+// システム設定
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@index([key])
 }

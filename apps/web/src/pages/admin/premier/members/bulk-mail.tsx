@@ -40,6 +40,10 @@ export default function BulkMailPage() {
 
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  const [signature, setSignature] = useState('')
+  const [testEmail, setTestEmail] = useState('')
+  const [testSending, setTestSending] = useState(false)
+  const [testSent, setTestSent] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -50,8 +54,50 @@ export default function BulkMailPage() {
   useEffect(() => {
     if (isAuthenticated && isReformCompany && target) {
       fetchRecipients()
+      fetchSignature()
     }
   }, [isAuthenticated, isReformCompany, target, loginFilter, planFilter, orgFilter])
+
+  const fetchSignature = async () => {
+    try {
+      const res = await fetch('/api/admin/premier/settings/email-signature')
+      if (res.ok) {
+        const data = await res.json()
+        setSignature(data.signature)
+      }
+    } catch {}
+  }
+
+  const handleTestSend = async () => {
+    if (!testEmail || !subject.trim() || !body.trim()) {
+      setError('テスト送信先、件名、本文を入力してください')
+      return
+    }
+
+    setTestSending(true)
+    setTestSent(false)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/admin/premier/members/test-mail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testEmail, subject, body, signature })
+      })
+
+      if (res.ok) {
+        setTestSent(true)
+        setTimeout(() => setTestSent(false), 5000)
+      } else {
+        const data = await res.json()
+        setError(data.error || 'テスト送信に失敗しました')
+      }
+    } catch {
+      setError('テスト送信に失敗しました')
+    } finally {
+      setTestSending(false)
+    }
+  }
 
   const fetchRecipients = async () => {
     try {
@@ -243,6 +289,39 @@ export default function BulkMailPage() {
                 <p className="text-xs text-slate-500 mt-1">
                   ※ {'{{name}}'} で受信者名、{'{{organization}}'} で組織名に置換されます
                 </p>
+              </div>
+
+              {signature && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">署名（自動付与）</label>
+                  <div className="p-3 bg-slate-50 rounded border text-sm whitespace-pre-wrap text-slate-600 font-mono">
+                    {signature}
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <label className="block text-sm font-medium mb-2">テスト送信</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="email"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    placeholder="テスト送信先メールアドレス"
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={handleTestSend}
+                    disabled={testSending || !testEmail}
+                    size="sm"
+                  >
+                    {testSending ? '送信中...' : 'テスト送信'}
+                  </Button>
+                </div>
+                {testSent && (
+                  <p className="text-sm text-green-600 mt-2">テストメールを送信しました</p>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4">

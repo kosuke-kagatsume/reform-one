@@ -1,11 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
+import { calculatePrice } from '@/types/premier'
+import type { PlanType, DiscountType } from '@/types/premier'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
       const now = new Date()
-      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
       const organizations = await prisma.organization.findMany({
@@ -18,6 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               id: true,
               planType: true,
               status: true,
+              discountType: true,
               currentPeriodStart: true,
               currentPeriodEnd: true,
               createdAt: true,
@@ -42,12 +44,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { createdAt: 'desc' }
       })
 
-      // Transform to expected format with additional data
       const transformedOrgs = organizations.map(org => {
         const subscription = org.subscriptions[0] || null
         const users = org.users.map(u => u.user)
 
-        // Calculate last login across all users
         const lastLogins = users
           .filter(u => u.lastLoginAt)
           .map(u => new Date(u.lastLoginAt!).getTime())
@@ -55,12 +55,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? new Date(Math.max(...lastLogins)).toISOString()
           : null
 
-        // Count active users (logged in within 30 days)
         const activeUsers = users.filter(u =>
           u.lastLoginAt && new Date(u.lastLoginAt) >= thirtyDaysAgo
         ).length
 
-        // Calculate days until expiration
         let daysUntilExpiration: number | null = null
         let expirationStatus: 'normal' | 'warning' | 'danger' | 'expired' = 'normal'
 
@@ -77,7 +75,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
-        // Determine overall status
         let status: 'active' | 'expiring' | 'expired' | 'canceled' | 'no_subscription' = 'no_subscription'
         if (subscription) {
           if (subscription.status === 'CANCELED') {
@@ -93,13 +90,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
+        let existingSubscriptionTypes: string[] = []
+        try {
+          existingSubscriptionTypes = JSON.parse((org as any).existingSubscriptionTypes || '[]')
+        } catch {}
+
         return {
           id: org.id,
           name: org.name,
           slug: org.slug,
           type: org.type,
           createdAt: org.createdAt,
-          isExistingSubscriber: (org as any).isExistingSubscriber ?? false,
+          existingSubscriptionTypes,
           subscription: subscription ? {
             ...subscription,
             daysUntilExpiration,
@@ -112,7 +114,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // Calculate summary stats
       const stats = {
         total: transformedOrgs.length,
         active: transformedOrgs.filter(o => o.status === 'active').length,
@@ -141,14 +142,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { name, slug, planType, adminEmail, adminName, startDate, endDate } = req.body
+    const { name, slug, planType, discountType, adminEmail, adminName, startDate, endDate, existingSubscriptionTypes, adminNotes } = req.body
 
     if (!name || !slug || !planType || !adminEmail) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
     try {
-      // Check if slug already exists
       const existing = await prisma.organization.findUnique({
         where: { slug }
       })
@@ -157,22 +157,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'この識別子は既に使用されています' })
       }
 
-      // Create organization
+      const pricing = calculatePrice(planType as PlanType, (discountType || 'NONE') as DiscountType)
+
       const organization = await prisma.organization.create({
         data: {
           name,
           slug,
           type: 'CUSTOMER',
+          existingSubscriptionTypes: JSON.stringify(existingSubscriptionTypes || []),
+          adminNotes: adminNotes || null,
           subscriptions: {
             create: {
               planType,
               status: 'ACTIVE',
               paymentMethod: 'BANK_TRANSFER',
               autoRenewal: true,
-              basePrice: planType === 'EXPERT' ? 220000 : 110000,
-              discountPercent: 25,
-              discountAmount: planType === 'EXPERT' ? 55000 : 55000,
-              finalPrice: planType === 'EXPERT' ? 165000 : 55000,
+              discountType: discountType || 'NONE',
+              basePrice: pricing.basePrice,
+              discountPercent: pricing.discountPercent,
+              discountAmount: pricing.discountAmount,
+              finalPrice: pricing.finalPrice,
               currentPeriodStart: startDate ? new Date(startDate) : new Date(),
               currentPeriodEnd: endDate ? new Date(endDate) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
             }
@@ -183,7 +187,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // Create admin user
       const user = await prisma.user.create({
         data: {
           email: adminEmail,
@@ -193,7 +196,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // Link user to organization
       await prisma.userOrganization.create({
         data: {
           userId: user.id,
@@ -202,7 +204,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // Create invitation for admin
       const token = crypto.randomUUID()
       const invitation = await prisma.invitation.create({
         data: {
@@ -210,7 +211,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           token,
           role: 'ADMIN',
           organizationId: organization.id,
-          invitedById: user.id, // Self-invite for initial admin
+          invitedById: user.id,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         }
       })

@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/lib/auth-context'
+import { PLAN_OPTIONS, EXISTING_SUBSCRIPTION_OPTIONS, type ExistingSubscriptionType } from '@/types/premier'
 import { ArrowLeft, Save, Building, User, CreditCard, Calendar, Link as LinkIcon } from 'lucide-react'
 
 export default function NewOrganizationPage() {
@@ -19,11 +21,13 @@ export default function NewOrganizationPage() {
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
-    planType: 'STANDARD',
+    planIndex: 0,
     adminEmail: '',
     adminName: '',
     startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    existingSubscriptionTypes: [] as ExistingSubscriptionType[],
+    adminNotes: ''
   })
 
   useEffect(() => {
@@ -48,6 +52,17 @@ export default function NewOrganizationPage() {
     }))
   }
 
+  const toggleExistingSubscription = (type: ExistingSubscriptionType) => {
+    setFormData(prev => ({
+      ...prev,
+      existingSubscriptionTypes: prev.existingSubscriptionTypes.includes(type)
+        ? prev.existingSubscriptionTypes.filter(t => t !== type)
+        : [...prev.existingSubscriptionTypes, type]
+    }))
+  }
+
+  const selectedPlan = PLAN_OPTIONS[formData.planIndex]
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -64,7 +79,18 @@ export default function NewOrganizationPage() {
       const res = await fetch('/api/admin/premier/organizations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          name: formData.name,
+          slug: formData.slug,
+          planType: selectedPlan.planType,
+          discountType: selectedPlan.discountType,
+          adminEmail: formData.adminEmail,
+          adminName: formData.adminName,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          existingSubscriptionTypes: formData.existingSubscriptionTypes,
+          adminNotes: formData.adminNotes || undefined
+        })
       })
 
       const data = await res.json()
@@ -153,11 +179,13 @@ export default function NewOrganizationPage() {
                   setFormData({
                     name: '',
                     slug: '',
-                    planType: 'STANDARD',
+                    planIndex: 0,
                     adminEmail: '',
                     adminName: '',
                     startDate: new Date().toISOString().split('T')[0],
-                    endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                    endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    existingSubscriptionTypes: [],
+                    adminNotes: ''
                   })
                 }}>
                   別の組織を作成
@@ -262,41 +290,39 @@ export default function NewOrganizationPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="planType">プラン *</Label>
+                  <Label htmlFor="planIndex">プラン *</Label>
                   <select
-                    id="planType"
-                    value={formData.planType}
-                    onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
+                    id="planIndex"
+                    value={formData.planIndex}
+                    onChange={(e) => setFormData({ ...formData, planIndex: parseInt(e.target.value) })}
                     className="w-full px-3 py-2 border rounded-md"
                   >
-                    <option value="STANDARD">スタンダード（年額110,000円・税込）</option>
-                    <option value="EXPERT">エキスパート（年額220,000円・税込）</option>
+                    {PLAN_OPTIONS.map((option, index) => (
+                      <option key={index} value={index}>
+                        {option.label}（年額{option.price.toLocaleString()}円・税込）
+                      </option>
+                    ))}
                   </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    ※ 既存購読者は22,000円（税込）の割引が適用されます
-                  </p>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-lg text-sm">
-                  {formData.planType === 'STANDARD' ? (
-                    <div>
-                      <p className="font-medium mb-2">スタンダードプラン</p>
-                      <ul className="list-disc list-inside text-slate-600 space-y-1">
-                        <li>セミナー参加</li>
-                        <li>アーカイブ視聴</li>
-                        <li>メンバー管理</li>
-                      </ul>
-                    </div>
+                  <p className="font-medium mb-1">{selectedPlan.label}</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    ¥{selectedPlan.price.toLocaleString()}/年（税込）
+                  </p>
+                  {selectedPlan.planType === 'STANDARD' ? (
+                    <ul className="list-disc list-inside text-slate-600 space-y-1 mt-2">
+                      <li>セミナー参加</li>
+                      <li>アーカイブ視聴</li>
+                      <li>メンバー管理</li>
+                    </ul>
                   ) : (
-                    <div>
-                      <p className="font-medium mb-2">エキスパートプラン</p>
-                      <ul className="list-disc list-inside text-slate-600 space-y-1">
-                        <li>スタンダードの全機能</li>
-                        <li>コミュニティアクセス</li>
-                        <li>定例会参加</li>
-                        <li>専門家への相談</li>
-                      </ul>
-                    </div>
+                    <ul className="list-disc list-inside text-slate-600 space-y-1 mt-2">
+                      <li>スタンダードの全機能</li>
+                      <li>コミュニティアクセス</li>
+                      <li>定例会参加</li>
+                      <li>専門家への相談</li>
+                    </ul>
                   )}
                 </div>
               </CardContent>
@@ -331,6 +357,44 @@ export default function NewOrganizationPage() {
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>既存購読ステータス</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {EXISTING_SUBSCRIPTION_OPTIONS.map(option => (
+                    <label key={option.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.existingSubscriptionTypes.includes(option.value)}
+                        onChange={() => toggleExistingSubscription(option.value)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <span className="text-sm">{option.label}</span>
+                    </label>
+                  ))}
+                  {formData.existingSubscriptionTypes.length === 0 && (
+                    <p className="text-sm text-slate-500">未購読</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>備考/メモ</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={formData.adminNotes}
+                  onChange={(e) => setFormData({ ...formData, adminNotes: e.target.value })}
+                  placeholder="管理者向けメモ（この組織に関する備考など）"
+                  rows={3}
+                />
               </CardContent>
             </Card>
           </div>

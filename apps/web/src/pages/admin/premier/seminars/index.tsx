@@ -20,6 +20,7 @@ import {
   Edit,
   Trash2,
   Copy,
+  Eye,
   FileText,
   TrendingUp,
   TrendingDown,
@@ -485,6 +486,10 @@ export default function SeminarsAdminPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => window.open(`/dashboard/seminars?preview=true`, '_blank')}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  プレビュー
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => router.push(`/admin/premier/seminars/${seminar.id}/edit`)}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   編集

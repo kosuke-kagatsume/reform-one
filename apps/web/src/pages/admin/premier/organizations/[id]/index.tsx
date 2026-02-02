@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/lib/auth-context'
 import { EmailSendDialog } from '@/components/admin/email-send-dialog'
+import { PLAN_OPTIONS, EXISTING_SUBSCRIPTION_OPTIONS, DISCOUNT_TYPE_LABELS, type ExistingSubscriptionType, type DiscountType } from '@/types/premier'
 import {
   ArrowLeft,
   Save,
@@ -28,7 +29,8 @@ import {
   CheckCircle,
   XCircle,
   Send,
-  Percent
+  Percent,
+  FileText
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -46,6 +48,7 @@ interface Subscription {
   id: string
   planType: string
   status: string
+  discountType: string
   currentPeriodStart: string
   currentPeriodEnd: string
   basePrice: number
@@ -79,7 +82,8 @@ interface Organization {
   slug: string
   type: string
   createdAt: string
-  isExistingSubscriber: boolean
+  existingSubscriptionTypes: string
+  adminNotes: string | null
   subscriptions: Subscription[]
   users: Member[]
   invitations: Invitation[]
@@ -131,11 +135,12 @@ export default function OrganizationDetailPage() {
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
-    planType: '',
+    planIndex: 0,
     status: '',
     startDate: '',
     endDate: '',
-    isExistingSubscriber: false
+    existingSubscriptionTypes: [] as string[],
+    adminNotes: ''
   })
 
   useEffect(() => {
@@ -168,14 +173,26 @@ export default function OrganizationDetailPage() {
           (s: Subscription) => s.status === 'ACTIVE'
         )
 
+        const currentPlanType = activeSubscription?.planType || 'STANDARD'
+        const currentDiscountType = activeSubscription?.discountType || 'NONE'
+        const planIdx = PLAN_OPTIONS.findIndex(
+          p => p.planType === currentPlanType && p.discountType === currentDiscountType
+        )
+
+        let existingSubTypes: string[] = []
+        try {
+          existingSubTypes = JSON.parse(data.organization.existingSubscriptionTypes || '[]')
+        } catch {}
+
         setFormData({
           name: data.organization.name,
           slug: data.organization.slug,
-          planType: activeSubscription?.planType || '',
+          planIndex: planIdx >= 0 ? planIdx : 0,
           status: activeSubscription?.status || '',
           startDate: activeSubscription?.currentPeriodStart?.split('T')[0] || '',
           endDate: activeSubscription?.currentPeriodEnd?.split('T')[0] || '',
-          isExistingSubscriber: data.organization.isExistingSubscriber || false
+          existingSubscriptionTypes: existingSubTypes,
+          adminNotes: data.organization.adminNotes || ''
         })
       } else {
         setError('組織が見つかりません')
@@ -194,10 +211,21 @@ export default function OrganizationDetailPage() {
     setSaving(true)
 
     try {
+      const selectedPlan = PLAN_OPTIONS[formData.planIndex]
       const res = await fetch(`/api/admin/premier/organizations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          name: formData.name,
+          slug: formData.slug,
+          planType: selectedPlan.planType,
+          discountType: selectedPlan.discountType,
+          status: formData.status,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          existingSubscriptionTypes: formData.existingSubscriptionTypes,
+          adminNotes: formData.adminNotes
+        })
       })
 
       if (res.ok) {
@@ -483,15 +511,18 @@ export default function OrganizationDetailPage() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="planType">プラン</Label>
+                      <Label htmlFor="planIndex">プラン</Label>
                       <select
-                        id="planType"
-                        value={formData.planType}
-                        onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
+                        id="planIndex"
+                        value={formData.planIndex}
+                        onChange={(e) => setFormData({ ...formData, planIndex: parseInt(e.target.value) })}
                         className="w-full px-3 py-2 border rounded-md"
                       >
-                        <option value="STANDARD">スタンダード</option>
-                        <option value="EXPERT">エキスパート</option>
+                        {PLAN_OPTIONS.map((option, index) => (
+                          <option key={index} value={index}>
+                            {option.label}（¥{option.price.toLocaleString()}）
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -531,24 +562,45 @@ export default function OrganizationDetailPage() {
                   </div>
 
                   <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Percent className="h-5 w-5 text-purple-600" />
-                        <div>
-                          <Label htmlFor="isExistingSubscriber" className="text-base font-medium">
-                            既存購読者（紙面購読者）
-                          </Label>
-                          <p className="text-sm text-slate-600">
-                            ONにすると割引価格が適用されます
-                          </p>
-                        </div>
-                      </div>
-                      <Switch
-                        id="isExistingSubscriber"
-                        checked={formData.isExistingSubscriber}
-                        onCheckedChange={(checked) => setFormData({ ...formData, isExistingSubscriber: checked })}
-                      />
+                    <div className="flex items-center gap-3 mb-3">
+                      <Percent className="h-5 w-5 text-purple-600" />
+                      <Label className="text-base font-medium">既存購読ステータス</Label>
                     </div>
+                    <div className="space-y-2">
+                      {EXISTING_SUBSCRIPTION_OPTIONS.map(option => (
+                        <label key={option.value} className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.existingSubscriptionTypes.includes(option.value)}
+                            onChange={() => {
+                              const types = formData.existingSubscriptionTypes.includes(option.value)
+                                ? formData.existingSubscriptionTypes.filter(t => t !== option.value)
+                                : [...formData.existingSubscriptionTypes, option.value]
+                              setFormData({ ...formData, existingSubscriptionTypes: types })
+                            }}
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                          <span className="text-sm">{option.label}</span>
+                        </label>
+                      ))}
+                      {formData.existingSubscriptionTypes.length === 0 && (
+                        <p className="text-sm text-slate-500">未購読</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-slate-500" />
+                      <Label htmlFor="adminNotes">備考/メモ</Label>
+                    </div>
+                    <Textarea
+                      id="adminNotes"
+                      value={formData.adminNotes}
+                      onChange={(e) => setFormData({ ...formData, adminNotes: e.target.value })}
+                      placeholder="管理者向けメモ"
+                      rows={3}
+                    />
                   </div>
 
                   {error && (

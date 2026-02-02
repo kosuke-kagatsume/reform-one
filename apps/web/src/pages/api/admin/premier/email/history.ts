@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: '管理者権限が必要です' })
   }
 
-  const { recipientId, recipientType, limit = '50', offset = '0' } = req.query
+  const { recipientId, recipientType, templateType, startDate, endDate, search, limit = '50', offset = '0' } = req.query
 
   // Validate and parse limit/offset
   const parsedLimit = Math.min(Math.max(parseInt(limit as string) || 50, 1), 100)
@@ -69,6 +69,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Invalid recipient type' })
       }
       where.recipientType = recipientType
+    }
+
+    if (templateType && typeof templateType === 'string') {
+      where.templateType = templateType
+    }
+
+    if (startDate && typeof startDate === 'string') {
+      where.sentAt = { ...(where.sentAt as any || {}), gte: new Date(startDate) }
+    }
+
+    if (endDate && typeof endDate === 'string') {
+      where.sentAt = { ...(where.sentAt as any || {}), lte: new Date(endDate + 'T23:59:59.999Z') }
+    }
+
+    if (search && typeof search === 'string') {
+      where.OR = [
+        { recipientEmail: { contains: search } },
+        { subject: { contains: search } },
+        { recipientName: { contains: search } }
+      ]
     }
 
     const [history, total] = await Promise.all([

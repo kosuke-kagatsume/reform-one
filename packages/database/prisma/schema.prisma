@@ -22,6 +22,8 @@ model Organization {
   website              String?
   industry             String?
   description          String?
+  existingSubscriptionTypes String              @default("[]")
+  adminNotes           String?
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   auditLogs            AuditLog[]
@@ -75,6 +77,7 @@ model User {
   emailVerified   Boolean            @default(false)
   lastLoginAt     DateTime?
   lastActivityAt  DateTime?          // 最終アクティビティ日時（セミナー参加、アーカイブ視聴等）
+  adminPermissionLevel String?
   status          String             @default("ACTIVE")
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
@@ -146,6 +149,7 @@ model Subscription {
   status               String        @default("PENDING")
   paymentMethod        String        @default("CARD")
   basePrice            Float
+  discountType         String        @default("NONE")
   discountPercent      Float         @default(0)
   discountAmount       Float         @default(0)
   finalPrice           Float
@@ -883,4 +887,14 @@ model QualificationFreeQuota {
   @@index([organizationId])
   @@index([qualificationId])
   @@index([periodEnd])
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@index([key])
 }

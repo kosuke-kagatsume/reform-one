@@ -17,6 +17,7 @@ import { StatCard, StatCardGrid } from '@/components/ui/stat-card'
 import { AlertRow } from '@/components/ui/alert-row'
 import { StatusBadge, DaysAgoBadge, PlanBadge, ContractStatusBadge } from '@/components/ui/status-badge'
 import { useAuth } from '@/lib/auth-context'
+import { DISCOUNT_TYPE_LABELS, type DiscountType } from '@/types/premier'
 import { EmailSendDialog } from '@/components/admin/email-send-dialog'
 import {
   Building,
@@ -42,11 +43,12 @@ interface Organization {
   slug: string
   type: string
   createdAt: string
-  isExistingSubscriber: boolean
+  existingSubscriptionTypes: string[]
   subscription: {
     id: string
     planType: string
     status: string
+    discountType: string
     currentPeriodStart: string
     currentPeriodEnd: string
     daysUntilExpiration: number | null
@@ -459,10 +461,15 @@ export default function OrganizationsPage() {
                               <PlanBadge plan={org.subscription.planType} />
                             )}
                             {getStatusBadge(org)}
-                            {org.isExistingSubscriber && (
+                            {org.subscription?.discountType && org.subscription.discountType !== 'NONE' && (
                               <Badge className="bg-purple-100 text-purple-700 border-purple-300">
                                 <Percent className="h-3 w-3 mr-1" />
-                                既存購読者
+                                {DISCOUNT_TYPE_LABELS[org.subscription.discountType as DiscountType] || org.subscription.discountType}
+                              </Badge>
+                            )}
+                            {org.existingSubscriptionTypes.length > 0 && (
+                              <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300">
+                                既存購読あり
                               </Badge>
                             )}
                           </div>

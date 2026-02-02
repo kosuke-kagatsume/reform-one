@@ -1,5 +1,67 @@
 export type PlanType = 'STANDARD' | 'EXPERT'
 
+export type DiscountType = 'NONE' | 'EXISTING_SUBSCRIBER' | 'EXHIBITION' | 'EXHIBITION_EXISTING'
+
+export type ExistingSubscriptionType = 'PAPER' | 'ANNUAL_DIGITAL' | 'MONTHLY_DIGITAL'
+
+export const EXISTING_SUBSCRIPTION_OPTIONS: { value: ExistingSubscriptionType; label: string }[] = [
+  { value: 'PAPER', label: '既存購読（紙）' },
+  { value: 'ANNUAL_DIGITAL', label: '既存購読（年間電子版）' },
+  { value: 'MONTHLY_DIGITAL', label: '既存購読（月額電子版）' },
+]
+
+export function calculatePrice(planType: PlanType, discountType: DiscountType): { basePrice: number; finalPrice: number; discountPercent: number; discountAmount: number } {
+  const basePrice = planType === 'EXPERT' ? 220000 : 110000
+  let price = basePrice
+  let discountPercent = 0
+  let discountAmount = 0
+
+  if (discountType === 'EXHIBITION' || discountType === 'EXHIBITION_EXISTING') {
+    discountPercent = 20
+    price = Math.round(basePrice * 0.8)
+  }
+
+  if (discountType === 'EXISTING_SUBSCRIBER' || discountType === 'EXHIBITION_EXISTING') {
+    discountAmount = 22000
+    price = price - 22000
+  }
+
+  return { basePrice, finalPrice: price, discountPercent, discountAmount }
+}
+
+export interface PlanOption {
+  planType: PlanType
+  discountType: DiscountType
+  label: string
+  price: number
+}
+
+export const PLAN_OPTIONS: PlanOption[] = [
+  { planType: 'STANDARD', discountType: 'NONE', label: 'スタンダード', price: 110000 },
+  { planType: 'EXPERT', discountType: 'NONE', label: 'エキスパート', price: 220000 },
+  { planType: 'STANDARD', discountType: 'EXISTING_SUBSCRIBER', label: 'スタンダード（既存購読者）', price: 88000 },
+  { planType: 'EXPERT', discountType: 'EXISTING_SUBSCRIBER', label: 'エキスパート（既存購読者）', price: 198000 },
+  { planType: 'STANDARD', discountType: 'EXHIBITION', label: 'スタンダード20%引き（展示会割引）', price: 88000 },
+  { planType: 'EXPERT', discountType: 'EXHIBITION', label: 'エキスパート20%引き（展示会割引）', price: 176000 },
+  { planType: 'STANDARD', discountType: 'EXHIBITION_EXISTING', label: 'スタンダード20%引き（既存購読者）', price: 66000 },
+  { planType: 'EXPERT', discountType: 'EXHIBITION_EXISTING', label: 'エキスパート20%引き（既存購読者）', price: 154000 },
+]
+
+export const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = {
+  NONE: 'なし',
+  EXISTING_SUBSCRIBER: '既存購読者割引',
+  EXHIBITION: '展示会割引',
+  EXHIBITION_EXISTING: '展示会割引＋既存購読者',
+}
+
+export type AdminPermissionLevel = 'VIEW' | 'EDIT' | 'FULL'
+
+export const ADMIN_PERMISSION_LABELS: Record<AdminPermissionLevel, string> = {
+  VIEW: '閲覧のみ',
+  EDIT: '編集',
+  FULL: 'フルアクセス',
+}
+
 // 権限ロール: OWNER=社長, ADMIN=管理者, MEMBER=一般社員, ACCOUNTANT=経理
 export type UserRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'ACCOUNTANT'
 
@@ -53,6 +115,8 @@ export interface Organization {
   website?: string
   industry?: string
   description?: string
+  existingSubscriptionTypes?: string[]
+  adminNotes?: string
 }
 
 export interface User {
@@ -62,6 +126,7 @@ export interface User {
   userType: 'EMPLOYEE' | 'CUSTOMER'
   emailVerified: boolean
   mfaEnabled?: boolean
+  adminPermissionLevel?: AdminPermissionLevel | null
   createdAt: Date
   updatedAt: Date
 }
@@ -78,6 +143,7 @@ export interface Subscription {
   planType: PlanType
   status: SubscriptionStatus
   paymentMethod: PaymentMethod
+  discountType?: DiscountType
   basePrice: number
   discountPercent: number
   discountAmount: number

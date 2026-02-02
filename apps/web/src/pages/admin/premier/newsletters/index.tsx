@@ -33,7 +33,8 @@ import {
   Pencil,
   Trash2,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Eye
 } from 'lucide-react'
 
 interface Newsletter {
@@ -272,6 +273,14 @@ export default function NewslettersAdmin() {
                             <Send className="h-4 w-4 text-blue-500" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(`/dashboard/newsletters/${newsletter.id}?preview=true`, '_blank')}
+                          title="プレビュー"
+                        >
+                          <Eye className="h-4 w-4 text-green-500" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"

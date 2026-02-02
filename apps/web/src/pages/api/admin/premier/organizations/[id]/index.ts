@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
+import { calculatePrice } from '@/types/premier'
+import type { PlanType, DiscountType } from '@/types/premier'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
@@ -39,21 +41,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { name, slug, planType, status, startDate, endDate, isExistingSubscriber } = req.body
+    const { name, slug, planType, discountType, status, startDate, endDate, existingSubscriptionTypes, adminNotes } = req.body
 
     try {
-      // Update organization
       const organization = await prisma.organization.update({
         where: { id },
         data: {
           name,
           slug,
-          isExistingSubscriber: isExistingSubscriber ?? undefined
+          existingSubscriptionTypes: existingSubscriptionTypes !== undefined
+            ? JSON.stringify(existingSubscriptionTypes)
+            : undefined,
+          adminNotes: adminNotes !== undefined ? (adminNotes || null) : undefined
         }
       })
 
-      // Update active subscription if plan details changed
-      if (planType || status || startDate || endDate) {
+      if (planType || discountType || status || startDate || endDate) {
         const activeSubscription = await prisma.subscription.findFirst({
           where: {
             organizationId: id,
@@ -62,15 +65,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
 
         if (activeSubscription) {
+          const newPlanType = (planType || activeSubscription.planType) as PlanType
+          const newDiscountType = (discountType || activeSubscription.discountType || 'NONE') as DiscountType
+          const pricing = calculatePrice(newPlanType, newDiscountType)
+
           await prisma.subscription.update({
             where: { id: activeSubscription.id },
             data: {
-              planType: planType || activeSubscription.planType,
+              planType: newPlanType,
+              discountType: newDiscountType,
               status: status || activeSubscription.status,
               currentPeriodStart: startDate ? new Date(startDate) : activeSubscription.currentPeriodStart,
               currentPeriodEnd: endDate ? new Date(endDate) : activeSubscription.currentPeriodEnd,
-              basePrice: planType === 'EXPERT' ? 220000 : planType === 'STANDARD' ? 110000 : activeSubscription.basePrice,
-              finalPrice: planType === 'EXPERT' ? 165000 : planType === 'STANDARD' ? 55000 : activeSubscription.finalPrice
+              basePrice: pricing.basePrice,
+              discountPercent: pricing.discountPercent,
+              discountAmount: pricing.discountAmount,
+              finalPrice: pricing.finalPrice
             }
           })
         }
@@ -85,7 +95,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'DELETE') {
     try {
-      // Delete related records first
       await prisma.invitation.deleteMany({ where: { organizationId: id } })
       await prisma.userOrganization.deleteMany({ where: { organizationId: id } })
       await prisma.subscription.deleteMany({ where: { organizationId: id } })
