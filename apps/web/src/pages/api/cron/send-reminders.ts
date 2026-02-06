@@ -7,6 +7,7 @@ import {
   internalError,
   ErrorCodes,
 } from '@/lib/api-response'
+import { sendMail, getReminderEmailHtml, getReminderEmailText } from '@/lib/mail'
 
 // B-4: 自動送信バッチ - cron: 未ログイン者検出＆送信
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -89,15 +90,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             : 999 // 一度もログインしていない
 
           try {
-            // メール送信（TODO: 実際のメール送信サービスと連携）
-            console.log(`Sending reminder to ${user.email} (${daysInactive} days inactive)`)
+            // B-2: リマインドメール送信
+            const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://web-rho-one-18.vercel.app'}/dashboard`
 
-            // TODO: メール送信処理
-            // await sendEmail({
-            //   to: user.email,
-            //   template: 'reminder',
-            //   data: { organizationName: organization.name, userName: user.name }
-            // })
+            const emailHtml = getReminderEmailHtml({
+              userName: user.name || 'ユーザー',
+              organizationName: organization.name,
+              daysInactive,
+              dashboardUrl
+            })
+
+            const emailText = getReminderEmailText({
+              userName: user.name || 'ユーザー',
+              organizationName: organization.name,
+              daysInactive,
+              dashboardUrl
+            })
+
+            const emailSent = await sendMail({
+              to: user.email,
+              subject: `【プレミア購読】${daysInactive}日間ログインがありません`,
+              html: emailHtml,
+              text: emailText
+            })
+
+            if (!emailSent) {
+              throw new Error('メール送信に失敗しました')
+            }
 
             // 送信履歴を記録 (B-5)
             await prisma.reminderLog.create({

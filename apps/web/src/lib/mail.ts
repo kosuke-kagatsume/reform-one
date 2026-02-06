@@ -618,3 +618,86 @@ ${contactInfo}
 リフォーム産業新聞社 プレミア購読運営事務局
   `.trim()
 }
+
+// B-2: Reminder email template for inactive users
+export function getReminderEmailHtml(params: {
+  userName: string
+  organizationName: string
+  daysInactive: number
+  dashboardUrl: string
+}): string {
+  const { userName, organizationName, daysInactive, dashboardUrl } = params
+
+  const safeUserName = escapeHtml(userName)
+  const safeOrganizationName = escapeHtml(organizationName)
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9fafb; }
+    .info { background: white; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    .highlight { color: #2563eb; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>プレミア購読</h1>
+    </div>
+    <div class="content">
+      <p><strong>${safeUserName}</strong> 様</p>
+      <p>いつもプレミア購読をご利用いただき、ありがとうございます。</p>
+
+      <div class="info">
+        <p><strong>${safeOrganizationName}</strong>のアカウントで、<span class="highlight">${daysInactive}日間</span>ログインがありません。</p>
+        <p>最新のセミナー情報やアーカイブ動画、コミュニティの投稿をお見逃しなく！</p>
+      </div>
+
+      <p>ぜひダッシュボードにアクセスして、最新のコンテンツをご確認ください。</p>
+      <a href="${dashboardUrl}" class="button">ダッシュボードを開く</a>
+    </div>
+    <div class="footer">
+      <p>このメールはプレミア購読システムから自動送信されています。</p>
+      <p>配信停止をご希望の場合は、ダッシュボードの通知設定から変更できます。</p>
+      <p>リフォーム産業新聞社</p>
+    </div>
+  </div>
+</body>
+</html>
+  `
+}
+
+export function getReminderEmailText(params: {
+  userName: string
+  organizationName: string
+  daysInactive: number
+  dashboardUrl: string
+}): string {
+  const { userName, organizationName, daysInactive, dashboardUrl } = params
+
+  return `
+${userName} 様
+
+いつもプレミア購読をご利用いただき、ありがとうございます。
+
+${organizationName}のアカウントで、${daysInactive}日間ログインがありません。
+
+最新のセミナー情報やアーカイブ動画、コミュニティの投稿をお見逃しなく！
+ぜひダッシュボードにアクセスして、最新のコンテンツをご確認ください。
+
+ダッシュボードURL: ${dashboardUrl}
+
+---
+このメールはプレミア購読システムから自動送信されています。
+配信停止をご希望の場合は、ダッシュボードの通知設定から変更できます。
+リフォーム産業新聞社
+  `.trim()
+}

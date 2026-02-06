@@ -34,6 +34,7 @@ model Organization {
   users                UserOrganization[]
   reminderSetting      ReminderSetting?
   changeLogs           OrganizationChangeLog[]
+  payments             Payment[]
 
   @@index([slug])
   @@index([type])
@@ -88,6 +89,7 @@ model User {
   sentEmails      EmailHistory[]     @relation("SentEmails")
   notifications   Notification[]
   notificationPref NotificationPreference?
+  payments        Payment[]
 
   @@index([email])
   @@index([userType])
@@ -897,4 +899,31 @@ model SystemSetting {
   updatedBy String?
 
   @@index([key])
+}
+
+// C-5: 決済履歴モデル
+model Payment {
+  id                    String       @id @default(cuid())
+  organizationId        String?
+  userId                String
+  type                  String       // SITE_VISIT, QUALIFICATION, AFTER_PARTY, SUBSCRIPTION
+  amount                Int          // 金額（円）
+  status                String       @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+  stripeSessionId       String?      // Stripe Checkout Session ID
+  stripePaymentIntentId String?      // Stripe Payment Intent ID
+  description           String?
+  metadata              String?      // JSON形式の追加情報
+  paidAt                DateTime?
+  refundedAt            DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([stripeSessionId])
+  @@index([stripePaymentIntentId])
+  @@index([status])
+  @@index([createdAt])
 }

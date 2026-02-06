@@ -1,8 +1,6 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { NotificationCenter } from './notification-center'
 import { FAQDropdown } from './faq-dropdown'
 import { useAuth } from '@/lib/auth-context'
@@ -17,13 +15,9 @@ import {
   Menu,
   X,
   FileText,
-  BarChart3,
   Shield,
   ChevronDown,
   User,
-  BookOpen,
-  Package,
-  GraduationCap,
   Calendar,
   Video,
   MessageSquare,
@@ -88,29 +82,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // グループ分けされたナビゲーション（menuIdを追加）
+  // D-1: 利用/管理者メニュー分離の明確化
   const navigationGroups: NavGroup[] = [
     {
-      label: 'よく使う',
+      label: '利用する',
       items: [
         { menuId: 'dashboard', name: 'ダッシュボード', href: '/dashboard', icon: Home },
         { menuId: 'seminars', name: 'セミナー', href: '/dashboard/seminars', icon: Calendar },
         { menuId: 'archives', name: 'アーカイブ', href: '/dashboard/archives', icon: Video },
         { menuId: 'community', name: 'コミュニティ', href: '/dashboard/community', icon: MessageSquare },
-      ]
-    },
-    {
-      label: 'コンテンツ',
-      items: [
         { menuId: 'databooks', name: 'データブック', href: '/dashboard/databooks', icon: FileText },
-        { menuId: 'newsletters', name: 'ニュースレター', href: '/dashboard/newsletters', icon: Mail, subLabel: '経営レポート配信' },
-        { menuId: 'site-visits', name: '視察会', href: '/dashboard/site-visits', icon: Building2, subLabel: '他社見学ツアー' },
-        { menuId: 'tools', name: 'ツール', href: '/dashboard/tools', icon: Wrench, subLabel: '診断・フォーマット集' },
+        { menuId: 'newsletters', name: 'ニュースレター', href: '/dashboard/newsletters', icon: Mail },
+        { menuId: 'site-visits', name: '視察会', href: '/dashboard/site-visits', icon: Building2 },
+        { menuId: 'tools', name: 'ツール', href: '/dashboard/tools', icon: Wrench },
         { menuId: 'qualifications', name: '資格', href: '/dashboard/qualifications', icon: Award },
       ]
     },
     {
-      label: '管理',
-      isAdminSection: true, // 管理者セクションとしてマーク
+      label: '管理者メニュー',
+      isAdminSection: true,
       items: [
         { menuId: 'members', name: 'メンバー管理', href: '/dashboard/members', icon: Users },
         { menuId: 'organization', name: '組織設定', href: '/dashboard/organization', icon: Building },
@@ -131,6 +121,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     logout()
     router.push('/login')
   }
+
+  // D-5: アクティブ状態の色を取得
+  const getActiveStyles = () => {
+    if (planType === 'EXPERT') {
+      return {
+        active: 'bg-purple-100 text-purple-700 font-semibold border-l-4 border-purple-600',
+        hover: 'hover:bg-purple-50 hover:text-purple-600'
+      }
+    }
+    return {
+      active: 'bg-blue-100 text-blue-700 font-semibold border-l-4 border-blue-600',
+      hover: 'hover:bg-blue-50 hover:text-blue-600'
+    }
+  }
+
+  const activeStyles = getActiveStyles()
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -173,40 +179,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {filteredNavigationGroups.map((group, groupIndex) => {
             const isAdminSection = 'isAdminSection' in group && group.isAdminSection
             return (
-              <div key={group.label} className={groupIndex > 0 ? 'mt-6' : ''}>
-                {/* 管理セクションは上に区切り線を追加 */}
+              <div key={group.label} className={groupIndex > 0 ? 'mt-4' : ''}>
+                {/* D-2: 管理者セクションは区切り線と背景で強調 */}
                 {isAdminSection && (
-                  <div className="border-t border-slate-200 pt-4 mb-2" />
+                  <div className="border-t-2 border-slate-300 pt-4 mb-2 mt-2" />
                 )}
                 <h3 className={`px-3 mb-2 text-xs uppercase tracking-wider ${
                   isAdminSection
-                    ? 'font-bold text-slate-600'
+                    ? 'font-bold text-slate-700 flex items-center gap-1'
                     : 'font-semibold text-slate-400'
                 }`}>
+                  {isAdminSection && <Shield className="h-3 w-3" />}
                   {group.label}
                 </h3>
-                <ul className="space-y-1">
+                <ul className="space-y-0.5">
                   {group.items.map((item) => {
-                    const isActive = router.pathname === item.href
-                    // エキスパートプランの場合は紫系、それ以外は青系
-                    const activeColor = planType === 'EXPERT' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
+                    const isActive = router.pathname === item.href || 
+                      (item.href !== '/dashboard' && router.pathname.startsWith(item.href))
                     return (
                       <li key={item.name}>
                         <Link
                           href={item.href}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          className={`flex items-center gap-3 px-3 py-2 rounded-r-lg text-sm transition-colors ${
                             isActive
-                              ? activeColor
-                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                              ? activeStyles.active
+                              : `text-slate-600 ${activeStyles.hover}`
                           }`}
                         >
-                          <item.icon className="h-5 w-5 flex-shrink-0" />
-                          <div className="flex flex-col">
-                            <span>{item.name}</span>
-                            {item.subLabel && (
-                              <span className="text-xs text-slate-400">{item.subLabel}</span>
-                            )}
-                          </div>
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isActive ? '' : 'text-slate-400'}`} />
+                          <span>{item.name}</span>
                         </Link>
                       </li>
                     )
