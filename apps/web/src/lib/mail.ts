@@ -701,3 +701,261 @@ ${organizationName}のアカウントで、${daysInactive}日間ログインが�
 リフォーム産業新聞社
   `.trim()
 }
+
+// A-3: Site Visit notification email template
+export function getSiteVisitNotificationEmailHtml(params: {
+  title: string
+  companyName?: string
+  location: string
+  scheduledAt: Date
+  description?: string
+  capacity?: number
+  dashboardUrl: string
+}): string {
+  const { title, companyName, location, scheduledAt, description, capacity, dashboardUrl } = params
+  const dateStr = scheduledAt.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+  const timeStr = scheduledAt.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #16a34a; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9fafb; }
+    .info { background: white; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .info-row { margin: 8px 0; }
+    .label { color: #666; font-size: 14px; }
+    .button { display: inline-block; background: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    .tag { display: inline-block; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 16px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>プレミア購読</h1>
+    </div>
+    <div class="content">
+      <span class="tag">視察会</span>
+      <h2>視察会のご案内</h2>
+      <div class="info">
+        <div class="info-row">
+          <span class="label">タイトル</span><br>
+          <strong>${escapeHtml(title)}</strong>
+        </div>
+        ${companyName ? `
+        <div class="info-row">
+          <span class="label">企業名</span><br>
+          ${escapeHtml(companyName)}
+        </div>
+        ` : ''}
+        <div class="info-row">
+          <span class="label">開催場所</span><br>
+          ${escapeHtml(location)}
+        </div>
+        <div class="info-row">
+          <span class="label">日時</span><br>
+          ${dateStr} ${timeStr}
+        </div>
+        ${description ? `
+        <div class="info-row">
+          <span class="label">概要</span><br>
+          ${escapeHtml(description)}
+        </div>
+        ` : ''}
+        ${capacity ? `
+        <div class="info-row">
+          <span class="label">定員</span><br>
+          ${capacity}名
+        </div>
+        ` : ''}
+      </div>
+      <a href="${dashboardUrl}" class="button">詳細を見る・申し込む</a>
+    </div>
+    <div class="footer">
+      <p>このメールはプレミア購読システムから自動送信されています。</p>
+      <p>リフォーム産業新聞社</p>
+    </div>
+  </div>
+</body>
+</html>
+  `
+}
+
+export function getSiteVisitNotificationEmailText(params: {
+  title: string
+  companyName?: string
+  location: string
+  scheduledAt: Date
+  description?: string
+  capacity?: number
+  dashboardUrl: string
+}): string {
+  const { title, companyName, location, scheduledAt, description, capacity, dashboardUrl } = params
+  const dateStr = scheduledAt.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+  const timeStr = scheduledAt.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return `
+【視察会のご案内】
+
+タイトル: ${title}
+${companyName ? `企業名: ${companyName}` : ''}
+開催場所: ${location}
+日時: ${dateStr} ${timeStr}
+${description ? `概要: ${description}` : ''}
+${capacity ? `定員: ${capacity}名` : ''}
+
+詳細・お申し込み: ${dashboardUrl}
+
+---
+このメールはプレミア購読システムから自動送信されています。
+リフォーム産業新聞社
+  `.trim()
+}
+
+// A-3: Online Site Visit notification email template
+export function getOnlineSiteVisitNotificationEmailHtml(params: {
+  title: string
+  companyName?: string
+  location?: string
+  scheduledAt: Date
+  description?: string
+  dashboardUrl: string
+}): string {
+  const { title, companyName, location, scheduledAt, description, dashboardUrl } = params
+  const dateStr = scheduledAt.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+  const timeStr = scheduledAt.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #7c3aed; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9fafb; }
+    .info { background: white; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .info-row { margin: 8px 0; }
+    .label { color: #666; font-size: 14px; }
+    .button { display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    .tag { display: inline-block; background: #ede9fe; color: #5b21b6; padding: 4px 12px; border-radius: 16px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>プレミア購読</h1>
+    </div>
+    <div class="content">
+      <span class="tag">オンライン見学会</span>
+      <h2>オンライン見学会のご案内</h2>
+      <div class="info">
+        <div class="info-row">
+          <span class="label">タイトル</span><br>
+          <strong>${escapeHtml(title)}</strong>
+        </div>
+        ${companyName ? `
+        <div class="info-row">
+          <span class="label">企業名</span><br>
+          ${escapeHtml(companyName)}
+        </div>
+        ` : ''}
+        ${location ? `
+        <div class="info-row">
+          <span class="label">見学先</span><br>
+          ${escapeHtml(location)}
+        </div>
+        ` : ''}
+        <div class="info-row">
+          <span class="label">配信日時</span><br>
+          ${dateStr} ${timeStr}
+        </div>
+        ${description ? `
+        <div class="info-row">
+          <span class="label">概要</span><br>
+          ${escapeHtml(description)}
+        </div>
+        ` : ''}
+      </div>
+      <p>Zoomを使用したオンライン配信です。ご自宅やオフィスからご参加いただけます。</p>
+      <a href="${dashboardUrl}" class="button">詳細を見る・参加登録</a>
+    </div>
+    <div class="footer">
+      <p>このメールはプレミア購読システムから自動送信されています。</p>
+      <p>リフォーム産業新聞社</p>
+    </div>
+  </div>
+</body>
+</html>
+  `
+}
+
+export function getOnlineSiteVisitNotificationEmailText(params: {
+  title: string
+  companyName?: string
+  location?: string
+  scheduledAt: Date
+  description?: string
+  dashboardUrl: string
+}): string {
+  const { title, companyName, location, scheduledAt, description, dashboardUrl } = params
+  const dateStr = scheduledAt.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+  const timeStr = scheduledAt.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return `
+【オンライン見学会のご案内】
+
+タイトル: ${title}
+${companyName ? `企業名: ${companyName}` : ''}
+${location ? `見学先: ${location}` : ''}
+配信日時: ${dateStr} ${timeStr}
+${description ? `概要: ${description}` : ''}
+
+Zoomを使用したオンライン配信です。ご自宅やオフィスからご参加いただけます。
+
+詳細・参加登録: ${dashboardUrl}
+
+---
+このメールはプレミア購読システムから自動送信されています。
+リフォーム産業新聞社
+  `.trim()
+}

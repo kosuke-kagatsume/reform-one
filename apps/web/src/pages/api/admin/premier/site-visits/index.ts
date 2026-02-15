@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
+import { sendSiteVisitNotification, shouldSendNotification } from '@/lib/event-notification'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -75,6 +76,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           isPublished: isPublished ?? false,
         },
       })
+
+      // A-3: 視察会作成時に自動メール送信（公開設定の場合）
+      if (shouldSendNotification(siteVisit.isPublished, null)) {
+        sendSiteVisitNotification({
+          id: siteVisit.id,
+          title: siteVisit.title,
+          scheduledAt: siteVisit.scheduledAt,
+          description: siteVisit.description,
+          companyName: siteVisit.companyName,
+          location: siteVisit.location,
+          capacity: siteVisit.capacity,
+        }).catch((err) => console.error('Failed to send site visit notification:', err))
+      }
 
       return res.status(201).json(siteVisit)
     }

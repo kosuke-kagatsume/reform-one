@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
+import { sendSeminarNotification, shouldSendNotification } from '@/lib/event-notification'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -57,6 +58,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
         include: { category: true }
       })
+
+      // A-3: セミナー作成時に自動メール送信（公開設定の場合）
+      // Note: isPublic is for external users; internal notifications always sent
+      if (shouldSendNotification(true, null)) {
+        // Send notification asynchronously (don't block the response)
+        sendSeminarNotification({
+          id: seminar.id,
+          title: seminar.title,
+          scheduledAt: seminar.scheduledAt,
+          description: seminar.description,
+          instructor: seminar.instructor,
+          zoomUrl: seminar.zoomUrl,
+          category: seminar.category,
+        }).catch((err) => console.error('Failed to send seminar notification:', err))
+      }
 
       return res.status(201).json({ seminar })
     } catch (error) {

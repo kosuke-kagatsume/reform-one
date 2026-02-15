@@ -8,6 +8,7 @@ import {
   internalError,
   ErrorCodes,
 } from '@/lib/api-response'
+import { sendOnlineSiteVisitNotification, shouldSendNotification } from '@/lib/event-notification'
 
 // 管理者用: オンライン現場見学会 詳細・更新・削除API
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -111,6 +112,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           metadata: JSON.stringify({ title: onlineSiteVisit.title })
         }
       })
+
+      // A-3: 公開時に未送信なら自動メール送信
+      if (shouldSendNotification(onlineSiteVisit.isPublished, existing.notificationSentAt)) {
+        sendOnlineSiteVisitNotification({
+          id: onlineSiteVisit.id,
+          title: onlineSiteVisit.title,
+          scheduledAt: onlineSiteVisit.scheduledAt,
+          description: onlineSiteVisit.description,
+          companyName: onlineSiteVisit.companyName,
+          location: onlineSiteVisit.location,
+          requiredPlan: onlineSiteVisit.requiredPlan,
+        }).catch((err) => console.error('Failed to send online site visit notification:', err))
+      }
 
       return success(res, { onlineSiteVisit }, 'オンライン現場見学会を更新しました')
     }

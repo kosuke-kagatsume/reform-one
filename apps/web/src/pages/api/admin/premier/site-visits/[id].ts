@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
+import { sendSiteVisitNotification, shouldSendNotification } from '@/lib/event-notification'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -62,6 +63,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing required fields' })
       }
 
+      // 更新前の状態を取得（通知判定用）
+      const existingSiteVisit = await prisma.siteVisit.findUnique({
+        where: { id },
+        select: { notificationSentAt: true },
+      })
+
       const siteVisit = await prisma.siteVisit.update({
         where: { id },
         data: {
@@ -86,6 +93,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           isCanceled: isCanceled ?? false,
         },
       })
+
+      // A-3: 公開時に未送信なら自動メール送信
+      if (shouldSendNotification(siteVisit.isPublished, existingSiteVisit?.notificationSentAt || null)) {
+        sendSiteVisitNotification({
+          id: siteVisit.id,
+          title: siteVisit.title,
+          scheduledAt: siteVisit.scheduledAt,
+          description: siteVisit.description,
+          companyName: siteVisit.companyName,
+          location: siteVisit.location,
+          capacity: siteVisit.capacity,
+        }).catch((err) => console.error('Failed to send site visit notification:', err))
+      }
 
       return res.status(200).json(siteVisit)
     }

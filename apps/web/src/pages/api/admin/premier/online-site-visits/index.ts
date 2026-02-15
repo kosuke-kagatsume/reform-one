@@ -8,6 +8,7 @@ import {
   internalError,
   ErrorCodes,
 } from '@/lib/api-response'
+import { sendOnlineSiteVisitNotification, shouldSendNotification } from '@/lib/event-notification'
 
 // 管理者用: オンライン現場見学会一覧・作成API
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -95,6 +96,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           metadata: JSON.stringify({ title })
         }
       })
+
+      // A-3: オンライン見学会作成時に自動メール送信（公開設定の場合）
+      if (shouldSendNotification(onlineSiteVisit.isPublished, null)) {
+        sendOnlineSiteVisitNotification({
+          id: onlineSiteVisit.id,
+          title: onlineSiteVisit.title,
+          scheduledAt: onlineSiteVisit.scheduledAt,
+          description: onlineSiteVisit.description,
+          companyName: onlineSiteVisit.companyName,
+          location: onlineSiteVisit.location,
+          requiredPlan: onlineSiteVisit.requiredPlan,
+        }).catch((err) => console.error('Failed to send online site visit notification:', err))
+      }
 
       return success(res, { onlineSiteVisit }, 'オンライン現場見学会を作成しました')
     }

@@ -493,6 +493,7 @@ model SiteVisit {
   // ステータス
   isPublished           Boolean                @default(false)
   isCanceled            Boolean                @default(false)
+  notificationSentAt    DateTime?              // A-3: 通知送信日時
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   participants          SiteVisitParticipant[]
