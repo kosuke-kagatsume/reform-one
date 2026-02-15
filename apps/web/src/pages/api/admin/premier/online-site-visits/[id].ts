@@ -103,13 +103,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // 操作ログ
+      // 操作ログ（A-6: ロールバック用にbefore状態を保存）
       await prisma.auditLog.create({
         data: {
           userId: auth.userId,
           action: 'online_site_visit.update',
           resource: id,
-          metadata: JSON.stringify({ title: onlineSiteVisit.title })
+          metadata: JSON.stringify({
+            title: onlineSiteVisit.title,
+            before: {
+              isPublished: existing.isPublished,
+              isCanceled: existing.isCanceled
+            }
+          })
         }
       })
 

@@ -6,7 +6,19 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth-context'
-import { FileText, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FileText, RefreshCw, ChevronLeft, ChevronRight, RotateCcw, AlertCircle } from 'lucide-react'
+
+// A-6: ロールバック可能な操作のリスト
+const ROLLBACKABLE_ACTIONS = [
+  'online_site_visit.update',
+  'online_site_visit.delete',
+  'site_visit.update',
+  'site_visit.delete',
+  'seminar.update',
+  'archive.update',
+  'digital_newspaper_edition.update',
+  'digital_newspaper_edition.delete'
+]
 
 interface AuditLogEntry {
   id: string
@@ -32,7 +44,49 @@ export default function AuditLogPage() {
   const [filterAction, setFilterAction] = useState('')
   const [filterStartDate, setFilterStartDate] = useState('')
   const [filterEndDate, setFilterEndDate] = useState('')
+  const [rollbackingId, setRollbackingId] = useState<string | null>(null)
+  const [rollbackMessage, setRollbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const limit = 50
+
+  // A-6: ロールバック可能かどうかをチェック
+  const canRollback = (action: string, metadata: Record<string, unknown> | null) => {
+    if (!ROLLBACKABLE_ACTIONS.includes(action)) return false
+    // update操作の場合、beforeデータが必要
+    if (action.endsWith('.update')) {
+      return metadata && 'before' in metadata
+    }
+    // delete操作の場合は常にロールバック可能（isCanceledをfalseに戻す）
+    return action.endsWith('.delete')
+  }
+
+  // A-6: ロールバック実行
+  const handleRollback = async (logId: string) => {
+    if (!confirm('この操作をロールバックしますか？')) return
+
+    setRollbackingId(logId)
+    setRollbackMessage(null)
+
+    try {
+      const res = await fetch('/api/admin/premier/audit-log/rollback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logId })
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setRollbackMessage({ type: 'success', text: data.message || 'ロールバックしました' })
+        fetchLogs() // ログを再読み込み
+      } else {
+        setRollbackMessage({ type: 'error', text: data.message || 'ロールバックに失敗しました' })
+      }
+    } catch {
+      setRollbackMessage({ type: 'error', text: 'エラーが発生しました' })
+    } finally {
+      setRollbackingId(null)
+    }
+  }
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.push('/login')
@@ -126,6 +180,24 @@ export default function AuditLogPage() {
           </CardContent>
         </Card>
 
+        {/* A-6: ロールバックメッセージ */}
+        {rollbackMessage && (
+          <div className={`p-4 rounded-lg flex items-center gap-2 ${
+            rollbackMessage.type === 'success'
+              ? 'bg-green-50 text-green-800 border border-green-200'
+              : 'bg-red-50 text-red-800 border border-red-200'
+          }`}>
+            {rollbackMessage.type === 'error' && <AlertCircle className="h-4 w-4" />}
+            <span>{rollbackMessage.text}</span>
+            <button
+              onClick={() => setRollbackMessage(null)}
+              className="ml-auto text-sm underline"
+            >
+              閉じる
+            </button>
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -159,9 +231,24 @@ export default function AuditLogPage() {
                         </p>
                       )}
                     </div>
-                    <span className="text-xs text-slate-400 whitespace-nowrap ml-4">
-                      {formatDate(log.timestamp)}
-                    </span>
+                    <div className="flex items-center gap-2 ml-4">
+                      <span className="text-xs text-slate-400 whitespace-nowrap">
+                        {formatDate(log.timestamp)}
+                      </span>
+                      {/* A-6: ロールバックボタン */}
+                      {canRollback(log.action, log.metadata) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRollback(log.id)}
+                          disabled={rollbackingId === log.id}
+                          className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          title="この操作をロールバック"
+                        >
+                          <RotateCcw className={`h-4 w-4 ${rollbackingId === log.id ? 'animate-spin' : ''}`} />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

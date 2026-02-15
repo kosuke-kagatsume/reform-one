@@ -63,10 +63,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing required fields' })
       }
 
-      // 更新前の状態を取得（通知判定用）
+      // 更新前の状態を取得（通知判定用 & A-6: ロールバック用）
       const existingSiteVisit = await prisma.siteVisit.findUnique({
         where: { id },
-        select: { notificationSentAt: true },
+        select: { notificationSentAt: true, isPublished: true, isCanceled: true },
       })
 
       const siteVisit = await prisma.siteVisit.update({
@@ -94,6 +94,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       })
 
+      // A-6: 操作ログ（ロールバック用にbefore状態を保存）
+      await prisma.auditLog.create({
+        data: {
+          userId: auth.userId,
+          action: 'site_visit.update',
+          resource: id as string,
+          metadata: JSON.stringify({
+            title: siteVisit.title,
+            before: {
+              isPublished: existingSiteVisit?.isPublished,
+              isCanceled: existingSiteVisit?.isCanceled
+            }
+          })
+        }
+      })
+
       // A-3: 公開時に未送信なら自動メール送信
       if (shouldSendNotification(siteVisit.isPublished, existingSiteVisit?.notificationSentAt || null)) {
         sendSiteVisitNotification({
@@ -111,6 +127,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'DELETE') {
+      // A-6: 操作ログ
+      await prisma.auditLog.create({
+        data: {
+          userId: auth.userId,
+          action: 'site_visit.delete',
+          resource: id as string,
+          metadata: JSON.stringify({ title: '視察会削除' })
+        }
+      })
+
       await prisma.siteVisit.delete({
         where: { id },
       })
