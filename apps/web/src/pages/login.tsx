@@ -37,6 +37,12 @@ export default function Login() {
       const result = await login(email, password)
 
       if (result.success) {
+        // A-4: リダイレクトパラメータがあればそちらへ
+        const redirect = router.query.redirect as string
+        if (redirect && redirect.startsWith('/')) {
+          router.push(redirect)
+          return
+        }
         // リフォーム産業新聞社のユーザーは管理画面へ、それ以外はダッシュボードへ
         // ログイン後のユーザー情報からリダイレクト先を判定
         const savedUser = localStorage.getItem('premier_user')
@@ -78,6 +84,12 @@ export default function Login() {
       try {
         const result = await login(account.email, account.password)
         if (result.success) {
+          // A-4: リダイレクトパラメータがあればそちらへ
+          const redirect = router.query.redirect as string
+          if (redirect && redirect.startsWith('/')) {
+            router.push(redirect)
+            return
+          }
           const savedUser = localStorage.getItem('premier_user')
           if (savedUser) {
             const userData = JSON.parse(savedUser)

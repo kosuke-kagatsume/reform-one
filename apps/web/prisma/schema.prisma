@@ -91,12 +91,35 @@ model User {
   notifications   Notification[]
   notificationPref NotificationPreference?
   payments        Payment[]
+  profile         UserProfile?             // A-4: プロフィール質問
 
   @@index([email])
   @@index([userType])
   @@index([lastLoginAt])
   @@index([lastActivityAt])
   @@index([status])
+}
+
+// A-4: ユーザープロフィール質問（登録時の6つの質問）
+model UserProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  // Q1: 部署
+  department       String?
+  // Q2: 役職
+  jobTitle         String?
+  // Q3: 業種カテゴリ
+  industryCategory String?  // リフォーム全般, 外壁塗装, 水回り, etc.
+  // Q4: 従業員数
+  companySize      String?  // 1-10名, 11-50名, 51-100名, 101名以上
+  // Q5: 関心のあるテーマ（複数選択可、JSON配列）
+  interests        String?  // JSON array: ["経営戦略", "人材育成", "マーケティング", etc.]
+  // Q6: 購読のきっかけ/目的
+  subscriptionGoal String?
+  // メタデータ
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserOrganization {

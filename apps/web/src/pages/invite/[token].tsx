@@ -76,7 +76,8 @@ export default function AcceptInvite() {
       if (response.ok) {
         setSuccess(true)
         setTimeout(() => {
-          router.push('/login')
+          // A-4: 登録後はプロフィール設定ページへリダイレクト
+          router.push('/login?redirect=/profile-setup')
         }, 3000)
       } else {
         const data = await response.json()
