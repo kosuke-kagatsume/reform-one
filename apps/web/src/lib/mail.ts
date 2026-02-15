@@ -18,14 +18,22 @@ function escapeHtml(str: string): string {
 const FROM_EMAIL = process.env.EMAIL_FROM || 'プレミア購読運営事務局 <premium@the-reform.co.jp>'
 const REPLY_TO = process.env.EMAIL_REPLY_TO || 'support@reform-one.jp'
 
+// C-1: 添付ファイルの型定義
+interface EmailAttachment {
+  filename: string
+  content: Buffer | string
+  contentType?: string
+}
+
 interface SendMailOptions {
   to: string | string[]
   subject: string
   text?: string
   html?: string
+  attachments?: EmailAttachment[]
 }
 
-export async function sendMail({ to, subject, text, html }: SendMailOptions): Promise<boolean> {
+export async function sendMail({ to, subject, text, html, attachments }: SendMailOptions): Promise<boolean> {
   const recipients = Array.isArray(to) ? to : [to]
 
   // In development without API key, just log the email
@@ -35,10 +43,19 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions): Pr
     console.log(`   To: ${recipients.join(', ')}`)
     console.log(`   Subject: ${subject}`)
     console.log(`   Body: ${text?.substring(0, 100)}...`)
+    if (attachments?.length) {
+      console.log(`   Attachments: ${attachments.map(a => a.filename).join(', ')}`)
+    }
     return true
   }
 
   try {
+    // C-1: 添付ファイル対応 - Resendの形式に変換
+    const resendAttachments = attachments?.map(att => ({
+      filename: att.filename,
+      content: typeof att.content === 'string' ? Buffer.from(att.content, 'base64') : att.content,
+    }))
+
     // Use type assertion for Resend API compatibility
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -47,6 +64,7 @@ export async function sendMail({ to, subject, text, html }: SendMailOptions): Pr
       subject,
       text: text || '',
       html: html || '',
+      attachments: resendAttachments,
     } as Parameters<typeof resend.emails.send>[0])
 
     if (error) {

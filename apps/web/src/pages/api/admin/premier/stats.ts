@@ -10,7 +10,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const now = new Date()
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
     const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
@@ -43,7 +42,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expertSubscriptions,
       // 今月の新規・解約
       newSubscriptionsThisMonth,
-      canceledThisMonth
+      canceledThisMonth,
+      // B: 視察会統計
+      upcomingSiteVisits,
+      totalSiteVisitParticipants,
+      // B: オンライン見学会統計
+      upcomingOnlineSiteVisits,
+      totalOnlineSiteVisitParticipants,
+      // B: 電子版新聞統計
+      totalDigitalNewspaperEditions,
+      publishedDigitalNewspaperEditions
     ] = await Promise.all([
       // 基本統計
       prisma.organization.count({
@@ -171,6 +179,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'CANCELED',
           canceledAt: { gte: startOfMonth }
         }
+      }),
+      // B: 開催予定視察会
+      prisma.siteVisit.count({
+        where: {
+          scheduledAt: { gte: now },
+          isPublished: true,
+          isCanceled: false
+        }
+      }),
+      // B: 視察会参加者数
+      prisma.siteVisitParticipant.count(),
+      // B: 開催予定オンライン見学会
+      prisma.onlineSiteVisit.count({
+        where: {
+          scheduledAt: { gte: now },
+          isPublished: true,
+          isCanceled: false
+        }
+      }),
+      // B: オンライン見学会参加者数
+      prisma.onlineSiteVisitParticipant.count(),
+      // B: 電子版新聞総数
+      prisma.digitalNewspaperEdition.count(),
+      // B: 公開中電子版新聞
+      prisma.digitalNewspaperEdition.count({
+        where: { isPublished: true }
       })
     ])
 
@@ -249,6 +283,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           newThisMonth: newSubscriptionsThisMonth,
           canceledThisMonth: canceledThisMonth
+        },
+        // B: 視察会
+        siteVisits: {
+          upcoming: upcomingSiteVisits,
+          totalParticipants: totalSiteVisitParticipants
+        },
+        // B: オンライン見学会
+        onlineSiteVisits: {
+          upcoming: upcomingOnlineSiteVisits,
+          totalParticipants: totalOnlineSiteVisitParticipants
+        },
+        // B: 電子版新聞
+        digitalNewspaper: {
+          total: totalDigitalNewspaperEditions,
+          published: publishedDigitalNewspaperEditions
         }
       },
       // 運営アラート

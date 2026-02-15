@@ -14,14 +14,14 @@ import {
   MessageSquare,
   ChevronRight,
   CheckCircle,
-  FileText,
   Mail,
   AlertTriangle,
-  Wrench,
-  FolderOpen,
   Search,
   RefreshCw,
-  Plus
+  Plus,
+  MapPin,
+  Monitor,
+  Newspaper
 } from 'lucide-react'
 
 interface DashboardDetails {
@@ -60,6 +60,19 @@ interface DashboardDetails {
     expert: { active: number }
     newThisMonth: number
     canceledThisMonth: number
+  }
+  // B: 追加統計
+  siteVisits: {
+    upcoming: number
+    totalParticipants: number
+  }
+  onlineSiteVisits: {
+    upcoming: number
+    totalParticipants: number
+  }
+  digitalNewspaper: {
+    total: number
+    published: number
   }
 }
 
@@ -182,11 +195,11 @@ export default function PremierAdminDashboard() {
   const quickActions = [
     { label: '新規セミナー', href: '/admin/premier/seminars/new', icon: Calendar },
     { label: '新規アーカイブ', href: '/admin/premier/archives/new', icon: Video },
+    { label: '新規視察会', href: '/admin/premier/site-visits/new', icon: MapPin },
+    { label: '新規オンライン見学会', href: '/admin/premier/online-site-visits/new', icon: Monitor },
     { label: 'ニュースレター', href: '/admin/premier/newsletters', icon: Mail },
+    { label: '電子版新聞', href: '/admin/premier/digital-newspaper', icon: Newspaper },
     { label: '新規契約組織', href: '/admin/premier/organizations/new', icon: Building },
-    { label: '新規ツール追加', href: '/admin/premier/tools', icon: Wrench },
-    { label: 'カテゴリ追加', href: '/admin/premier/categories', icon: FolderOpen },
-    { label: 'データブック', href: '/admin/premier/databooks', icon: FileText },
     { label: '会員検索', href: '/admin/premier/members', icon: Search },
   ]
 
@@ -428,6 +441,75 @@ export default function PremierAdminDashboard() {
                           未ログイン30日以上: {stats.details.members.inactive}人
                         </span>
                       )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* B: 視察会 */}
+          <Link href="/admin/premier/site-visits">
+            <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-amber-100">
+                      <MapPin className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.details.siteVisits?.upcoming || 0}</p>
+                      <p className="text-sm font-medium text-slate-700">開催予定視察会</p>
+                      <p className="text-xs text-slate-500">
+                        累計参加者: {stats.details.siteVisits?.totalParticipants || 0}人
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* B: オンライン見学会 */}
+          <Link href="/admin/premier/online-site-visits">
+            <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-cyan-100">
+                      <Monitor className="h-6 w-6 text-cyan-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.details.onlineSiteVisits?.upcoming || 0}</p>
+                      <p className="text-sm font-medium text-slate-700">開催予定オンライン見学会</p>
+                      <p className="text-xs text-slate-500">
+                        累計参加者: {stats.details.onlineSiteVisits?.totalParticipants || 0}人
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* B: 電子版新聞 */}
+          <Link href="/admin/premier/digital-newspaper">
+            <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-indigo-100">
+                      <Newspaper className="h-6 w-6 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.details.digitalNewspaper?.published || 0}</p>
+                      <p className="text-sm font-medium text-slate-700">公開中電子版新聞</p>
+                      <p className="text-xs text-slate-500">
+                        全{stats.details.digitalNewspaper?.total || 0}号
+                      </p>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
