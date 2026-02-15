@@ -23,7 +23,8 @@ import {
   Shield,
   Eye,
   MapPin,
-  Monitor
+  Monitor,
+  Newspaper
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -77,6 +78,11 @@ export function PremierAdminLayout({ children }: PremierAdminLayoutProps) {
       title: 'アーカイブ管理',
       icon: Video,
       href: '/admin/premier/archives',
+    },
+    {
+      title: '電子版新聞',
+      icon: Newspaper,
+      href: '/admin/premier/digital-newspaper',
     },
     {
       title: 'コミュニティ管理',

@@ -26,7 +26,8 @@ import {
   Award,
   Mail,
   Crown,
-  Monitor
+  Monitor,
+  Newspaper
 } from 'lucide-react'
 
 interface NavItem {
@@ -94,6 +95,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { menuId: 'community', name: 'コミュニティ', href: '/dashboard/community', icon: MessageSquare },
         { menuId: 'databooks', name: 'データブック', href: '/dashboard/databooks', icon: FileText },
         { menuId: 'newsletters', name: 'ニュースレター', href: '/dashboard/newsletters', icon: Mail },
+        { menuId: 'digital-newspaper', name: '電子版新聞', href: '/dashboard/digital-newspaper', icon: Newspaper },
         { menuId: 'site-visits', name: '視察会', href: '/dashboard/site-visits', icon: Building2 },
         { menuId: 'online-site-visits', name: 'オンライン見学会', href: '/dashboard/online-site-visits', icon: Monitor },
         { menuId: 'tools', name: 'ツール', href: '/dashboard/tools', icon: Wrench },

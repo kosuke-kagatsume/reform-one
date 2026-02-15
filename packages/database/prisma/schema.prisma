@@ -35,6 +35,7 @@ model Organization {
   reminderSetting      ReminderSetting?
   changeLogs           OrganizationChangeLog[]
   payments             Payment[]
+  digitalNewspaperAccess DigitalNewspaperAccess?
 
   @@index([slug])
   @@index([type])
@@ -944,6 +945,35 @@ model SystemSetting {
   updatedBy String?
 
   @@index([key])
+}
+
+// 電子版リフォーム産業新聞
+model DigitalNewspaperEdition {
+  id           String   @id @default(cuid())
+  title        String                          // 号数・タイトル（例: 2026年2月15日号）
+  issueDate    DateTime                        // 発行日
+  pdfUrl       String                          // PDFファイルURL
+  thumbnailUrl String?                         // サムネイル画像URL
+  pageCount    Int?                            // ページ数
+  description  String?                         // 概要
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([issueDate])
+  @@index([isPublished])
+}
+
+// 電子版アクセス権限（1組織につき1名のみ）
+model DigitalNewspaperAccess {
+  id             String       @id @default(cuid())
+  organizationId String       @unique            // 1組織につき1レコード
+  userId         String                          // アクセス権を持つユーザー
+  grantedAt      DateTime     @default(now())
+  grantedBy      String?                         // 付与した管理者
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // C-5: 決済履歴モデル
