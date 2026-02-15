@@ -6,6 +6,7 @@ import {
   BarChart3,
   Users,
   Calendar,
+  CalendarDays,
   Video,
   MessageSquare,
   Menu,
@@ -53,6 +54,11 @@ export function PremierAdminLayout({ children }: PremierAdminLayoutProps) {
       title: 'ダッシュボード',
       icon: BarChart3,
       href: '/admin/premier',
+    },
+    {
+      title: 'カレンダー',
+      icon: CalendarDays,
+      href: '/admin/premier/calendar',
     },
     {
       title: '契約組織管理',
