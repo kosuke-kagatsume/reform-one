@@ -21,7 +21,9 @@ import {
   Mail as MailIcon,
   FileText,
   Shield,
-  Eye
+  Eye,
+  MapPin,
+  Monitor
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,6 +62,16 @@ export function PremierAdminLayout({ children }: PremierAdminLayoutProps) {
       title: 'セミナー管理',
       icon: Calendar,
       href: '/admin/premier/seminars',
+    },
+    {
+      title: '視察会管理',
+      icon: MapPin,
+      href: '/admin/premier/site-visits',
+    },
+    {
+      title: 'オンライン見学会',
+      icon: Monitor,
+      href: '/admin/premier/online-site-visits',
     },
     {
       title: 'アーカイブ管理',

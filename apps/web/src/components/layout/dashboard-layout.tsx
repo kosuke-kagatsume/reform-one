@@ -25,7 +25,8 @@ import {
   Wrench,
   Award,
   Mail,
-  Crown
+  Crown,
+  Monitor
 } from 'lucide-react'
 
 interface NavItem {
@@ -94,6 +95,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { menuId: 'databooks', name: 'データブック', href: '/dashboard/databooks', icon: FileText },
         { menuId: 'newsletters', name: 'ニュースレター', href: '/dashboard/newsletters', icon: Mail },
         { menuId: 'site-visits', name: '視察会', href: '/dashboard/site-visits', icon: Building2 },
+        { menuId: 'online-site-visits', name: 'オンライン見学会', href: '/dashboard/online-site-visits', icon: Monitor },
         { menuId: 'tools', name: 'ツール', href: '/dashboard/tools', icon: Wrench },
         { menuId: 'qualifications', name: '資格', href: '/dashboard/qualifications', icon: Award },
       ]

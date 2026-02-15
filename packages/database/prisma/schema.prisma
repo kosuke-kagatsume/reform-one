@@ -531,6 +531,50 @@ model SiteVisitParticipant {
   @@index([paymentStatus])
 }
 
+// オンライン現場見学会（Zoom配信）
+model OnlineSiteVisit {
+  id                 String                      @id @default(cuid())
+  title              String
+  description        String?
+  companyName        String?                     // 視察先企業名
+  location           String?                     // 都道府県（参考情報）
+  imageUrl           String?
+  zoomUrl            String?                     // Zoom配信URL
+  scheduledAt        DateTime
+  duration           Int?                        // 分
+  capacity           Int                         @default(100)
+  // プラン別
+  requiredPlan       String                      @default("STANDARD") // STANDARD or EXPERT
+  // ステータス
+  isPublished        Boolean                     @default(false)
+  isCanceled         Boolean                     @default(false)
+  notificationSentAt DateTime?                   // 通知送信日時
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  participants       OnlineSiteVisitParticipant[]
+
+  @@index([scheduledAt])
+  @@index([isPublished])
+  @@index([requiredPlan])
+}
+
+model OnlineSiteVisitParticipant {
+  id                String          @id @default(cuid())
+  onlineSiteVisitId String
+  userId            String
+  organizationId    String?
+  status            String          @default("REGISTERED") // REGISTERED, ATTENDED, CANCELED
+  registeredAt      DateTime        @default(now())
+  attendedAt        DateTime?
+  onlineSiteVisit   OnlineSiteVisit @relation(fields: [onlineSiteVisitId], references: [id], onDelete: Cascade)
+
+  @@unique([onlineSiteVisitId, userId])
+  @@index([onlineSiteVisitId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([status])
+}
+
 model Qualification {
   id          String              @id @default(cuid())
   name        String
