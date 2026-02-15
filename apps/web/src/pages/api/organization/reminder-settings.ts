@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 設定がない場合はデフォルト値を返す
       if (!setting) {
         return success(res, {
-          enabled: false,
+          isEnabled: false,
           daysThreshold: 14,
           targetType: 'ALL'
         })
@@ -59,13 +59,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const setting = await prisma.reminderSetting.upsert({
         where: { organizationId },
         update: {
-          enabled: enabled ?? false,
+          isEnabled: enabled ?? false,
           daysThreshold: daysThreshold ?? 14,
           targetType: targetType ?? 'ALL'
         },
         create: {
           organizationId,
-          enabled: enabled ?? false,
+          isEnabled: enabled ?? false,
           daysThreshold: daysThreshold ?? 14,
           targetType: targetType ?? 'ALL'
         }

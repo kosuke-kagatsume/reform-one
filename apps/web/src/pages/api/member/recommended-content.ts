@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         id: true,
         title: true,
-        benefitText: true,
+        recommendReason: true,
         category: { select: { name: true } }
       }
     })
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         id: true,
         title: true,
-        summary: true
+        description: true
       }
     })
 
@@ -62,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       id: archive.id,
       type: 'archive' as const,
       title: archive.title,
-      reason: archive.benefitText || archive.category.name || `おすすめ動画 #${index + 1}`,
+      reason: archive.recommendReason || archive.category.name || `おすすめ動画 #${index + 1}`,
       viewed: viewedArchiveIds.includes(archive.id)
     }))
 
@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         id: recentDatabook.id,
         type: 'databook',
         title: recentDatabook.title,
-        reason: recentDatabook.summary || '最新のデータブック',
+        reason: recentDatabook.description || '最新のデータブック',
         viewed: false // TODO: データブックの既読チェック
       })
     }

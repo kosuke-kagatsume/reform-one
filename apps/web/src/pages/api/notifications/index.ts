@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
       const unreadCount = await prisma.notification.count({
-        where: { userId, read: false }
+        where: { userId, isRead: false }
       })
 
       return success(res, {
@@ -47,9 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return error(res, ErrorCodes.UNAUTHORIZED, '認証が必要です')
       }
 
-      const { userId, type, title, message, link } = req.body
+      const { userId, type, title, body, link } = req.body
 
-      if (!userId || !type || !title || !message) {
+      if (!userId || !type || !title) {
         return error(res, ErrorCodes.MISSING_REQUIRED_FIELD, '必須項目が不足しています')
       }
 
@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           userId,
           type,
           title,
-          message,
+          body: body || null,
           link: link || null
         }
       })

@@ -38,13 +38,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         scheduledAt,
         duration,
         capacity,
-        price,
+        maxPerOrganization,
+        priceStandard,
+        priceExpert,
+        expertFreeQuota,
         hasAfterParty,
         afterPartyPrice,
+        afterPartyCapacity,
+        afterPartyLocation,
         isPublished,
       } = req.body
 
-      if (!title || !location || !scheduledAt || price === undefined) {
+      if (!title || !location || !scheduledAt || priceStandard === undefined) {
         return res.status(400).json({ error: 'Missing required fields' })
       }
 
@@ -59,9 +64,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           scheduledAt: new Date(scheduledAt),
           duration: duration ? parseInt(duration, 10) : null,
           capacity: capacity ? parseInt(capacity, 10) : 20,
-          price: parseFloat(price),
+          maxPerOrganization: maxPerOrganization ? parseInt(maxPerOrganization, 10) : 2,
+          priceStandard: parseFloat(priceStandard),
+          priceExpert: priceExpert !== undefined ? parseFloat(priceExpert) : 0,
+          expertFreeQuota: expertFreeQuota ? parseInt(expertFreeQuota, 10) : 2,
           hasAfterParty: hasAfterParty ?? false,
           afterPartyPrice: afterPartyPrice ? parseFloat(afterPartyPrice) : null,
+          afterPartyCapacity: afterPartyCapacity ? parseInt(afterPartyCapacity, 10) : null,
+          afterPartyLocation: afterPartyLocation || null,
           isPublished: isPublished ?? false,
         },
       })

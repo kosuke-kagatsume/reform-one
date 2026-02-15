@@ -32,10 +32,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return error(res, ErrorCodes.FORBIDDEN, '管理者権限が必要です')
     }
 
+    // 組織のReminderSettingを取得
+    const reminderSetting = await prisma.reminderSetting.findUnique({
+      where: { organizationId: userOrg.organizationId }
+    })
+
     const { memberId, limit = '50', offset = '0' } = req.query
 
     const where: Prisma.ReminderLogWhereInput = {
-      organizationId: userOrg.organizationId
+      reminderSettingId: reminderSetting?.id
     }
 
     // 特定メンバーのログのみ取得
@@ -70,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 統計情報
     const stats = await prisma.reminderLog.groupBy({
       by: ['status'],
-      where: { organizationId: userOrg.organizationId },
+      where: { reminderSettingId: reminderSetting?.id },
       _count: true
     })
 

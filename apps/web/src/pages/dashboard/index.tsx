@@ -73,12 +73,6 @@ interface AdminStats {
   totalArchivesViewed: number
 }
 
-interface BusinessSceneTag {
-  id: string
-  name: string
-  color: string | null
-}
-
 interface RecommendedContent {
   id: string
   type: 'archive' | 'seminar' | 'databook'
@@ -106,8 +100,6 @@ export default function Dashboard() {
   const [totalArchiveCount, setTotalArchiveCount] = useState(0)
 
   // 一般社員向け状態
-  const [businessSceneTags, setBusinessSceneTags] = useState<BusinessSceneTag[]>([])
-  const [selectedSceneTag, setSelectedSceneTag] = useState<string | null>(null)
   const [recommendedContent, setRecommendedContent] = useState<RecommendedContent[]>([])
   const [salesContact, setSalesContact] = useState<SalesContact | null>(null)
 
@@ -269,13 +261,6 @@ export default function Dashboard() {
   // 一般社員向けデータ取得
   const fetchMemberData = async () => {
     try {
-      // 業務シーンタグを取得
-      const tagsRes = await fetch('/api/business-scene-tags')
-      if (tagsRes.ok) {
-        const data = await tagsRes.json()
-        setBusinessSceneTags(data.tags || [])
-      }
-
       // 今月やってほしいこと（自動生成おすすめ）を取得
       const recommendedRes = await fetch('/api/member/recommended-content')
       if (recommendedRes.ok) {
@@ -292,14 +277,6 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to fetch member data:', error)
       // デモ用のダミーデータ
-      setBusinessSceneTags([
-        { id: '1', name: '初回商談', color: '#3B82F6' },
-        { id: '2', name: '失注防止', color: '#EF4444' },
-        { id: '3', name: '値上げ対応', color: '#F59E0B' },
-        { id: '4', name: '若手育成', color: '#10B981' },
-        { id: '5', name: '現場クレーム', color: '#8B5CF6' },
-        { id: '6', name: '社内DX', color: '#06B6D4' }
-      ])
       setRecommendedContent([
         { id: '1', type: 'archive', title: '初回商談で必ず聞くべき5つの質問', reason: '初回商談に役立つ', viewed: false },
         { id: '2', type: 'archive', title: '値上げ交渉の成功事例', reason: '今月の注目コンテンツ', viewed: true },
@@ -893,34 +870,6 @@ export default function Dashboard() {
               </Button>
             </CardHeader>
             <CardContent>
-              {/* 一般社員向け：業務シーンタグフィルター */}
-              {isMember && planType === 'EXPERT' && businessSceneTags.length > 0 && (
-                <div className="mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant={selectedSceneTag === null ? 'default' : 'outline'}
-                      onClick={() => setSelectedSceneTag(null)}
-                      className="text-xs"
-                    >
-                      すべて
-                    </Button>
-                    {businessSceneTags.map((tag) => (
-                      <Button
-                        key={tag.id}
-                        size="sm"
-                        variant={selectedSceneTag === tag.id ? 'default' : 'outline'}
-                        onClick={() => setSelectedSceneTag(tag.id)}
-                        className="text-xs"
-                        style={selectedSceneTag === tag.id && tag.color ? { backgroundColor: tag.color } : {}}
-                      >
-                        <Tag className="h-3 w-3 mr-1" />
-                        {tag.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
               {recentArchives.length > 0 ? (
                 <div className="space-y-3">
                   {recentArchives.map((archive, index) => (

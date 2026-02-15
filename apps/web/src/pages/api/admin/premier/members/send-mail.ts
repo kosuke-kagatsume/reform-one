@@ -119,13 +119,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           })
 
           for (const p of participants) {
-            const email = p.userEmail
-            if (email && !seenEmails.has(email)) {
-              seenEmails.add(email)
+            // ユーザー情報をリレーションから取得
+            const user = await prisma.user.findUnique({
+              where: { id: p.userId },
+              include: {
+                organizations: {
+                  include: { organization: true },
+                  take: 1
+                }
+              }
+            })
+            if (user && !seenEmails.has(user.email)) {
+              seenEmails.add(user.email)
+              const userOrg = user.organizations[0]
               recipients.push({
-                email,
-                name: p.userName,
-                organizationName: p.organizationName || ''
+                email: user.email,
+                name: user.name,
+                organizationName: userOrg?.organization.name || ''
               })
             }
           }

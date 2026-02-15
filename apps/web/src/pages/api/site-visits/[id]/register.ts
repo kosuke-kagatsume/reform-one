@@ -76,10 +76,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Get user's organization
+    // Get user's organization and subscription
     const userOrg = await prisma.userOrganization.findFirst({
       where: { userId: auth.userId },
+      include: {
+        organization: {
+          include: {
+            subscriptions: {
+              where: { status: 'ACTIVE' },
+              take: 1
+            }
+          }
+        }
+      }
     })
+
+    // Determine price based on user's plan
+    const isExpertPlan = userOrg?.organization?.subscriptions?.[0]?.planType === 'EXPERT'
+    const price = isExpertPlan ? (siteVisit.priceExpert ?? siteVisit.priceStandard) : siteVisit.priceStandard
 
     // Create registration
     const registration = await prisma.siteVisitParticipant.create({
@@ -93,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // If price is 0, auto-confirm
-    if (siteVisit.price === 0) {
+    if (price === 0) {
       await prisma.siteVisitParticipant.update({
         where: { id: registration.id },
         data: {
@@ -129,7 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 name: `視察会: ${siteVisit.title}`,
                 description: `${siteVisit.location} - ${siteVisit.scheduledAt.toLocaleDateString('ja-JP')}`,
               },
-              unit_amount: Math.round(siteVisit.price),
+              unit_amount: Math.round(price),
             },
             quantity: 1,
           },

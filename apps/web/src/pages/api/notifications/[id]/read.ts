@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Mark as read
     await prisma.notification.update({
       where: { id },
-      data: { read: true }
+      data: { isRead: true, readAt: new Date() }
     })
 
     return success(res, null, '既読にしました')

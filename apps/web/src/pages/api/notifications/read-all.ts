@@ -21,8 +21,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const result = await prisma.notification.updateMany({
-      where: { userId, read: false },
-      data: { read: true }
+      where: { userId, isRead: false },
+      data: { isRead: true, readAt: new Date() }
     })
 
     return success(res, { count: result.count }, `${result.count}件の通知を既読にしました`)

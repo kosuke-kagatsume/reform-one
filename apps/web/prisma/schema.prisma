@@ -164,6 +164,7 @@ model Subscription {
   renewalNotifiedAt    DateTime?
   cancelAt             DateTime?
   canceledAt           DateTime?
+  scheduledPlanChange  String?       // 次回更新時に変更するプラン（STANDARD/EXPERT）
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
   addons               Addon[]

@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 有効なリマインド設定を持つ組織を取得
     const reminderSettings = await prisma.reminderSetting.findMany({
-      where: { enabled: true }
+      where: { isEnabled: true }
     })
 
     let totalSent = 0
@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const recentReminder = await prisma.reminderLog.findFirst({
             where: {
               userId: user.id,
-              organizationId: setting.organizationId,
+              reminderSettingId: setting.id,
               sentAt: {
                 gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7日以内
               }
@@ -121,10 +121,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // 送信履歴を記録 (B-5)
             await prisma.reminderLog.create({
               data: {
-                organizationId: setting.organizationId,
+                reminderSettingId: setting.id,
                 userId: user.id,
-                emailAddress: user.email,
-                daysInactive,
+                email: user.email,
                 status: 'SENT'
               }
             })
@@ -137,10 +136,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // 失敗も記録
             await prisma.reminderLog.create({
               data: {
-                organizationId: setting.organizationId,
+                reminderSettingId: setting.id,
                 userId: user.id,
-                emailAddress: user.email,
-                daysInactive,
+                email: user.email,
                 status: 'FAILED'
               }
             })
