@@ -76,22 +76,22 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 // 各ロールがアクセスできるメニュー項目
 export const ROLE_MENU_ACCESS: Record<UserRole, string[]> = {
   OWNER: [
-    'dashboard', 'seminars', 'archives', 'community',
-    'databooks', 'newsletters', 'site-visits', 'tools', 'qualifications',
+    'dashboard', 'calendar', 'seminars', 'archives', 'community',
+    'databooks', 'newsletters', 'digital-newspaper', 'site-visits', 'online-site-visits', 'tools', 'qualifications',
     'members', 'organization', 'billing', 'security', 'settings'
   ],
   ADMIN: [
-    'dashboard', 'seminars', 'archives', 'community',
-    'databooks', 'newsletters', 'site-visits', 'tools', 'qualifications',
+    'dashboard', 'calendar', 'seminars', 'archives', 'community',
+    'databooks', 'newsletters', 'digital-newspaper', 'site-visits', 'online-site-visits', 'tools', 'qualifications',
     'members', 'organization', 'security', 'settings'
   ],
   MEMBER: [
-    'dashboard', 'seminars', 'archives', 'community',
-    'databooks', 'newsletters', 'site-visits', 'tools', 'qualifications',
+    'dashboard', 'calendar', 'seminars', 'archives', 'community',
+    'databooks', 'newsletters', 'digital-newspaper', 'site-visits', 'online-site-visits', 'tools', 'qualifications',
     'settings'
   ],
   ACCOUNTANT: [
-    'dashboard', 'billing', 'settings'
+    'dashboard', 'calendar', 'billing', 'settings'
   ]
 }
 

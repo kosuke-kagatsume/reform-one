@@ -19,6 +19,7 @@ import {
   ChevronDown,
   User,
   Calendar,
+  CalendarDays,
   Video,
   MessageSquare,
   Building2,
@@ -90,6 +91,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       label: '利用する',
       items: [
         { menuId: 'dashboard', name: 'ダッシュボード', href: '/dashboard', icon: Home },
+        { menuId: 'calendar', name: 'カレンダー', href: '/dashboard/calendar', icon: CalendarDays },
         { menuId: 'seminars', name: 'セミナー', href: '/dashboard/seminars', icon: Calendar },
         { menuId: 'archives', name: 'アーカイブ', href: '/dashboard/archives', icon: Video },
         { menuId: 'community', name: 'コミュニティ', href: '/dashboard/community', icon: MessageSquare },
