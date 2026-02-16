@@ -86,6 +86,9 @@ function getWidgetDescription(type: string): string {
     'materials-catalog': '建材カタログへのアクセス',
     store: '公式ストアへのアクセス',
     'fair-registration': 'フェア来場登録',
+    'expert-recommendations': 'エキスパートプラン向けの今月のおすすめコンテンツ',
+    'admin-summary': 'メンバー数・利用状況などの管理者向けサマリー',
+    'kpi-cards': 'セミナー数・アーカイブ数などのKPIカード',
     'upcoming-seminars': '今後のセミナー予定を表示',
     'recent-archives': '最新のアーカイブ動画を表示',
     'community-updates': 'コミュニティの最新投稿を表示'

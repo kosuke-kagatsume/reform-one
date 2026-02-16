@@ -307,7 +307,14 @@ export default function SeminarsPage() {
         {/* 管理者アクション (2-6) */}
         {isAdmin && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href)
+                alert('ページURLをコピーしました')
+              }}
+            >
               <Share2 className="h-4 w-4 mr-2" />
               社員に共有
             </Button>

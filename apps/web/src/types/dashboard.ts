@@ -12,6 +12,9 @@ export type WidgetType =
   | 'store'
   | 'fair-registration'
   // Premier subscription widgets
+  | 'expert-recommendations'
+  | 'admin-summary'
+  | 'kpi-cards'
   | 'upcoming-seminars'
   | 'recent-archives'
   | 'community-updates'
@@ -97,11 +100,35 @@ export const defaultWidgets: Widget[] = [
   },
   // Premier subscription default widgets
   {
+    id: 'expert-recommendations',
+    type: 'expert-recommendations',
+    title: '今月のおすすめ（エキスパート）',
+    enabled: true,
+    order: 8,
+    width: 'full'
+  },
+  {
+    id: 'admin-summary',
+    type: 'admin-summary',
+    title: '管理者サマリー',
+    enabled: true,
+    order: 9,
+    width: 'full'
+  },
+  {
+    id: 'kpi-cards',
+    type: 'kpi-cards',
+    title: 'KPIカード',
+    enabled: true,
+    order: 10,
+    width: 'full'
+  },
+  {
     id: 'upcoming-seminars',
     type: 'upcoming-seminars',
     title: '今後のセミナー',
     enabled: true,
-    order: 8,
+    order: 11,
     width: 'half'
   },
   {

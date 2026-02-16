@@ -29,11 +29,7 @@ import {
   TrendingUp,
   Play,
   Star,
-  MessageSquare,
-  Phone,
-  Tag,
   Target,
-  Briefcase,
   BookOpen
 } from 'lucide-react'
 import Link from 'next/link'
@@ -81,12 +77,6 @@ interface RecommendedContent {
   viewed: boolean
 }
 
-interface SalesContact {
-  name: string
-  email: string
-  phone: string | null
-}
-
 export default function Dashboard() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, planType, hasFeature, isReformCompany, isAdmin } = useAuth()
@@ -101,7 +91,6 @@ export default function Dashboard() {
 
   // 一般社員向け状態
   const [recommendedContent, setRecommendedContent] = useState<RecommendedContent[]>([])
-  const [salesContact, setSalesContact] = useState<SalesContact | null>(null)
 
   // 一般社員かどうか（ADMIN以外）
   const isMember = !isAdmin
@@ -267,13 +256,6 @@ export default function Dashboard() {
         const data = await recommendedRes.json()
         setRecommendedContent(data.content || [])
       }
-
-      // 担当営業の連絡先を取得
-      const contactRes = await fetch('/api/member/sales-contact')
-      if (contactRes.ok) {
-        const data = await contactRes.json()
-        setSalesContact(data.contact || null)
-      }
     } catch (error) {
       console.error('Failed to fetch member data:', error)
       // デモ用のダミーデータ
@@ -282,11 +264,6 @@ export default function Dashboard() {
         { id: '2', type: 'archive', title: '値上げ交渉の成功事例', reason: '今月の注目コンテンツ', viewed: true },
         { id: '3', type: 'databook', title: '2025年リフォーム市場動向', reason: '提案資料作成に活用', viewed: false }
       ])
-      setSalesContact({
-        name: '山田 太郎',
-        email: 'yamada@reform.co.jp',
-        phone: '03-1234-5678'
-      })
     }
   }
 
@@ -437,7 +414,7 @@ export default function Dashboard() {
         )}
 
         {/* 管理者専用サマリー */}
-        {isAdmin && adminStats && (
+        {isAdmin && adminStats && isWidgetEnabled('admin-summary') && (
           <Card className="border-blue-200 bg-blue-50/30">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -631,6 +608,7 @@ export default function Dashboard() {
         )}
 
         {/* KPIカード（改善版） */}
+        {isWidgetEnabled('kpi-cards') && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link href="/dashboard/seminars">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -712,6 +690,7 @@ export default function Dashboard() {
             </Card>
           </Link>
         </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 管理者向け：今後のセミナー */}
@@ -953,79 +932,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* 一般社員向け：サポートセクション */}
-        {isMember && planType === 'EXPERT' && (
-          <Card className="bg-gradient-to-r from-slate-50 to-blue-50 border-slate-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-slate-600" />
-                仕事で困ったら
-              </CardTitle>
-              <CardDescription>
-                チームに相談したり、担当営業に連絡できます
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* チームに質問ボタン */}
-                <div className="p-4 bg-white rounded-lg border hover:border-blue-300 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">チームに質問する</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        同僚や先輩に相談できます
-                      </p>
-                      <Button size="sm" variant="outline" className="mt-3" asChild>
-                        <Link href="/dashboard/community">
-                          コミュニティへ
-                          <ChevronRight className="h-3 w-3 ml-1" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 担当営業連絡先 */}
-                <div className="p-4 bg-white rounded-lg border">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-emerald-100 rounded-lg">
-                      <Phone className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">担当営業に連絡</p>
-                      {salesContact ? (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-sm font-medium text-slate-700">{salesContact.name}</p>
-                          <a
-                            href={`mailto:${salesContact.email}`}
-                            className="text-xs text-blue-600 hover:underline block"
-                          >
-                            {salesContact.email}
-                          </a>
-                          {salesContact.phone && (
-                            <a
-                              href={`tel:${salesContact.phone}`}
-                              className="text-xs text-blue-600 hover:underline block"
-                            >
-                              {salesContact.phone}
-                            </a>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-500 mt-1">
-                          担当者情報は管理者にお問い合わせください
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* オンボーディング常設リンク（管理者のみ） */}
         {isAdmin && !showOnboarding && onboardingCompleted.length < 3 && (

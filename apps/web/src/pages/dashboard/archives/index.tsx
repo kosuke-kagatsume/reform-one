@@ -279,11 +279,26 @@ export default function ArchivesPage() {
         {/* 管理者向け情報 (3-7) */}
         {isAdmin && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href)
+                alert('ページURLをコピーしました')
+              }}
+            >
               <Share2 className="h-4 w-4 mr-2" />
               社員に共有
             </Button>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // 視聴回数順にソート
+                const sorted = [...archives].sort((a, b) => b._count.views - a._count.views)
+                setArchives(sorted)
+              }}
+            >
               <BarChart3 className="h-4 w-4 mr-2" />
               視聴ランキング
             </Button>

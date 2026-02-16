@@ -430,9 +430,16 @@ export default function MembersPage() {
           </Dialog>
         </div>
 
-        {/* 改善されたサマリーカード (10-1) */}
+        {/* 改善されたサマリーカード (10-1) - クリックでフィルタ */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-blue-200 bg-blue-50/30">
+          <Card
+            className="border-blue-200 bg-blue-50/30 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              setFilterStatus('all')
+              setFilterRole('all')
+              setSearchQuery('')
+            }}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-blue-100 p-3 rounded-lg">
@@ -459,7 +466,14 @@ export default function MembersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className={`cursor-pointer hover:shadow-md transition-shadow ${filterStatus === 'active' ? 'ring-2 ring-green-500' : ''}`}
+            onClick={() => {
+              setFilterStatus('active')
+              setFilterRole('all')
+              setSearchQuery('')
+            }}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-green-100 p-3 rounded-lg">
@@ -473,7 +487,14 @@ export default function MembersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className={inactiveMembers.length > 0 ? 'border-amber-200 bg-amber-50/30' : ''}>
+          <Card
+            className={`cursor-pointer hover:shadow-md transition-shadow ${inactiveMembers.length > 0 ? 'border-amber-200 bg-amber-50/30' : ''} ${filterStatus === 'inactive' ? 'ring-2 ring-amber-500' : ''}`}
+            onClick={() => {
+              setFilterStatus('inactive')
+              setFilterRole('all')
+              setSearchQuery('')
+            }}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className={`p-3 rounded-lg ${inactiveMembers.length > 0 ? 'bg-amber-100' : 'bg-slate-100'}`}>
@@ -489,7 +510,7 @@ export default function MembersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-purple-100 p-3 rounded-lg">
