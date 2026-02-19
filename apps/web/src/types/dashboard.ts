@@ -136,7 +136,7 @@ export const defaultWidgets: Widget[] = [
     type: 'recent-archives',
     title: '最新のアーカイブ',
     enabled: true,
-    order: 9,
+    order: 12,
     width: 'half'
   },
   {
@@ -144,7 +144,7 @@ export const defaultWidgets: Widget[] = [
     type: 'community-updates',
     title: 'コミュニティ更新',
     enabled: true,
-    order: 10,
+    order: 13,
     width: 'full'
   }
 ]

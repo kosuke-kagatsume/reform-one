@@ -122,6 +122,7 @@ export default function MembersPage() {
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false)
   const [memberToRemind, setMemberToRemind] = useState<Member | null>(null)
   const [sendingReminder, setSendingReminder] = useState(false)
+  const [reminderSuccess, setReminderSuccess] = useState('')
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -226,8 +227,10 @@ export default function MembersPage() {
 
       if (res.ok) {
         setReminderDialogOpen(false)
+        setReminderSuccess(`${memberToRemind.name || memberToRemind.email}にリマインダーを送信しました`)
         setMemberToRemind(null)
-        // TODO: 成功トースト表示
+        // 3秒後にメッセージをクリア
+        setTimeout(() => setReminderSuccess(''), 3000)
       }
     } catch (error) {
       console.error('Failed to send reminder:', error)
@@ -429,6 +432,14 @@ export default function MembersPage() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* リマインダー送信成功メッセージ */}
+        {reminderSuccess && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5" />
+            {reminderSuccess}
+          </div>
+        )}
 
         {/* 改善されたサマリーカード (10-1) - クリックでフィルタ */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
