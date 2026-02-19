@@ -2,6 +2,7 @@ import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { AuthProvider } from '@/lib/auth-context'
+import { Toaster } from 'sonner'
 
 export default function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -13,6 +14,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
       </Head>
       <AuthProvider>
         <Component {...pageProps} />
+        <Toaster position="bottom-right" richColors />
       </AuthProvider>
     </>
   )

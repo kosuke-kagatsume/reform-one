@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -312,7 +313,7 @@ export default function SeminarsPage() {
               size="sm"
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href)
-                alert('ページURLをコピーしました')
+                toast.success('ページURLをコピーしました')
               }}
             >
               <Share2 className="h-4 w-4 mr-2" />

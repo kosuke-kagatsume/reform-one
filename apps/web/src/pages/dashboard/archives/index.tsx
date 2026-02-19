@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -284,7 +285,7 @@ export default function ArchivesPage() {
               size="sm"
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href)
-                alert('ページURLをコピーしました')
+                toast.success('ページURLをコピーしました')
               }}
             >
               <Share2 className="h-4 w-4 mr-2" />
@@ -297,6 +298,7 @@ export default function ArchivesPage() {
                 // 視聴回数順にソート
                 const sorted = [...archives].sort((a, b) => b._count.views - a._count.views)
                 setArchives(sorted)
+                toast.success('視聴回数順に並び替えました')
               }}
             >
               <BarChart3 className="h-4 w-4 mr-2" />
