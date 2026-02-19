@@ -69,7 +69,7 @@ interface Organization {
 }
 
 type SortOption = 'name_asc' | 'login_desc' | 'activity_desc' | 'created_desc'
-type LoginFilter = 'all' | 'recent' | 'normal' | 'inactive' | 'never'
+type LoginFilter = 'all' | 'recent' | 'normal' | 'inactive' | 'never' | 'active_30' | 'dormant'
 type PlanFilter = 'all' | 'expert' | 'standard' | 'none'
 
 export default function MembersAdminPage() {
@@ -171,7 +171,18 @@ export default function MembersAdminPage() {
         m.organization.name.toLowerCase().includes(searchQuery.toLowerCase())
 
       // Login status filter
-      const matchesLogin = loginFilter === 'all' || m.loginStatus === loginFilter
+      let matchesLogin = true
+      if (loginFilter === 'all') {
+        matchesLogin = true
+      } else if (loginFilter === 'active_30') {
+        // 30日以内ログイン: recent + normal
+        matchesLogin = m.loginStatus === 'recent' || m.loginStatus === 'normal'
+      } else if (loginFilter === 'dormant') {
+        // 30日以上未ログイン: inactive + never
+        matchesLogin = m.loginStatus === 'inactive' || m.loginStatus === 'never'
+      } else {
+        matchesLogin = m.loginStatus === loginFilter
+      }
 
       // Plan filter
       let matchesPlan = true
@@ -263,7 +274,7 @@ export default function MembersAdminPage() {
             icon={UserCheck}
             iconColor="text-green-600"
             variant="success"
-            onClick={() => setLoginFilter('recent')}
+            onClick={() => setLoginFilter('active_30')}
             hoverHint="クリックでアクティブユーザーを表示"
           />
 
@@ -275,7 +286,7 @@ export default function MembersAdminPage() {
             icon={UserX}
             iconColor="text-red-600"
             variant={(stats?.notLoggedIn30Days || 0) > 0 ? 'danger' : 'default'}
-            onClick={() => setLoginFilter('inactive')}
+            onClick={() => setLoginFilter('dormant')}
             hoverHint="クリックで休眠ユーザーを表示"
             cta={(stats?.notLoggedIn30Days || 0) > 0 ? '要対応' : undefined}
           />
@@ -295,7 +306,7 @@ export default function MembersAdminPage() {
         </div>
 
         {/* 休眠ユーザー一括メール通知 */}
-        {loginFilter === 'inactive' && filteredMembers.length > 0 && (
+        {(loginFilter === 'inactive' || loginFilter === 'dormant') && filteredMembers.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -342,6 +353,8 @@ export default function MembersAdminPage() {
             className="px-3 py-2 border rounded-md bg-white"
           >
             <option value="all">すべてのログイン状況</option>
+            <option value="active_30">30日以内ログイン</option>
+            <option value="dormant">30日以上未ログイン</option>
             <option value="recent">アクティブ（7日以内）</option>
             <option value="normal">やや不活発（8-30日）</option>
             <option value="inactive">非アクティブ（30日超）</option>

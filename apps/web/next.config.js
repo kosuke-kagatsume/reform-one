@@ -3,7 +3,7 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com;
   style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://cloudflare-stream.com;
+  img-src 'self' blob: data: https://cloudflare-stream.com https://img.youtube.com https://i.ytimg.com;
   font-src 'self';
   connect-src 'self' https://api.stripe.com https://analytics.vercel.com;
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
