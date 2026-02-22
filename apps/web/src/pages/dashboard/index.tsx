@@ -29,9 +29,28 @@ import {
   TrendingUp,
   Play,
   Star,
+  Mail,
   Target,
-  BookOpen
+  BookOpen,
+  Pencil
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import Link from 'next/link'
 
 interface Seminar {
@@ -77,6 +96,21 @@ interface RecommendedContent {
   viewed: boolean
 }
 
+interface ExpertRecommendation {
+  type: 'seminar' | 'archive' | 'databook'
+  title: string
+  date?: string
+  duration?: string
+  href: string
+  isNew?: boolean
+}
+
+const defaultExpertRecommendations: ExpertRecommendation[] = [
+  { type: 'seminar', title: '経営者向け戦略セミナー', date: '1月15日', href: '/dashboard/seminars' },
+  { type: 'archive', title: '営業力強化実践講座', duration: '45分', href: '/dashboard/archives' },
+  { type: 'databook', title: '2026年市場動向レポート', isNew: true, href: '/dashboard/databooks' }
+]
+
 export default function Dashboard() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, planType, hasFeature, isReformCompany, isAdmin } = useAuth()
@@ -91,6 +125,11 @@ export default function Dashboard() {
 
   // 一般社員向け状態
   const [recommendedContent, setRecommendedContent] = useState<RecommendedContent[]>([])
+
+  // おすすめコンテンツ管理者設定
+  const [expertRecommendations, setExpertRecommendations] = useState<ExpertRecommendation[]>(defaultExpertRecommendations)
+  const [editRecommendationsOpen, setEditRecommendationsOpen] = useState(false)
+  const [editingRecommendations, setEditingRecommendations] = useState<ExpertRecommendation[]>([])
 
   // 一般社員かどうか（ADMIN以外）
   const isMember = !isAdmin
@@ -182,6 +221,47 @@ export default function Dashboard() {
     return Math.round((onboardingCompleted.length / onboardingSteps.length) * 100)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onboardingCompleted])
+
+  // おすすめコンテンツの読み込み
+  useEffect(() => {
+    if (isAuthenticated && user?.organization?.id) {
+      const savedKey = `expert_recommendations_${user.organization.id}`
+      const saved = localStorage.getItem(savedKey)
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setExpertRecommendations(parsed)
+          }
+        } catch {
+          // 読み込みエラー時はデフォルト値を使用
+        }
+      }
+    }
+  }, [isAuthenticated, user?.organization?.id])
+
+  // おすすめコンテンツの編集開始
+  const openRecommendationsEditor = () => {
+    setEditingRecommendations([...expertRecommendations])
+    setEditRecommendationsOpen(true)
+  }
+
+  // おすすめコンテンツの保存
+  const saveRecommendations = () => {
+    setExpertRecommendations(editingRecommendations)
+    if (user?.organization?.id) {
+      const savedKey = `expert_recommendations_${user.organization.id}`
+      localStorage.setItem(savedKey, JSON.stringify(editingRecommendations))
+    }
+    setEditRecommendationsOpen(false)
+  }
+
+  // おすすめコンテンツの項目を更新
+  const updateRecommendation = (index: number, field: keyof ExpertRecommendation, value: string | boolean) => {
+    const updated = [...editingRecommendations]
+    updated[index] = { ...updated[index], [field]: value }
+    setEditingRecommendations(updated)
+  }
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -302,13 +382,6 @@ export default function Dashboard() {
 
   const canAccessCommunity = hasFeature('community')
 
-  // エキスパート向け今月のおすすめ
-  const expertRecommendations = planType === 'EXPERT' ? [
-    { type: 'seminar', title: '経営者向け戦略セミナー', date: '1月15日' },
-    { type: 'archive', title: '営業力強化実践講座', duration: '45分' },
-    { type: 'databook', title: '2026年市場動向レポート', isNew: true }
-  ] : []
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -316,16 +389,31 @@ export default function Dashboard() {
         {planType === 'EXPERT' && isAdmin && isWidgetEnabled('expert-recommendations') && (
           <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
             <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Crown className="h-5 w-5 text-purple-600" />
-                <CardTitle className="text-lg text-purple-900">今月のおすすめ</CardTitle>
-                <Badge className="bg-purple-600">エキスパート特典</Badge>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-purple-600" />
+                  <CardTitle className="text-lg text-purple-900">今月のおすすめ</CardTitle>
+                  <Badge className="bg-purple-600">エキスパート特典</Badge>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={openRecommendationsEditor}
+                  className="text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  編集
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {expertRecommendations.map((item, index) => (
-                  <div key={index} className="bg-white rounded-lg p-4 border border-purple-200">
+                  <Link
+                    key={index}
+                    href={item.href}
+                    className="bg-white rounded-lg p-4 border border-purple-200 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer block"
+                  >
                     <div className="flex items-center gap-2 mb-2">
                       {item.type === 'seminar' && <Calendar className="h-4 w-4 text-purple-600" />}
                       {item.type === 'archive' && <Video className="h-4 w-4 text-purple-600" />}
@@ -336,7 +424,7 @@ export default function Dashboard() {
                     <p className="text-xs text-slate-500 mt-1">
                       {item.date || item.duration || ''}
                     </p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </CardContent>
@@ -561,6 +649,14 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {isMember && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="mailto:?subject=【プレミア購読】お問い合わせ&body=管理者様%0A%0Aお問い合わせ内容：">
+                  <Mail className="h-4 w-4 mr-2" />
+                  管理者に相談
+                </Link>
+              </Button>
+            )}
             <DashboardCustomizeDialog />
           </div>
         </div>
@@ -596,11 +692,11 @@ export default function Dashboard() {
               </Link>
             </Button>
             <Button variant="outline" className="justify-start h-auto py-3" asChild>
-              <Link href="mailto:premium@the-reform.co.jp">
+              <Link href="/dashboard/guide">
                 <HelpCircle className="h-4 w-4 mr-2 text-slate-600" />
                 <div className="text-left">
-                  <p className="font-medium text-sm">サポート</p>
-                  <p className="text-xs text-slate-500">お問い合わせ</p>
+                  <p className="font-medium text-sm">利用ガイド・Q&A</p>
+                  <p className="text-xs text-slate-500">使い方を確認</p>
                 </div>
               </Link>
             </Button>
@@ -948,6 +1044,107 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* おすすめコンテンツ編集ダイアログ */}
+      <Dialog open={editRecommendationsOpen} onOpenChange={setEditRecommendationsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>今月のおすすめを編集</DialogTitle>
+            <DialogDescription>
+              メンバーに表示するおすすめコンテンツを設定します
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {editingRecommendations.map((rec, index) => (
+              <div key={index} className="border rounded-lg p-4 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline">おすすめ {index + 1}</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>種類</Label>
+                    <Select
+                      value={rec.type}
+                      onValueChange={(value) => updateRecommendation(index, 'type', value as 'seminar' | 'archive' | 'databook')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="seminar">セミナー</SelectItem>
+                        <SelectItem value="archive">アーカイブ</SelectItem>
+                        <SelectItem value="databook">データブック</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>タイトル</Label>
+                    <Input
+                      value={rec.title}
+                      onChange={(e) => updateRecommendation(index, 'title', e.target.value)}
+                      placeholder="コンテンツのタイトル"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{rec.type === 'seminar' ? '開催日' : rec.type === 'archive' ? '再生時間' : '補足'}</Label>
+                    <Input
+                      value={rec.date || rec.duration || ''}
+                      onChange={(e) => {
+                        if (rec.type === 'seminar') {
+                          updateRecommendation(index, 'date', e.target.value)
+                          updateRecommendation(index, 'duration', '')
+                        } else {
+                          updateRecommendation(index, 'duration', e.target.value)
+                          updateRecommendation(index, 'date', '')
+                        }
+                      }}
+                      placeholder={rec.type === 'seminar' ? '例: 1月15日' : rec.type === 'archive' ? '例: 45分' : '例: NEW'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>リンク先</Label>
+                    <Select
+                      value={rec.href}
+                      onValueChange={(value) => updateRecommendation(index, 'href', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="/dashboard/seminars">セミナー一覧</SelectItem>
+                        <SelectItem value="/dashboard/archives">アーカイブ一覧</SelectItem>
+                        <SelectItem value="/dashboard/databooks">データブック</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={`isNew-${index}`}
+                    checked={rec.isNew || false}
+                    onChange={(e) => updateRecommendation(index, 'isNew', e.target.checked)}
+                    className="rounded border-slate-300"
+                  />
+                  <Label htmlFor={`isNew-${index}`} className="font-normal">
+                    NEWバッジを表示
+                  </Label>
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditRecommendationsOpen(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={saveRecommendations}>
+              保存する
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

@@ -319,7 +319,15 @@ export default function SeminarsPage() {
               <Share2 className="h-4 w-4 mr-2" />
               社員に共有
             </Button>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const subject = encodeURIComponent('【プレミア購読】セミナーのご案内')
+                const body = encodeURIComponent(`セミナー一覧をご確認ください。\n\n${window.location.href}`)
+                window.location.href = `mailto:?subject=${subject}&body=${body}`
+              }}
+            >
               <Mail className="h-4 w-4 mr-2" />
               案内メールを送る
             </Button>

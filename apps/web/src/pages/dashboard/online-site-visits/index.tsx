@@ -14,7 +14,8 @@ import {
   Video,
   Clock,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  Play
 } from 'lucide-react'
 
 interface OnlineSiteVisit {
@@ -32,12 +33,14 @@ interface OnlineSiteVisit {
   isRegistered: boolean
   registrationStatus: string | null
   isFull: boolean
+  archiveUrl?: string | null
 }
 
 export default function OnlineSiteVisitsPage() {
   const router = useRouter()
   const { user, isLoading, isAuthenticated, planType } = useAuth()
   const [onlineSiteVisits, setOnlineSiteVisits] = useState<OnlineSiteVisit[]>([])
+  const [pastVisits, setPastVisits] = useState<OnlineSiteVisit[]>([])
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState<string | null>(null)
 
@@ -55,10 +58,18 @@ export default function OnlineSiteVisitsPage() {
 
   const fetchOnlineSiteVisits = async () => {
     try {
-      const res = await fetch('/api/online-site-visits?upcoming=true')
-      if (res.ok) {
-        const data = await res.json()
-        setOnlineSiteVisits(data.data.onlineSiteVisits || [])
+      // 今後の開催
+      const upcomingRes = await fetch('/api/online-site-visits?upcoming=true')
+      if (upcomingRes.ok) {
+        const data = await upcomingRes.json()
+        setOnlineSiteVisits(data.data?.onlineSiteVisits || data.onlineSiteVisits || [])
+      }
+
+      // 過去の開催（アーカイブ）
+      const pastRes = await fetch('/api/online-site-visits?past=true')
+      if (pastRes.ok) {
+        const data = await pastRes.json()
+        setPastVisits(data.data?.onlineSiteVisits || data.onlineSiteVisits || [])
       }
     } catch (error) {
       console.error('Failed to fetch online site visits:', error)
@@ -322,6 +333,58 @@ export default function OnlineSiteVisitsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* 過去のオンライン見学会アーカイブ */}
+        {pastVisits.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-purple-600" />
+                過去の見学会アーカイブ
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pastVisits.map((visit) => (
+                  <div
+                    key={visit.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <h3 className="font-semibold mb-2">{visit.title}</h3>
+                    {visit.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{visit.description}</p>
+                    )}
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {formatDate(visit.scheduledAt)}
+                      </span>
+                      {visit.companyName && (
+                        <span className="flex items-center gap-1">
+                          <Building2 className="h-4 w-4" />
+                          {visit.companyName}
+                        </span>
+                      )}
+                    </div>
+                    {visit.archiveUrl ? (
+                      <Button asChild variant="outline" size="sm" className="w-full">
+                        <a href={visit.archiveUrl} target="_blank" rel="noopener noreferrer">
+                          <Play className="h-4 w-4 mr-2" />
+                          アーカイブを視聴
+                          <ExternalLink className="h-3 w-3 ml-2" />
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" className="w-full" disabled>
+                        アーカイブ準備中
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   )

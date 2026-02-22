@@ -53,7 +53,10 @@ import {
   FileText,
   MessageSquare,
   ArrowUpDown,
-  Send
+  Send,
+  Upload,
+  FileSpreadsheet,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -123,6 +126,13 @@ export default function MembersPage() {
   const [memberToRemind, setMemberToRemind] = useState<Member | null>(null)
   const [sendingReminder, setSendingReminder] = useState(false)
   const [reminderSuccess, setReminderSuccess] = useState('')
+
+  // CSV bulk invite state
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false)
+  const [csvEmails, setCsvEmails] = useState<string[]>([])
+  const [csvRole, setCsvRole] = useState<'ADMIN' | 'MEMBER'>('MEMBER')
+  const [csvProcessing, setCsvProcessing] = useState(false)
+  const [csvResults, setCsvResults] = useState<{ success: string[]; failed: { email: string; error: string }[] } | null>(null)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -237,6 +247,81 @@ export default function MembersPage() {
     } finally {
       setSendingReminder(false)
     }
+  }
+
+  // CSV file handler
+  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const lines = text.split(/\r?\n/).filter(line => line.trim())
+      const emails: string[] = []
+
+      for (const line of lines) {
+        // CSVの各行からメールアドレスを抽出
+        const parts = line.split(',')
+        for (const part of parts) {
+          const cleaned = part.trim().replace(/^["']|["']$/g, '')
+          // メールアドレスの簡易バリデーション
+          if (cleaned.includes('@') && cleaned.includes('.')) {
+            emails.push(cleaned.toLowerCase())
+          }
+        }
+      }
+
+      // 重複を除去
+      const uniqueEmails = [...new Set(emails)]
+      setCsvEmails(uniqueEmails)
+      setCsvResults(null)
+    }
+    reader.readAsText(file)
+  }
+
+  const handleCsvBulkInvite = async () => {
+    if (csvEmails.length === 0 || !user) return
+
+    setCsvProcessing(true)
+    const success: string[] = []
+    const failed: { email: string; error: string }[] = []
+
+    for (const email of csvEmails) {
+      try {
+        const res = await fetch('/api/members/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            role: csvRole,
+            invitedBy: user.id,
+            orgId: user.organization.id
+          })
+        })
+
+        const data = await res.json()
+        if (res.ok) {
+          success.push(email)
+        } else {
+          failed.push({ email, error: data.error || '招待に失敗しました' })
+        }
+      } catch {
+        failed.push({ email, error: '通信エラー' })
+      }
+    }
+
+    setCsvResults({ success, failed })
+    setCsvProcessing(false)
+    if (success.length > 0) {
+      fetchMembers()
+    }
+  }
+
+  const resetCsvDialog = () => {
+    setCsvEmails([])
+    setCsvResults(null)
+    setCsvDialogOpen(false)
   }
 
   const formatDate = (dateString: string) => {
@@ -359,13 +444,18 @@ export default function MembersPage() {
             <h1 className="text-2xl font-bold">メンバー管理</h1>
             <p className="text-slate-600">{user.organization.name} のメンバーを管理</p>
           </div>
-          <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                メンバーを招待
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setCsvDialogOpen(true)}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              CSV一括招待
+            </Button>
+            <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  メンバーを招待
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>新しいメンバーを招待</DialogTitle>
@@ -431,6 +521,7 @@ export default function MembersPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </div>
         </div>
 
         {/* リマインダー送信成功メッセージ */}
@@ -853,6 +944,147 @@ export default function MembersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* CSV一括招待ダイアログ */}
+      <Dialog open={csvDialogOpen} onOpenChange={(open) => {
+        if (!open) resetCsvDialog()
+        else setCsvDialogOpen(true)
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>CSV一括招待</DialogTitle>
+            <DialogDescription>
+              CSVファイルからメールアドレスを読み込み、まとめて招待できます
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {!csvResults ? (
+              <>
+                <div className="space-y-2">
+                  <Label>CSVファイルを選択</Label>
+                  <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      onChange={handleCsvUpload}
+                      className="hidden"
+                      id="csv-upload"
+                    />
+                    <label
+                      htmlFor="csv-upload"
+                      className="cursor-pointer flex flex-col items-center"
+                    >
+                      <Upload className="h-8 w-8 text-slate-400 mb-2" />
+                      <span className="text-sm text-slate-600">
+                        クリックしてファイルを選択
+                      </span>
+                      <span className="text-xs text-slate-400 mt-1">
+                        CSV形式（1行1メールアドレス）
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {csvEmails.length > 0 && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>読み込まれたメールアドレス（{csvEmails.length}件）</Label>
+                      <div className="border rounded-lg p-3 max-h-40 overflow-y-auto bg-slate-50">
+                        <div className="flex flex-wrap gap-2">
+                          {csvEmails.map((email, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 bg-white border px-2 py-1 rounded text-sm"
+                            >
+                              {email}
+                              <button
+                                onClick={() => setCsvEmails(csvEmails.filter((_, idx) => idx !== i))}
+                                className="text-slate-400 hover:text-red-500"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>権限を選択</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={csvRole === 'MEMBER' ? 'default' : 'outline'}
+                          onClick={() => setCsvRole('MEMBER')}
+                          className="flex-1"
+                          size="sm"
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          メンバー
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={csvRole === 'ADMIN' ? 'default' : 'outline'}
+                          onClick={() => setCsvRole('ADMIN')}
+                          className="flex-1"
+                          size="sm"
+                        >
+                          <ShieldCheck className="h-4 w-4 mr-2" />
+                          管理者
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="space-y-4">
+                {csvResults.success.length > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
+                      <CheckCircle2 className="h-5 w-5" />
+                      {csvResults.success.length}件の招待を送信しました
+                    </div>
+                    <div className="text-sm text-green-600 max-h-20 overflow-y-auto">
+                      {csvResults.success.join(', ')}
+                    </div>
+                  </div>
+                )}
+                {csvResults.failed.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-red-700 font-medium mb-2">
+                      <XCircle className="h-5 w-5" />
+                      {csvResults.failed.length}件が失敗しました
+                    </div>
+                    <div className="text-sm text-red-600 space-y-1 max-h-20 overflow-y-auto">
+                      {csvResults.failed.map((f, i) => (
+                        <div key={i}>{f.email}: {f.error}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            {!csvResults ? (
+              <>
+                <Button variant="outline" onClick={resetCsvDialog}>
+                  キャンセル
+                </Button>
+                <Button
+                  onClick={handleCsvBulkInvite}
+                  disabled={csvProcessing || csvEmails.length === 0}
+                >
+                  {csvProcessing ? '送信中...' : `${csvEmails.length}件を招待`}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={resetCsvDialog}>閉じる</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

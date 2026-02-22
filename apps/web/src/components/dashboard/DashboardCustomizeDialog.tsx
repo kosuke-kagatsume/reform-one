@@ -74,7 +74,6 @@ export function DashboardCustomizeDialog() {
 
 function getWidgetDescription(type: string): string {
   const descriptions: Record<string, string> = {
-    stats: '統計情報を表示',
     services: 'サービスの利用状況を表示',
     'quick-actions': 'よく使う機能へのショートカット',
     'recent-activity': '最近のアクティビティを表示',

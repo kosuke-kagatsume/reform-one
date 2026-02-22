@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const planType = userOrg?.organization?.subscriptions?.[0]?.planType || 'STANDARD'
 
-    const { upcoming } = req.query
+    const { upcoming, past } = req.query
     const now = new Date()
 
     // プランに応じた見学会を取得
@@ -54,6 +54,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (upcoming === 'true') {
       whereCondition.scheduledAt = { gte: now }
+    } else if (past === 'true') {
+      whereCondition.scheduledAt = { lt: now }
     }
 
     const onlineSiteVisits = await prisma.onlineSiteVisit.findMany({
@@ -67,7 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           select: { id: true, status: true }
         }
       },
-      orderBy: { scheduledAt: 'asc' }
+      // 過去の見学会は新しい順、今後の見学会は古い順
+      orderBy: { scheduledAt: past === 'true' ? 'desc' : 'asc' }
     })
 
     // 参加状態を追加
@@ -85,7 +88,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       participantCount: visit._count.participants,
       isRegistered: visit.participants.length > 0,
       registrationStatus: visit.participants[0]?.status || null,
-      isFull: visit._count.participants >= visit.capacity
+      isFull: visit._count.participants >= visit.capacity,
+      archiveUrl: visit.archiveUrl || null
     }))
 
     return success(res, { onlineSiteVisits: result })

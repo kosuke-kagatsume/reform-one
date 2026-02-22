@@ -565,6 +565,7 @@ model OnlineSiteVisit {
   location           String?                     // 都道府県（参考情報）
   imageUrl           String?
   zoomUrl            String?                     // Zoom配信URL
+  archiveUrl         String?                     // YouTubeアーカイブURL
   scheduledAt        DateTime
   duration           Int?                        // 分
   capacity           Int                         @default(100)

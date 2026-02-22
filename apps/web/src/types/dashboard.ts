@@ -1,5 +1,4 @@
 export type WidgetType =
-  | 'stats'
   | 'services'
   | 'quick-actions'
   | 'recent-activity'
@@ -34,14 +33,6 @@ export interface DashboardConfig {
 }
 
 export const defaultWidgets: Widget[] = [
-  {
-    id: 'stats',
-    type: 'stats',
-    title: '統計情報',
-    enabled: true,
-    order: 0,
-    width: 'full'
-  },
   {
     id: 'services',
     type: 'services',
