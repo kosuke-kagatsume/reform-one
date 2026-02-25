@@ -305,6 +305,7 @@ export default function BulkMailPage() {
           recipientIds: recipients.map(r => r.id),
           subject,
           body,
+          signature,
           attachments: attachments.map(a => ({ url: a.url, fileName: a.fileName }))
         })
       })

@@ -16,8 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const auth = await verifyAuth(req)
-  if (!auth) {
-    return res.status(401).json({ error: '認証が必要です' })
+  if (!auth || auth.userType !== 'REFORM_STAFF') {
+    return res.status(401).json({ error: '管理者権限が必要です' })
   }
 
   try {
@@ -65,6 +65,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         upsert: false,
       })
 
+    // Clean up temp file regardless of upload result
+    try {
+      fs.unlinkSync(file.filepath)
+    } catch (cleanupError) {
+      console.error('Failed to clean up temp file:', cleanupError)
+    }
+
     if (error) {
       console.error('Supabase upload error:', error)
       return res.status(500).json({ error: 'ファイルのアップロードに失敗しました' })
@@ -74,9 +81,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: urlData } = supabaseAdmin.storage
       .from(STORAGE_BUCKET)
       .getPublicUrl(data.path)
-
-    // Clean up temp file
-    fs.unlinkSync(file.filepath)
 
     return res.status(200).json({
       url: urlData.publicUrl,

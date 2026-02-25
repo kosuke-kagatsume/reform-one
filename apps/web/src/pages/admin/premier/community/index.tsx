@@ -154,9 +154,13 @@ export default function CommunityAdminPage() {
         fetchCategories()
         setEditingCategory(null)
         setNewMeetingUrl('')
+        toast.success('定例会URLを更新しました')
+      } else {
+        toast.error('更新に失敗しました')
       }
     } catch (error) {
       console.error('Failed to update meeting URL:', error)
+      toast.error('更新に失敗しました')
     } finally {
       setSaving(false)
     }

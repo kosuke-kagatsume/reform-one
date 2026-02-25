@@ -26,6 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const { name, subject, body } = req.body
 
+      if (!name || !subject || !body) {
+        return res.status(400).json({ error: '名前、件名、本文は必須です' })
+      }
+
       const template = await prisma.adminEmailTemplate.update({
         where: { id: id as string },
         data: { name, subject, body }
