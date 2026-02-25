@@ -44,6 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
+      // カテゴリの存在確認
+      const category = await prisma.communityCategory.findUnique({
+        where: { id: categoryId }
+      })
+      if (!category) {
+        return res.status(404).json({ error: '指定されたカテゴリが存在しません' })
+      }
+
       if (subscribe) {
         // 購読を登録
         await prisma.communityNotificationSubscription.upsert({

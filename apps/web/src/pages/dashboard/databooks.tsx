@@ -123,13 +123,22 @@ export default function DatabooksPage() {
       if (res.ok) {
         const data = await res.json()
         setStats(data)
+      } else {
+        // APIエラー時はダミーデータを表示
+        console.error('Failed to fetch stats:', res.status)
+        setStats({
+          totalDatabooks: 0,
+          totalDownloads: 0,
+          nextPublishDate: null
+        })
       }
-    } catch {
-      // デモ用ダミーデータ
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+      // ネットワークエラー時
       setStats({
-        totalDatabooks: 12,
-        totalDownloads: 3500,
-        nextPublishDate: '2026-04-01'
+        totalDatabooks: 0,
+        totalDownloads: 0,
+        nextPublishDate: null
       })
     }
   }
@@ -379,16 +388,24 @@ export default function DatabooksPage() {
                           )}
 
                           {/* 一般社員向け：活用シーン */}
-                          {isMember && planType === 'EXPERT' && databook.usageScenes && (
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {JSON.parse(databook.usageScenes).slice(0, 3).map((scene: string, idx: number) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  <Target className="h-3 w-3 mr-1" />
-                                  {scene}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                          {isMember && planType === 'EXPERT' && databook.usageScenes && (() => {
+                            try {
+                              const scenes = JSON.parse(databook.usageScenes)
+                              if (!Array.isArray(scenes)) return null
+                              return (
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {scenes.slice(0, 3).map((scene: string, idx: number) => (
+                                    <Badge key={idx} variant="secondary" className="text-xs">
+                                      <Target className="h-3 w-3 mr-1" />
+                                      {scene}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )
+                            } catch {
+                              return null
+                            }
+                          })()}
 
                           <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
                             <span className="flex items-center gap-1">
