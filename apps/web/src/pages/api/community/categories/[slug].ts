@@ -1,11 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
+import { verifyAuth } from '@/lib/auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { slug } = req.query
 
   if (typeof slug !== 'string') {
     return res.status(400).json({ error: 'Invalid slug' })
+  }
+
+  // PUT/DELETE requires admin authentication
+  if (req.method === 'PUT' || req.method === 'DELETE') {
+    const auth = await verifyAuth(req)
+    if (!auth || auth.userType !== 'REFORM_STAFF') {
+      return res.status(401).json({ error: '管理者権限が必要です' })
+    }
   }
 
   if (req.method === 'GET') {

@@ -1,19 +1,43 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { sendMail } from '@/lib/mail'
-import { getAdminUser } from '@/lib/admin-auth'
+import { getAdminUser, requireAdminPermission } from '@/lib/admin-auth'
 
 const SIGNATURE_KEY = 'email_signature'
+
+interface AttachmentInput {
+  url: string
+  fileName: string
+}
+
+// URLからファイル内容をダウンロード
+async function downloadAttachment(url: string): Promise<Buffer | null> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+    const arrayBuffer = await response.arrayBuffer()
+    return Buffer.from(arrayBuffer)
+  } catch (error) {
+    console.error('Failed to download attachment:', url, error)
+    return null
+  }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // 管理者権限チェック
+  const { authorized, error: authError } = await requireAdminPermission(req, 'EDIT')
+  if (!authorized) {
+    return res.status(403).json({ error: authError || '管理者権限が必要です' })
+  }
+
   const adminUser = await getAdminUser(req)
 
   try {
-    const { recipientIds, subject, body } = req.body
+    const { recipientIds, subject, body, attachments: attachmentInputs } = req.body
 
     if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
       return res.status(400).json({ error: '送信先が指定されていません' })
@@ -30,6 +54,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       signature = setting?.value || ''
     } catch {}
+
+    // 添付ファイルをダウンロード
+    const emailAttachments: { filename: string; content: Buffer }[] = []
+    if (attachmentInputs && Array.isArray(attachmentInputs)) {
+      for (const att of attachmentInputs as AttachmentInput[]) {
+        const content = await downloadAttachment(att.url)
+        if (content) {
+          emailAttachments.push({
+            filename: att.fileName,
+            content
+          })
+        }
+      }
+    }
 
     const recipients = await prisma.user.findMany({
       where: {
@@ -78,7 +116,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               </div>
             </div>
           `,
-          text: fullBody
+          text: fullBody,
+          attachments: emailAttachments.length > 0 ? emailAttachments : undefined
         })
 
         if (adminUser) {
