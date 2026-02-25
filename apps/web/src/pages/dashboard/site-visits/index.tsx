@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAuth } from '@/lib/auth-context'
+import { toast } from 'sonner'
 import {
   Calendar,
   Clock,
@@ -305,7 +306,14 @@ export default function SiteVisitsPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href)
+                      toast.success('ページURLをコピーしました')
+                    }}
+                  >
                     <Share2 className="h-4 w-4 mr-2" />
                     社員に共有
                   </Button>

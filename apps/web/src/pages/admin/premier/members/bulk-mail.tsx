@@ -14,8 +14,31 @@ import {
   ArrowLeft,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Save,
+  FileText,
+  Trash2,
+  Paperclip,
+  X,
+  Upload,
+  File
 } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface Recipient {
   id: string
@@ -23,6 +46,20 @@ interface Recipient {
   email: string
   organizationName: string
   planType: string | null
+}
+
+interface EmailTemplate {
+  id: string
+  name: string
+  subject: string
+  body: string
+}
+
+interface Attachment {
+  url: string
+  fileName: string
+  size: number
+  type: string
 }
 
 type TargetType = 'all' | 'expert' | 'standard' | 'filtered'
@@ -45,6 +82,17 @@ export default function BulkMailPage() {
   const [testSending, setTestSending] = useState(false)
   const [testSent, setTestSent] = useState(false)
 
+  // テンプレート関連
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+  const [newTemplateName, setNewTemplateName] = useState('')
+  const [savingTemplate, setSavingTemplate] = useState(false)
+
+  // 添付ファイル関連
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [uploading, setUploading] = useState(false)
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login')
@@ -55,8 +103,123 @@ export default function BulkMailPage() {
     if (isAuthenticated && isReformCompany && target) {
       fetchRecipients()
       fetchSignature()
+      fetchTemplates()
     }
   }, [isAuthenticated, isReformCompany, target, loginFilter, planFilter, orgFilter])
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await fetch('/api/admin/premier/email-templates')
+      if (res.ok) {
+        const data = await res.json()
+        setTemplates(data.templates || [])
+      }
+    } catch {}
+  }
+
+  const handleSelectTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    const template = templates.find(t => t.id === templateId)
+    if (template) {
+      setSubject(template.subject)
+      setBody(template.body)
+    }
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!newTemplateName.trim() || !subject.trim() || !body.trim()) {
+      setError('テンプレート名、件名、本文を入力してください')
+      return
+    }
+
+    setSavingTemplate(true)
+    try {
+      const res = await fetch('/api/admin/premier/email-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTemplateName, subject, body })
+      })
+
+      if (res.ok) {
+        setSaveTemplateOpen(false)
+        setNewTemplateName('')
+        fetchTemplates()
+      } else {
+        const data = await res.json()
+        setError(data.error || 'テンプレートの保存に失敗しました')
+      }
+    } catch {
+      setError('テンプレートの保存に失敗しました')
+    } finally {
+      setSavingTemplate(false)
+    }
+  }
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('このテンプレートを削除しますか？')) return
+
+    try {
+      const res = await fetch(`/api/admin/premier/email-templates/${templateId}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        fetchTemplates()
+        if (selectedTemplateId === templateId) {
+          setSelectedTemplateId('')
+        }
+      }
+    } catch {}
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    setError(null)
+
+    for (const file of Array.from(files)) {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      try {
+        const res = await fetch('/api/admin/premier/upload-attachment', {
+          method: 'POST',
+          body: formData
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          setAttachments(prev => [...prev, {
+            url: data.url,
+            fileName: data.fileName,
+            size: data.size,
+            type: data.type
+          }])
+          toast.success(`${file.name} をアップロードしました`)
+        } else {
+          const data = await res.json()
+          setError(data.error || 'ファイルのアップロードに失敗しました')
+        }
+      } catch {
+        setError('ファイルのアップロードに失敗しました')
+      }
+    }
+
+    setUploading(false)
+    // Reset input
+    e.target.value = ''
+  }
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  }
 
   const fetchSignature = async () => {
     try {
@@ -82,7 +245,13 @@ export default function BulkMailPage() {
       const res = await fetch('/api/admin/premier/members/test-mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ testEmail, subject, body, signature })
+        body: JSON.stringify({
+          testEmail,
+          subject,
+          body,
+          signature,
+          attachments: attachments.map(a => ({ url: a.url, fileName: a.fileName }))
+        })
       })
 
       if (res.ok) {
@@ -135,7 +304,8 @@ export default function BulkMailPage() {
         body: JSON.stringify({
           recipientIds: recipients.map(r => r.id),
           subject,
-          body
+          body,
+          attachments: attachments.map(a => ({ url: a.url, fileName: a.fileName }))
         })
       })
 
@@ -269,6 +439,54 @@ export default function BulkMailPage() {
                 </div>
               )}
 
+              {/* テンプレート選択 */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    テンプレートから選択
+                  </label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSaveTemplateOpen(true)}
+                    disabled={!subject.trim() || !body.trim()}
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    現在の内容を保存
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={selectedTemplateId} onValueChange={handleSelectTemplate}>
+                    <SelectTrigger className="flex-1 bg-white">
+                      <SelectValue placeholder="テンプレートを選択..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedTemplateId && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteTemplate(selectedTemplateId)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {templates.length === 0 && (
+                  <p className="text-xs text-slate-500 mt-2">
+                    まだテンプレートがありません。メールを作成後「現在の内容を保存」で保存できます。
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">件名</label>
                 <Input
@@ -289,6 +507,67 @@ export default function BulkMailPage() {
                 <p className="text-xs text-slate-500 mt-1">
                   ※ {'{{name}}'} で受信者名、{'{{organization}}'} で組織名に置換されます
                 </p>
+              </div>
+
+              {/* 添付ファイル */}
+              <div>
+                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  添付ファイル
+                </label>
+
+                {/* アップロード済みファイル一覧 */}
+                {attachments.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {attachments.map((attachment, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-slate-50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2">
+                          <File className="h-4 w-4 text-slate-500" />
+                          <span className="text-sm font-medium">{attachment.fileName}</span>
+                          <span className="text-xs text-slate-500">
+                            ({formatFileSize(attachment.size)})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(index)}
+                          className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* アップロードボタン */}
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp"
+                    />
+                    <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-slate-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                      {uploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 text-slate-500" />
+                      )}
+                      <span className="text-sm text-slate-600">
+                        {uploading ? 'アップロード中...' : 'ファイルを選択'}
+                      </span>
+                    </div>
+                  </label>
+                  <span className="text-xs text-slate-500">
+                    PDF, Word, Excel, 画像（10MB以下）
+                  </span>
+                </div>
               </div>
 
               {signature && (
@@ -350,6 +629,42 @@ export default function BulkMailPage() {
           </Card>
         </div>
       </div>
+
+      {/* テンプレート保存ダイアログ */}
+      <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>テンプレートとして保存</DialogTitle>
+            <DialogDescription>
+              現在の件名と本文をテンプレートとして保存します
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">テンプレート名</label>
+              <Input
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                placeholder="例: セミナー案内メール"
+              />
+            </div>
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <p className="text-sm font-medium mb-1">件名:</p>
+              <p className="text-sm text-slate-600">{subject}</p>
+              <p className="text-sm font-medium mb-1 mt-3">本文:</p>
+              <p className="text-sm text-slate-600 whitespace-pre-wrap line-clamp-3">{body}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveTemplateOpen(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={handleSaveTemplate} disabled={savingTemplate || !newTemplateName.trim()}>
+              {savingTemplate ? '保存中...' : '保存する'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PremierAdminLayout>
   )
 }

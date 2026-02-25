@@ -6,6 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/auth-context'
 import { LockedFeatureCard } from '@/components/premier/locked-feature-card'
+import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   FileText,
   Download,
@@ -18,7 +26,8 @@ import {
   Info,
   Lightbulb,
   Target,
-  FileCheck
+  FileCheck,
+  Users
 } from 'lucide-react'
 
 interface Databook {
@@ -50,8 +59,34 @@ export default function DatabooksPage() {
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState<string | null>(null)
   const [stats, setStats] = useState<DatabookStats | null>(null)
+  const [downloadStatsOpen, setDownloadStatsOpen] = useState(false)
+  const [downloadStats, setDownloadStats] = useState<{ userId: string; userName: string; email: string; downloadedAt: string; databookTitle: string }[]>([])
+  const [loadingStats, setLoadingStats] = useState(false)
 
   const canAccessDatabooks = hasFeature('databook')
+
+  const handleShareToEmployees = () => {
+    navigator.clipboard.writeText(window.location.href)
+    toast.success('URLをコピーしました', {
+      description: '社員にこのURLを共有してください'
+    })
+  }
+
+  const handleShowDownloadStats = async () => {
+    setDownloadStatsOpen(true)
+    setLoadingStats(true)
+    try {
+      const res = await fetch('/api/databooks/download-stats')
+      if (res.ok) {
+        const data = await res.json()
+        setDownloadStats(data.stats || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch download stats:', error)
+    } finally {
+      setLoadingStats(false)
+    }
+  }
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -282,11 +317,11 @@ export default function DatabooksPage() {
         {/* 管理者向けアクション */}
         {isAdmin && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleShareToEmployees}>
               <Share2 className="h-4 w-4 mr-2" />
               社員に共有
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleShowDownloadStats}>
               <BarChart3 className="h-4 w-4 mr-2" />
               ダウンロード状況
             </Button>
@@ -466,6 +501,43 @@ export default function DatabooksPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ダウンロード状況ダイアログ */}
+      <Dialog open={downloadStatsOpen} onOpenChange={setDownloadStatsOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              ダウンロード状況
+            </DialogTitle>
+            <DialogDescription>
+              組織内メンバーのダウンロード履歴
+            </DialogDescription>
+          </DialogHeader>
+          {loadingStats ? (
+            <div className="py-8 text-center text-slate-500">読み込み中...</div>
+          ) : downloadStats.length === 0 ? (
+            <div className="py-8 text-center text-slate-500">
+              <Users className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+              <p>まだダウンロード履歴がありません</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {downloadStats.map((stat, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{stat.userName || stat.email}</p>
+                    <p className="text-sm text-slate-500">{stat.databookTitle}</p>
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    {new Date(stat.downloadedAt).toLocaleDateString('ja-JP')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

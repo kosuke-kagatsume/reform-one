@@ -282,42 +282,36 @@ export default function PremierAdminDashboard() {
           </Link>
 
           {/* 有効契約数 - 更新期限内訳付き */}
-          <Card className="hover:shadow-md transition-all">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-green-100">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-2xl font-bold">{stats.activeSubscriptions}</p>
-                  <p className="text-sm font-medium text-slate-700">有効契約数</p>
-                  <div className="mt-2 space-y-1">
-                    {stats.details.expiringSubscriptions.within30Days > 0 && (
-                      <Link href="/admin/premier/organizations?filter=expiring30">
-                        <p className="text-xs text-red-600 hover:underline cursor-pointer">
-                          更新期限30日以内: {stats.details.expiringSubscriptions.within30Days}件
-                        </p>
-                      </Link>
-                    )}
-                    {stats.details.expiringSubscriptions.within60Days > 0 && (
-                      <Link href="/admin/premier/organizations?filter=expiring60">
-                        <p className="text-xs text-orange-500 hover:underline cursor-pointer">
-                          60日以内: {stats.details.expiringSubscriptions.within60Days}件
-                        </p>
-                      </Link>
-                    )}
+          <Link href="/admin/premier/organizations?filter=active">
+            <Card className="hover:shadow-md hover:border-green-200 transition-all cursor-pointer group">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-green-100">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-2xl font-bold">{stats.activeSubscriptions}</p>
+                      <p className="text-sm font-medium text-slate-700">有効契約数</p>
+                      <div className="mt-2 space-y-1">
+                        {stats.details.expiringSubscriptions.within30Days > 0 && (
+                          <p className="text-xs text-red-600">
+                            更新期限30日以内: {stats.details.expiringSubscriptions.within30Days}件
+                          </p>
+                        )}
+                        {stats.details.expiringSubscriptions.within60Days > 0 && (
+                          <p className="text-xs text-orange-500">
+                            60日以内: {stats.details.expiringSubscriptions.within60Days}件
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  {(stats.details.expiringSubscriptions.within30Days > 0 || stats.details.expiringSubscriptions.within60Days > 0) && (
-                    <Link href="/admin/premier/organizations?filter=expiring">
-                      <p className="text-xs text-blue-600 hover:underline mt-1 cursor-pointer">
-                        更新対象を確認 →
-                      </p>
-                    </Link>
-                  )}
+                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-green-500" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
           {/* 開催予定セミナー - 改善版 */}
           <Card className="hover:shadow-md transition-all">

@@ -376,19 +376,20 @@ model ArchiveView {
 }
 
 model CommunityCategory {
-  id              String             @id @default(cuid())
-  name            String
-  slug            String             @unique
-  description     String?
-  meetingUrl      String?            // 常設ZoomリンクURL
-  frequency       String?            // 開催頻度（例：月1回）
-  nextMeetingAt   DateTime?          // 次回開催日時
-  sortOrder       Int                @default(0)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  posts           CommunityPost[]
-  meetingArchives MeetingArchive[]
-  meetings        CommunityMeeting[]
+  id                        String                             @id @default(cuid())
+  name                      String
+  slug                      String                             @unique
+  description               String?
+  meetingUrl                String?                            // 常設ZoomリンクURL
+  frequency                 String?                            // 開催頻度（例：月1回）
+  nextMeetingAt             DateTime?                          // 次回開催日時
+  sortOrder                 Int                                @default(0)
+  createdAt                 DateTime                           @default(now())
+  updatedAt                 DateTime                           @updatedAt
+  posts                     CommunityPost[]
+  meetingArchives           MeetingArchive[]
+  meetings                  CommunityMeeting[]
+  notificationSubscriptions CommunityNotificationSubscription[]
 
   @@index([slug])
   @@index([nextMeetingAt])
@@ -1027,3 +1028,35 @@ model Payment {
   @@index([status])
   @@index([createdAt])
 }
+
+// 管理者用メールテンプレート（一斉メール用）
+model AdminEmailTemplate {
+  id          String   @id @default(cuid())
+  name        String                   // テンプレート名
+  subject     String                   // 件名
+  body        String                   // 本文
+  createdById String                   // 作成者ID
+  isDefault   Boolean  @default(false) // デフォルトテンプレートかどうか
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([isDefault])
+}
+
+// コミュニティ定例会通知登録
+model CommunityNotificationSubscription {
+  id         String            @id @default(cuid())
+  userId     String
+  categoryId String
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  category   CommunityCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@index([userId])
+  @@index([categoryId])
+  @@index([isActive])
+}
+

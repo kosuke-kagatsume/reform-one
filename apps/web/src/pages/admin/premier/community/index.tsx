@@ -25,8 +25,12 @@ import {
   ExternalLink,
   Edit,
   MoreVertical,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Pencil,
+  Save
 } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { toast } from 'sonner'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +62,12 @@ export default function CommunityAdminPage() {
   const [newMeetingUrl, setNewMeetingUrl] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // コミュニティ運用説明文の編集
+  const [guidelines, setGuidelines] = useState('')
+  const [editingGuidelines, setEditingGuidelines] = useState(false)
+  const [guidelinesContent, setGuidelinesContent] = useState('')
+  const [savingGuidelines, setSavingGuidelines] = useState(false)
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login')
@@ -67,6 +77,7 @@ export default function CommunityAdminPage() {
   useEffect(() => {
     if (isAuthenticated && isReformCompany) {
       fetchCategories()
+      fetchGuidelines()
     }
   }, [isAuthenticated, isReformCompany])
 
@@ -81,6 +92,47 @@ export default function CommunityAdminPage() {
       console.error('Failed to fetch categories:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchGuidelines = async () => {
+    try {
+      const res = await fetch('/api/admin/settings/community-guidelines')
+      if (res.ok) {
+        const data = await res.json()
+        setGuidelines(data.content)
+      }
+    } catch (error) {
+      console.error('Failed to fetch guidelines:', error)
+    }
+  }
+
+  const handleEditGuidelines = () => {
+    setGuidelinesContent(guidelines)
+    setEditingGuidelines(true)
+  }
+
+  const handleSaveGuidelines = async () => {
+    setSavingGuidelines(true)
+    try {
+      const res = await fetch('/api/admin/settings/community-guidelines', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: guidelinesContent })
+      })
+
+      if (res.ok) {
+        setGuidelines(guidelinesContent)
+        setEditingGuidelines(false)
+        toast.success('運用説明を更新しました')
+      } else {
+        toast.error('更新に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to save guidelines:', error)
+      toast.error('更新に失敗しました')
+    } finally {
+      setSavingGuidelines(false)
     }
   }
 
@@ -279,15 +331,18 @@ export default function CommunityAdminPage() {
         </Card>
 
         <Card className="bg-slate-50">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">コミュニティ運用について</CardTitle>
+            <Button variant="ghost" size="sm" onClick={handleEditGuidelines}>
+              <Pencil className="h-4 w-4 mr-1" />
+              編集
+            </Button>
           </CardHeader>
           <CardContent>
             <ul className="text-sm text-slate-600 space-y-2">
-              <li>・ 各コミュニティでは月1回の定例Zoomミーティングを開催します</li>
-              <li>・ 「URL設定」ボタンから各コミュニティのZoom登録ページURLを設定できます</li>
-              <li>・ 定例会の録画はYouTube限定公開URLで保存し、アーカイブとして登録します</li>
-              <li>・ エキスパートプラン会員のみがコミュニティにアクセスできます</li>
+              {guidelines.split('\n').map((line, idx) => (
+                <li key={idx}>{line}</li>
+              ))}
             </ul>
           </CardContent>
         </Card>
@@ -324,6 +379,42 @@ export default function CommunityAdminPage() {
             </Button>
             <Button onClick={handleUpdateMeetingUrl} disabled={saving}>
               {saving ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* コミュニティ運用説明文編集ダイアログ */}
+      <Dialog open={editingGuidelines} onOpenChange={setEditingGuidelines}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>コミュニティ運用説明の編集</DialogTitle>
+            <DialogDescription>
+              管理画面に表示される運用説明文を編集できます。各項目は改行で区切ってください。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="guidelines">運用説明文</Label>
+              <Textarea
+                id="guidelines"
+                value={guidelinesContent}
+                onChange={(e) => setGuidelinesContent(e.target.value)}
+                rows={8}
+                placeholder="・ 各コミュニティでは月1回の定例Zoomミーティングを開催します"
+              />
+              <p className="text-xs text-slate-500">
+                各行が箇条書きとして表示されます。「・」から始めると見やすくなります。
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingGuidelines(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={handleSaveGuidelines} disabled={savingGuidelines}>
+              <Save className="h-4 w-4 mr-2" />
+              {savingGuidelines ? '保存中...' : '保存'}
             </Button>
           </DialogFooter>
         </DialogContent>

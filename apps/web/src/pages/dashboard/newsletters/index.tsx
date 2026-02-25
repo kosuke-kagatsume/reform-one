@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/lib/auth-context'
 import { LockedFeatureCard } from '@/components/premier/locked-feature-card'
+import { toast } from 'sonner'
 import {
   Mail,
   Calendar,
@@ -257,7 +258,14 @@ export default function NewslettersPage() {
         {/* 管理者向けアクション */}
         {isAdmin && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href)
+                toast.success('ページURLをコピーしました')
+              }}
+            >
               <Share2 className="h-4 w-4 mr-2" />
               社員に共有
             </Button>

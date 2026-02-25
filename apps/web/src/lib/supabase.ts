@@ -17,8 +17,23 @@ export const STORAGE_BUCKET = 'images'
 // Allowed file types
 export const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
+// Allowed attachment file types (for email attachments)
+export const ALLOWED_ATTACHMENT_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/jpeg',
+  'image/png',
+  'image/webp'
+]
+
 // Max file size (5MB)
 export const MAX_FILE_SIZE = 5 * 1024 * 1024
+
+// Max attachment size (10MB)
+export const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
 
 // Image folders
 export const IMAGE_FOLDERS = {
@@ -27,6 +42,7 @@ export const IMAGE_FOLDERS = {
   community: 'community',
   profiles: 'profiles',
   general: 'general',
+  attachments: 'attachments',
 } as const
 
 export type ImageFolder = keyof typeof IMAGE_FOLDERS
@@ -59,6 +75,28 @@ export function validateImageFile(file: {
     return {
       valid: false,
       error: `ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。`,
+    }
+  }
+
+  return { valid: true }
+}
+
+// Validate attachment file before upload
+export function validateAttachmentFile(file: {
+  type: string
+  size: number
+}): { valid: boolean; error?: string } {
+  if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+    return {
+      valid: false,
+      error: `対応していないファイル形式です。PDF, Word, Excel, JPG, PNG, WebPのみ対応しています。`,
+    }
+  }
+
+  if (file.size > MAX_ATTACHMENT_SIZE) {
+    return {
+      valid: false,
+      error: `ファイルサイズが大きすぎます。10MB以下のファイルを選択してください。`,
     }
   }
 

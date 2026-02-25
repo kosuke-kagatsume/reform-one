@@ -236,15 +236,9 @@ export default function AdminDigitalNewspaperPage() {
     <PremierAdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">電子版リフォーム産業新聞</h1>
-            <p className="text-gray-600">電子版の号数管理とアクセス権限管理</p>
-          </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            新規号を追加
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold">電子版リフォーム産業新聞</h1>
+          <p className="text-gray-600">電子版のアクセス権限管理</p>
         </div>
 
         {/* Stats */}

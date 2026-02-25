@@ -24,8 +24,11 @@ import {
   Lightbulb,
   Heart,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Bell,
+  BellOff
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface CommunityCategory {
   id: string
@@ -95,6 +98,10 @@ export default function CommunityDetailPage() {
   const [newComment, setNewComment] = useState<Record<string, string>>({})
   const [submittingComment, setSubmittingComment] = useState(false)
 
+  // 開催通知登録
+  const [notificationSubscribed, setNotificationSubscribed] = useState(false)
+  const [togglingSubscription, setTogglingSubscription] = useState(false)
+
   const canAccessCommunity = hasFeature('community')
 
   useEffect(() => {
@@ -122,10 +129,11 @@ export default function CommunityDetailPage() {
         if (currentCategory) {
           setCategory(currentCategory)
 
-          // Fetch posts and meetings for this category
-          const [postsRes, meetingsRes] = await Promise.all([
+          // Fetch posts, meetings, and subscription status for this category
+          const [postsRes, meetingsRes, subscriptionRes] = await Promise.all([
             fetch(`/api/community/posts?categoryId=${currentCategory.id}`),
-            fetch(`/api/community/meetings?categoryId=${currentCategory.id}`)
+            fetch(`/api/community/meetings?categoryId=${currentCategory.id}`),
+            fetch(`/api/community/notifications/subscribe?categoryId=${currentCategory.id}`)
           ])
 
           if (postsRes.ok) {
@@ -137,6 +145,11 @@ export default function CommunityDetailPage() {
             const meetingsData = await meetingsRes.json()
             setMeetings(meetingsData.meetings)
           }
+
+          if (subscriptionRes.ok) {
+            const subscriptionData = await subscriptionRes.json()
+            setNotificationSubscribed(subscriptionData.subscribed)
+          }
         } else {
           router.push('/dashboard/community')
         }
@@ -145,6 +158,37 @@ export default function CommunityDetailPage() {
       console.error('Failed to fetch data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleNotification = async () => {
+    if (!category) return
+
+    setTogglingSubscription(true)
+    try {
+      const res = await fetch('/api/community/notifications/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: category.id,
+          subscribe: !notificationSubscribed
+        })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setNotificationSubscribed(data.subscribed)
+        toast.success(
+          data.subscribed
+            ? '定例会の開催通知を受け取るように設定しました'
+            : '定例会の開催通知をオフにしました'
+        )
+      }
+    } catch (error) {
+      console.error('Failed to toggle notification:', error)
+      toast.error('通知設定の変更に失敗しました')
+    } finally {
+      setTogglingSubscription(false)
     }
   }
 
@@ -356,14 +400,34 @@ export default function CommunityDetailPage() {
               )}
             </div>
           </div>
-          {category.meetingUrl && (
-            <Button asChild>
-              <a href={category.meetingUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                定例会に参加登録
-              </a>
+          <div className="flex items-center gap-2">
+            {/* 開催通知登録ボタン */}
+            <Button
+              variant={notificationSubscribed ? 'default' : 'outline'}
+              onClick={handleToggleNotification}
+              disabled={togglingSubscription}
+            >
+              {notificationSubscribed ? (
+                <>
+                  <Bell className="h-4 w-4 mr-2" />
+                  通知ON
+                </>
+              ) : (
+                <>
+                  <BellOff className="h-4 w-4 mr-2" />
+                  通知OFF
+                </>
+              )}
             </Button>
-          )}
+            {category.meetingUrl && (
+              <Button asChild>
+                <a href={category.meetingUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  定例会に参加登録
+                </a>
+              </Button>
+            )}
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
