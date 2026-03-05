@@ -6,7 +6,7 @@ const cspHeader = `
   img-src 'self' blob: data: https://cloudflare-stream.com https://img.youtube.com https://i.ytimg.com;
   font-src 'self';
   connect-src 'self' https://api.stripe.com https://analytics.vercel.com;
-  frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
+  frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.youtube.com https://youtube.com;
   object-src 'none';
   base-uri 'self';
   form-action 'self';

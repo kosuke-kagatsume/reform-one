@@ -304,10 +304,10 @@ export default function GuidePage() {
               </p>
               <div className="flex justify-center gap-4">
                 <a
-                  href="tel:03-6826-5735"
+                  href="tel:03-6260-4824"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-slate-700 hover:bg-slate-50 border"
                 >
-                  <span>03-6826-5735</span>
+                  <span>03-6260-4824</span>
                 </a>
                 <a
                   href="mailto:premium@the-reform.co.jp"
@@ -318,7 +318,7 @@ export default function GuidePage() {
                 </a>
               </div>
               <p className="text-xs text-slate-500 mt-3">
-                受付時間: 平日 9:00〜18:00（土日祝除く）
+                受付時間: 10:00〜15:00
               </p>
             </div>
           </CardContent>

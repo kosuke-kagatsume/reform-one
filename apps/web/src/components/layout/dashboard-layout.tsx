@@ -51,7 +51,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
-  const { user, planType, logout } = useAuth()
+  const { user, planType, hasFeature, logout } = useAuth()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
@@ -74,10 +74,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return `プレミア購読｜スタンダードプラン${roleLabel}`
   }
 
+  // メニューIDからPLAN_FEATURESキーへのマッピング（EXPERT専用機能）
+  const MENU_TO_FEATURE: Record<string, string> = {
+    community: 'community',
+    databooks: 'databook',
+    newsletters: 'newsletter',
+  }
+
   // ロールに基づいてアクセス可能なメニューをチェック
   const canAccessMenu = (menuId: string) => {
     // リフォーム産業新聞社は全てアクセス可能
     if (user?.organization?.type === 'REFORM_COMPANY') return true
+
+    // プランによる機能制限チェック
+    const feature = MENU_TO_FEATURE[menuId]
+    if (feature && !hasFeature(feature)) return false
+
     // ADMINロール（従来の）はOWNER扱い
     const effectiveRole = userRole === 'ADMIN' ? 'OWNER' : userRole
     const accessList = ROLE_MENU_ACCESS[effectiveRole] || ROLE_MENU_ACCESS.MEMBER

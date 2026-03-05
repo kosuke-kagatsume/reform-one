@@ -465,7 +465,7 @@ export default function ArchivesPage() {
                             <img
                               src={archive.thumbnailUrl}
                               alt={archive.title}
-                              className={`w-full h-40 object-cover rounded-t-lg ${isWatched ? 'opacity-80' : ''}`}
+                              className={`w-full aspect-video object-contain bg-black rounded-t-lg ${isWatched ? 'opacity-80' : ''}`}
                               onError={(e) => {
                                 // サムネイル読み込み失敗時はフォールバック表示
                                 const target = e.target as HTMLImageElement
@@ -477,7 +477,7 @@ export default function ArchivesPage() {
                           ) : null}
                           {/* サムネイルカテゴリ色分け (3-5) - フォールバック表示 */}
                           <div
-                            className={`w-full h-40 bg-gradient-to-br ${colors.gradient} rounded-t-lg items-center justify-center ${isWatched ? 'opacity-80' : ''}`}
+                            className={`w-full aspect-video bg-gradient-to-br ${colors.gradient} rounded-t-lg items-center justify-center ${isWatched ? 'opacity-80' : ''}`}
                             style={{ display: archive.thumbnailUrl ? 'none' : 'flex' }}
                           >
                             <Video className="h-12 w-12 text-white/80" />

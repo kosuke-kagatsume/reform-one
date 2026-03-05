@@ -137,35 +137,8 @@ export default function QualificationsPage() {
   }
 
   const handleEnroll = async (qualificationId: string, useFreeSlot: boolean) => {
-    setEnrolling(qualificationId)
-    try {
-      const res = await fetch(`/api/qualifications/${qualificationId}/enroll`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ useFreeSlot }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        if (data.checkoutUrl) {
-          // Stripe決済へリダイレクト
-          window.location.href = data.checkoutUrl
-        } else {
-          // 無料枠使用の場合
-          fetchQualifications()
-          fetchStats()
-          alert('申込が完了しました。センリョクから受講案内メールが届きます。')
-        }
-      } else {
-        const error = await res.json()
-        alert(error.error || '登録に失敗しました')
-      }
-    } catch (error) {
-      console.error('Failed to enroll:', error)
-      alert('登録に失敗しました')
-    } finally {
-      setEnrolling(null)
-    }
+    // 外部申込フォームへ遷移
+    window.open('https://reform-shuninsya.com/reform-premier_form/', '_blank')
   }
 
   const formatDate = (dateString: string) => {

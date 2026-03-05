@@ -14,6 +14,17 @@ export interface AuthResult {
  *
  * 注意: 本番環境ではJWTトークンやセッションベースの認証に置き換えることを推奨
  */
+/**
+ * 認証済みユーザーのプランタイプを取得
+ */
+export async function getUserPlanType(orgId: string): Promise<string | null> {
+  const subscription = await prisma.subscription.findFirst({
+    where: { organizationId: orgId, status: 'ACTIVE' },
+    select: { planType: true },
+  })
+  return subscription?.planType || null
+}
+
 export async function verifyAuth(req: NextApiRequest): Promise<AuthResult | null> {
   try {
     // Authorization headerからユーザーIDを取得
