@@ -11,6 +11,7 @@ import {
   type ImageFolder,
 } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
+import { verifyAuth } from '@/lib/auth'
 import { success, error, methodNotAllowed, ErrorCodes } from '@/lib/api-response'
 
 // Disable body parser for file uploads
@@ -47,39 +48,18 @@ export default async function handler(
   }
 
   try {
-    // Check authentication (must be Reform Company staff)
-    const sessionCookie = req.cookies.premier_session
-    if (!sessionCookie) {
+    // Check authentication - allow EMPLOYEE users (admin staff)
+    const auth = await verifyAuth(req)
+    if (!auth || auth.userType !== 'EMPLOYEE') {
       return error(res, ErrorCodes.UNAUTHORIZED, '認証が必要です')
     }
 
-    // Get user and check if admin
     const user = await prisma.user.findUnique({
-      where: { id: sessionCookie },
-      include: {
-        organizations: {
-          include: {
-            organization: true,
-          },
-        },
-      },
+      where: { id: auth.userId },
     })
 
     if (!user) {
       return error(res, ErrorCodes.UNAUTHORIZED, 'ユーザーが見つかりません')
-    }
-
-    // Check if user is Reform Company staff (PROVIDER organization)
-    const isStaff = user.organizations.some(
-      (uo) => uo.organization.type === 'PROVIDER'
-    )
-
-    if (!isStaff) {
-      return error(
-        res,
-        ErrorCodes.FORBIDDEN,
-        '画像のアップロードは管理者のみ可能です'
-      )
     }
 
     // Parse form data

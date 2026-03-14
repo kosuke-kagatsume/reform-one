@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useAuth } from '@/lib/auth-context'
+import { ImageUpload } from '@/components/ui/image-upload'
 import {
   Plus,
   Calendar,
@@ -41,6 +42,7 @@ interface SiteVisit {
   imageUrl: string | null
   scheduledAt: string
   duration: number | null
+  endTime: string | null
   capacity: number
   price: number
   hasAfterParty: boolean
@@ -84,7 +86,7 @@ export default function AdminSiteVisitsPage() {
     address: '',
     imageUrl: '',
     scheduledAt: '',
-    duration: '',
+    endTime: '',
     capacity: '20',
     price: '',
     hasAfterParty: false,
@@ -100,7 +102,7 @@ export default function AdminSiteVisitsPage() {
     address: '',
     imageUrl: '',
     scheduledAt: '',
-    duration: '',
+    endTime: '',
     capacity: '20',
     price: '',
     hasAfterParty: false,
@@ -146,7 +148,7 @@ export default function AdminSiteVisitsPage() {
         body: JSON.stringify({
           ...formData,
           companyName: formData.companyName || null,
-          duration: formData.duration ? parseInt(formData.duration) : null,
+          endTime: formData.endTime || null,
           capacity: parseInt(formData.capacity),
           price: parseFloat(formData.price),
           afterPartyPrice: formData.afterPartyPrice ? parseFloat(formData.afterPartyPrice) : null,
@@ -163,7 +165,7 @@ export default function AdminSiteVisitsPage() {
           address: '',
           imageUrl: '',
           scheduledAt: '',
-          duration: '',
+          endTime: '',
           capacity: '20',
           price: '',
           hasAfterParty: false,
@@ -196,7 +198,7 @@ export default function AdminSiteVisitsPage() {
       address: visit.address || '',
       imageUrl: visit.imageUrl || '',
       scheduledAt: localDateTime,
-      duration: visit.duration ? String(visit.duration) : '',
+      endTime: visit.endTime || '',
       capacity: String(visit.capacity),
       price: String(visit.price),
       hasAfterParty: visit.hasAfterParty,
@@ -219,7 +221,7 @@ export default function AdminSiteVisitsPage() {
         body: JSON.stringify({
           ...editFormData,
           companyName: editFormData.companyName || null,
-          duration: editFormData.duration ? parseInt(editFormData.duration) : null,
+          endTime: editFormData.endTime || null,
           capacity: parseInt(editFormData.capacity),
           price: parseFloat(editFormData.price),
           afterPartyPrice: editFormData.afterPartyPrice ? parseFloat(editFormData.afterPartyPrice) : null,
@@ -371,12 +373,12 @@ export default function AdminSiteVisitsPage() {
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="imageUrl">画像URL</Label>
-                    <Input
-                      id="imageUrl"
+                    <Label>画像</Label>
+                    <ImageUpload
+                      folder="site-visits"
                       value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                      placeholder="https://..."
+                      onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                      aspectRatio="video"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -391,13 +393,12 @@ export default function AdminSiteVisitsPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="duration">所要時間（分）</Label>
+                      <Label htmlFor="endTime">終了予定時刻</Label>
                       <Input
-                        id="duration"
-                        type="number"
-                        value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                        placeholder="120"
+                        id="endTime"
+                        type="time"
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                       />
                     </div>
                   </div>
@@ -669,11 +670,12 @@ export default function AdminSiteVisitsPage() {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="edit-imageUrl">画像URL</Label>
-                  <Input
-                    id="edit-imageUrl"
+                  <Label>画像</Label>
+                  <ImageUpload
+                    folder="site-visits"
                     value={editFormData.imageUrl}
-                    onChange={(e) => setEditFormData({ ...editFormData, imageUrl: e.target.value })}
+                    onChange={(url) => setEditFormData({ ...editFormData, imageUrl: url })}
+                    aspectRatio="video"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -688,12 +690,12 @@ export default function AdminSiteVisitsPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-duration">所要時間（分）</Label>
+                    <Label htmlFor="edit-endTime">終了予定時刻</Label>
                     <Input
-                      id="edit-duration"
-                      type="number"
-                      value={editFormData.duration}
-                      onChange={(e) => setEditFormData({ ...editFormData, duration: e.target.value })}
+                      id="edit-endTime"
+                      type="time"
+                      value={editFormData.endTime}
+                      onChange={(e) => setEditFormData({ ...editFormData, endTime: e.target.value })}
                     />
                   </div>
                 </div>

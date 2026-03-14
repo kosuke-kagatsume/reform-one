@@ -118,8 +118,12 @@ export default function NewSeminarPage() {
       if (res.ok) {
         router.push('/admin/premier/seminars')
       } else {
-        const data = await res.json()
-        setError(data.error || '作成に失敗しました')
+        try {
+          const data = await res.json()
+          setError(data.error || '作成に失敗しました')
+        } catch {
+          setError(`作成に失敗しました（ステータス: ${res.status}）`)
+        }
       }
     } catch (error) {
       console.error('Failed to create seminar:', error)

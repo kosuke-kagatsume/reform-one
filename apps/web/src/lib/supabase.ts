@@ -43,6 +43,7 @@ export const IMAGE_FOLDERS = {
   profiles: 'profiles',
   general: 'general',
   attachments: 'attachments',
+  'site-visits': 'site-visits',
 } as const
 
 export type ImageFolder = keyof typeof IMAGE_FOLDERS

@@ -465,7 +465,7 @@ export default function ArchivesPage() {
                             <img
                               src={archive.thumbnailUrl}
                               alt={archive.title}
-                              className={`w-full aspect-video object-contain bg-black rounded-t-lg ${isWatched ? 'opacity-80' : ''}`}
+                              className={`w-full aspect-video object-cover rounded-t-lg ${isWatched ? 'opacity-80' : ''}`}
                               onError={(e) => {
                                 // サムネイル読み込み失敗時はフォールバック表示
                                 const target = e.target as HTMLImageElement

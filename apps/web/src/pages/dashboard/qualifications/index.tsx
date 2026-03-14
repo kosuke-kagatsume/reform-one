@@ -341,37 +341,16 @@ export default function QualificationsPage() {
                 </div>
               )}
 
-              {/* 受講ボタン（9-5） */}
-              {!hasEnrollment && mainQualification && (
+              {/* 受講ボタン（常に表示） */}
+              {mainQualification && (
                 <div className="space-y-3">
-                  {isExpert && hasFreeSlot ? (
-                    <Button
-                      className="w-full bg-green-600 hover:bg-green-700"
-                      onClick={() => handleEnroll(mainQualification.id, true)}
-                      disabled={enrolling === mainQualification.id}
-                    >
-                      {enrolling === mainQualification.id ? '処理中...' : (
-                        <>
-                          無料枠で申し込む
-                          <ArrowRight className="h-4 w-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      onClick={() => handleEnroll(mainQualification.id, false)}
-                      disabled={enrolling === mainQualification.id}
-                    >
-                      {enrolling === mainQualification.id ? '処理中...' : (
-                        <>
-                          {isExpert ? '追加受講を申し込む' : '受講を申し込む'}
-                          （¥{formatPrice(MAIN_QUALIFICATION.standardPrice)}）
-                          <ExternalLink className="h-4 w-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    className="w-full"
+                    onClick={() => handleEnroll(mainQualification.id, false)}
+                  >
+                    申し込みはこちら
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               )}
 
@@ -399,7 +378,7 @@ export default function QualificationsPage() {
               <div className="text-sm">
                 <p className="font-medium text-amber-800 mb-1">受講の流れ</p>
                 <ol className="list-decimal list-inside space-y-1 text-amber-700">
-                  <li>このページから申込（無料枠または決済）</li>
+                  <li>下記サイトから申し込み</li>
                   <li>運営元「センリョク」から受講案内メールが届きます</li>
                   <li>メールの案内に従ってオンライン受講開始</li>
                   <li>修了後、認定証が発行されます</li>

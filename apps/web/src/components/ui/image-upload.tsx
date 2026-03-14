@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Upload, X, Loader2, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type ImageFolder = 'seminars' | 'archives' | 'community' | 'profiles' | 'general'
+export type ImageFolder = 'seminars' | 'archives' | 'community' | 'profiles' | 'general' | 'site-visits'
 
 interface ImageUploadProps {
   folder: ImageFolder

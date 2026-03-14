@@ -503,6 +503,7 @@ model SiteVisit {
   imageUrl              String?
   scheduledAt           DateTime
   duration              Int?
+  endTime               String?                // 終了予定時刻（HH:mm形式）
   capacity              Int                    @default(20)
   maxPerOrganization    Int                    @default(2) // 1社あたり最大人数
   // プラン別価格

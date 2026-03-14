@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/lib/auth-context'
-import { ArrowLeft, Save, Calendar, Clock, User, Video, FileText, Trash2, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Save, Calendar, Clock, User, Video, FileText, Trash2, ImageIcon, Mail } from 'lucide-react'
 import { ImageUpload } from '@/components/ui/image-upload'
 import {
   AlertDialog,
@@ -40,6 +40,7 @@ interface Seminar {
   imageUrl: string | null
   isPublic: boolean
   publicPrice: number | null
+  notificationSentAt: string | null
   category: Category
 }
 
@@ -50,6 +51,8 @@ export default function EditSeminarPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [sendingNotification, setSendingNotification] = useState(false)
+  const [notificationSentAt, setNotificationSentAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -109,6 +112,7 @@ export default function EditSeminarPage() {
           isPublic: seminar.isPublic,
           publicPrice: seminar.publicPrice || 0
         })
+        setNotificationSentAt(seminar.notificationSentAt)
       } else {
         setError('セミナーが見つかりません')
       }
@@ -165,6 +169,31 @@ export default function EditSeminarPage() {
     }
   }
 
+  const handleSendNotification = async () => {
+    if (!confirm('リマインドメールを全購読者に送信しますか？')) return
+    setSendingNotification(true)
+    try {
+      const res = await fetch('/api/notifications/seminar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seminarId: id })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setNotificationSentAt(new Date().toISOString())
+        alert(`リマインドメールを${data.sent}名に送信しました`)
+      } else {
+        const data = await res.json()
+        setError(data.error || 'メール送信に失敗しました')
+      }
+    } catch (err) {
+      console.error('Failed to send notification:', err)
+      setError('メール送信に失敗しました')
+    } finally {
+      setSendingNotification(false)
+    }
+  }
+
   const handleDelete = async () => {
     setDeleting(true)
     try {
@@ -211,6 +240,23 @@ export default function EditSeminarPage() {
               <p className="text-slate-600">セミナーの情報を編集</p>
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSendNotification}
+                disabled={sendingNotification}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {sendingNotification ? '送信中...' : 'リマインドメール送信'}
+              </Button>
+              {notificationSentAt && (
+                <span className="text-xs text-slate-500">
+                  送信済み: {new Date(notificationSentAt).toLocaleDateString('ja-JP')}
+                </span>
+              )}
+            </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" disabled={deleting}>
@@ -233,6 +279,7 @@ export default function EditSeminarPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit}>
